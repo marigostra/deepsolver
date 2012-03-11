@@ -1,0 +1,23 @@
+#!/bin/sh -e
+# Builds Deepsolver repository from ALT Linux Sisyphus mirror
+
+[ -z "$1" ] && echo "${0##*/}:you should give path to ALT Linux repo" >&2 && exit 1
+
+COMPRESSION=none
+VENDOR='ALt Linux'
+NAME=Sisyphus
+IGNORE_FILE="ignore-requires"
+
+ALT="${1%/}"
+
+for i in noarch i586 x86_64; do
+    /bin/mkdir "$i"
+    /bin/ln -s "$ALT/files/$i/RPMS" "$i/RPMS"
+    /bin/ln -s "$ALT/files/SRPMS" "$i/SRPMS"
+done
+
+../programs/genbasedir -e "$IGNORE_FILE" -c "$COMPRESSION" -r -d i586/RPMS:x86_64/RPMS -p "$PATH" -u "name=$NAME" -u "vendor=$VENDOR" -l noarch
+../programs/genbasedir -e "$IGNORE_FILE" -c "$COMPRESSION" -r -d noarch/RPMS -p "$PATH" -u "name=$NAME" -u "vendor=$VENDOR" -l i586
+../programs/genbasedir -e "$IGNORE_FILE" -c "$COMPRESSION" -r -d noarch/RPMS -p "$PATH" -u "name=$NAME" -u "vendor=$VENDOR" -l x86_64
+
+../programs/ds update

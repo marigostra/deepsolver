@@ -1,0 +1,14 @@
+
+AM_CXXFLAGS = $(DEEPSOLVER_CXXFLAGS) $(DEEPSOLVER_INCLUDES)
+LIBS += -lz
+
+bin_PROGRAMS = test
+
+test_LDADD = \
+$(top_srcdir)/lib/libdeepsolver.a  \
+$(top_srcdir)/lib/os/libdeepsolveros.a 
+
+test_DEPENDENCIES = $(test_LDADD)
+
+test_SOURCES=\
+test.cpp

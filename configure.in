@@ -1,0 +1,37 @@
+
+AC_INIT(deepsolver, 0.0.1, msp@altlinux.org)
+AM_INIT_AUTOMAKE([-Wall foreign])
+
+if test "x$CFLAGS" == 'x'; then
+   CFLAGS='-O2'
+fi
+
+if test "x$CXXFLAGS" == 'x'; then
+   CXXFLAGS='-O2'
+fi
+
+AC_PROG_CC
+AC_PROG_CXX
+AC_PROG_RANLIB
+
+AC_SUBST(DEEPSOLVER_CXXFLAGS, '-Wall -pedantic -fpic -fno-rtti -DFIXME_DATADIR=\"$(pkgdatadir)\"')
+AC_SUBST(DEEPSOLVER_INCLUDES, '-I$(top_srcdir)/lib')
+
+AC_CONFIG_FILES([
+  makefile
+  lib/makefile
+  lib/os/makefile
+  lib/rpm/makefile
+  programs/makefile
+  tests/makefile
+  tests/regression/makefile
+  tests/integrity/makefile
+  tests/regression/zlib/makefile
+  tests/regression/gzip/makefile
+  tests/regression/md5/makefile
+  tests/regression/ver/makefile
+  tests/integrity/unmets/makefile
+  tests/integrity/provide-map/makefile
+])
+
+AC_OUTPUT

@@ -1,0 +1,26 @@
+#!/bin/sh -e
+# Runs all prepared regression tests;
+# NOTE: You must run 'make'  from the root directory first to build all test binaries;
+
+# zlib interface test;
+cd zlib
+./run
+cd ..
+
+# gzip interface test;
+cd gzip
+./run
+cd ..
+
+# MD5 regression test;
+cd md5
+./run
+cd ..
+
+# Version overlapping regression test;
+cd ver
+./run
+cd ..
+
+echo
+echo 'All tests was passed successfully!'
