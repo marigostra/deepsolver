@@ -15,49 +15,194 @@
    General Public License for more details.
 */
 
+#include"deepsolver.h"
 #include"ConfigCenter.h"
+#include"utils/TextFiles.h"
 
-static std::string collectFiles(const std::string& dirName)
+static std::string buildConfigParamTitle(const StringVector& path, const std::string& sectArg)
 {
-  StringVector items;
-  DIR* dir = opendir(dirName.c_str());
-  if (dir == NULL)
-    return std::string();
-  struct dirent* ent;
-  while ((ent = readdir(dir)) != NULL)
+  assert(!path.empty());
+  std::string value = path[0];
+  if (!sectArg.empty())
+    value += " \"" + sectArg + "\"";
+  for(StringVector::size_type i = 1;i < path.size();i++)
+    value += "." + path[i];
+  return value;
+}
+
+void ConfigCenter::loadFromFile(const std::string& fileName)
+{
+  logMsg(LOG_DEBUG, "Reading configuration data from \'%s\'", fileName.c_str());
+  assert(!fileName.empty());
+  std::auto_ptr<AbstractTextFileReader> file = createTextFileReader(TextFileStd, fileName);
+  ConfigFile parser(*this, fileName);
+  std::string line;
+  while(file->readLine(line))
+    parser.processLine(line);
+}
+
+void ConfigCenter::commit()
+{
+  logMsg(LOG_DEBUG, "Committing loaded configuration data");
+  if (m_root.dir.pkgData.empty())
+    throw ConfigException(ConfigErrorValueCannotBeEmpty, "core.dir.pkgdata");
+  m_root.dir.tmpPkgDataFetch = Directory::mixNameComponents(m_root.dir.pkgData, PKG_DATA_FETCH_DIR);//Real constant can be found in DefaultValues.h;
+  //Repositories;
+  for(ConfRepoVector::size_type i = 0;i < m_root.repo.size();i++)
     {
-      std::string name(ent->d_name);
-      if (name == "." || name == "..")
-	continue;
-      struct stat s;
-      std::string nameToCheck;
-      if (dirName.empty() || dirName[dirName.length() - 1] == '/')//FIXME:
-	nameToCheck = dirName + name; else
-	nameToCheck = dirName + "/" + name;
-      if (stat(nameToCheck.c_str(), &s) != 0)
-	continue;
-      if (!S_ISREG(s.st_mode))//FIXME:
-	continue;
-      items.push_back(name);
+      const ConfRepo& repo = m_root.repo[i];
+      assert(!repo.name.empty());
+      if (repo.url.empty())
+	throw ConfigException(ConfigErrorValueCannotBeEmpty, "repo \"" + repo.name + "\".url");
+      if (repo.arch.empty())
+	throw ConfigException(ConfigErrorValueCannotBeEmpty, "repo \"" + repo.name + "\".arch");
+      if (repo.components.empty())
+	throw ConfigException(ConfigErrorValueCannotBeEmpty, "repo \"" + repo.name + "\".components");
+      for(StringVector::size_type k = 0;k < repo.arch.size();k++)
+	{
+	  assert(!trim(repo.arch[k]).empty());
+	}
+      for(StringVector::size_type k = 0;k < repo.components.size();k++)
+	{
+	  assert(!trim(repo.components[k]).empty());
+	}
     }
-  closedir(dir);
-  std::sort(items.begin(), items.end());
-  std::string res;
-  for(StringVector::size_type i = 0;i < items.size();i++)
+}
+
+void ConfigCenter::onConfigFileValue(const StringVector& path, 
+		       const std::string& sectArg,
+		       const std::string& value,
+				     bool adding,
+				     const ConfigFilePosInfo& pos)
+{
+  assert(!path.empty());
+  if (path[0] == "core")
+    onCoreConfigValue(path, sectArg, value,adding, pos); else
+  if (path[0] == "repo")
+    onRepoConfigValue(path, sectArg, value,adding, pos); else
+    throw ConfigException(ConfigErrorUnknownParam, buildConfigParamTitle(path, sectArg), pos);
+}
+
+void ConfigCenter::onCoreConfigValue(const StringVector&path,
+				     const std::string& sectArg,
+				     const std::string& value,
+				     bool adding, 
+				     const ConfigFilePosInfo& pos)
+{
+  //FIXME:sectArg must be empty;
+  assert(sectArg.empty());
+  if (path.size() < 2)
+    throw ConfigException(ConfigErrorIncompletePath, buildConfigParamTitle(path, sectArg), pos);
+  if (path[1] == "dir")
+    onCoreDirConfigValue(path, sectArg, value,adding, pos); else
+  throw ConfigException(ConfigErrorUnknownParam, buildConfigParamTitle(path, sectArg), pos);
+}
+
+void ConfigCenter::onCoreDirConfigValue(const StringVector&path,
+				     const std::string& sectArg,
+				     const std::string& value,
+				     bool adding, 
+				     const ConfigFilePosInfo& pos)
+{
+  //FIXME:sectArg must be empty;
+  assert(sectArg.empty());
+  if (path.size() < 3)
+    throw ConfigException(ConfigErrorIncompletePath, buildConfigParamTitle(path, sectArg), pos);
+  if (path[2] == "pkgdata")
     {
-      std::string nameToRead;
-      if (dirName.empty() || dirName[dirName.length() - 1] == '/')
-	nameToRead = dirName + items[i]; else
-	nameToRead = dirName + "/" + items[i];//FIXME:
-      char c;
-      std::string s;
-      std::ifstream f(nameToRead.c_str());
-      if (!f)
-	continue;
-      while(f.get(c))
-	s += c;
-      s += '\n';
-      res += s;
-    } //for files;
-  return res;
+      if (adding)
+    throw ConfigException(ConfigErrorAddingNotPermitted, buildConfigParamTitle(path, sectArg), pos);
+      m_root.dir.pkgData = trim(value);
+      if (m_root.dir.pkgData.empty())
+    throw ConfigException(ConfigErrorValueCannotBeEmpty, "core.dir.pkgdata", pos);
+      return;
+    }
+  throw ConfigException(ConfigErrorUnknownParam, buildConfigParamTitle(path, sectArg), pos);
+}
+
+void ConfigCenter::onRepoConfigValue(const StringVector&path,
+				     const std::string& sectArg,
+				     const std::string& value,
+				     bool adding, 
+				     const ConfigFilePosInfo& pos)
+{
+  if (path.size() < 2)
+    throw ConfigException(ConfigErrorIncompletePath, buildConfigParamTitle(path, sectArg), pos);
+  //URL;
+  if (path[1] == "url")
+    {
+      if (adding)
+    throw ConfigException(ConfigErrorAddingNotPermitted, buildConfigParamTitle(path, sectArg), pos);
+      if (trim(value).empty())
+	throw ConfigException(ConfigErrorValueCannotBeEmpty, buildConfigParamTitle(path, sectArg), pos);
+      if (sectArg.empty())
+	{
+	  for(ConfRepoVector::size_type i = 0;i < m_root.repo.size();i++)
+	    m_root.repo[i].url = trim(value);
+	} else
+	findRepo(sectArg).url = trim(value);
+      return;
+    } //URL;
+  //Arch;
+  if (path[1] == "arch")
+    {
+      StringVector values;
+      splitBySpaces(value, values);
+      if (sectArg.empty())
+	{
+	  for(ConfRepoVector::size_type i = 0;i < m_root.repo.size();i++)
+	    {
+	      if (!adding)
+		m_root.repo[i].arch = values; else 
+		for(StringVector::size_type k = 0;k < values.size();k++)
+		  m_root.repo[i].arch.push_back(values[k]);
+	    } //for(repos);
+	} else
+	{
+	  ConfRepo& repo = findRepo(sectArg);
+	  if (!adding)
+	    repo.arch = values; else
+	    for(StringVector::size_type k = 0;k < values.size();k++)
+	      repo.arch.push_back(values[k]);
+	}
+      return;
+    } //arch;
+
+
+  //Components;
+  if (path[1] == "components")
+    {
+      StringVector values;
+      splitBySpaces(value, values);
+      if (sectArg.empty())
+	{
+	  for(ConfRepoVector::size_type i = 0;i < m_root.repo.size();i++)
+	    {
+	      if (!adding)
+		m_root.repo[i].components = values; else 
+		for(StringVector::size_type k = 0;k < values.size();k++)
+		  m_root.repo[i].components.push_back(values[k]);
+	    } //for(repos);
+	} else
+	{
+	  ConfRepo& repo = findRepo(sectArg);
+	  if (!adding)
+	    repo.components = values; else
+	    for(StringVector::size_type k = 0;k < values.size();k++)
+	      repo.components.push_back(values[k]);
+	}
+      return;
+    } //Components;
+  //FIXME:enabled;
+  //FIXME:vendor;
+  throw ConfigException(ConfigErrorUnknownParam, buildConfigParamTitle(path, sectArg), pos);
+}
+
+ConfRepo& ConfigCenter::findRepo(const std::string& name)
+{
+  for(ConfRepoVector::size_type i = 0;i < m_root.repo.size();i++)
+    if (m_root.repo[i].name == name)
+      return m_root.repo[i];
+  m_root.repo.push_back(ConfRepo(name));
+  return m_root.repo.back();
 }

@@ -53,10 +53,12 @@ typedef size_t VarId;
 typedef std::vector<VarId> VarIdVector;
 typedef std::list<VarId> VarIdList;
 typedef std::set<VarId> VarIdSet;
+typedef std::map<VarId, VarId> VarIdToVarIdMap;
 
 typedef char VerDirection;
 
 enum {
+  VerNone = 0,
   VerLess = 1,
   VerEquals = 2,
   VerGreater = 4
@@ -66,7 +68,7 @@ class VersionCond
 {
 public:
   VersionCond()
-    : type(0) {}
+    : type(VerNone) {}
 
   VersionCond(const std::string& v)
     : version(v), type(VerEquals) {}

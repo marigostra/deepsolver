@@ -40,6 +40,7 @@ public:
     close();
   }
 
+public:
   /**\brief Opens existing file in read/write mode
    *
    * This method opens an existing file and associates the current object
@@ -81,6 +82,12 @@ public:
    * destruction.
    */
   void close();
+
+  /**\brief FIXME*/
+  bool opened() const
+  {
+    return m_fd != -1;
+  }
 
   /**\brief Reads data from an opened file
    *
@@ -145,6 +152,27 @@ public:
    * \param [in] fileName The name of the file to remove hard link to
    */
   static void unlink(const std::string& fileName);
+
+  /**\brief Checks if file is a regular file
+   *
+   * FIXME
+   */
+  static bool isRegFile(const std::string& fileName);
+
+  /**\brief Checks if file is a directory
+   *
+   * FIXME
+   */
+    static bool isDir(const std::string& fileName);
+
+  /**\brief Checks if file is a symlink
+   *
+   * FIXME
+   */
+  static bool isSymLink(const std::string& fileName);
+
+  /**\brief FIXME*/
+  static void readAhead(const std::string& fileName);
 
 protected:
   int m_fd;

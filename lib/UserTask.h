@@ -22,38 +22,36 @@ class UserTaskItemToInstall
 {
 public:
   UserTaskItemToInstall()
-    : less(0),
-      equals(0),
-      greater(0) {}
+    : verDir(VerNone) {}
+
+ UserTaskItemToInstall(const std::string& n)
+    : pkgName(n), verDir(VerNone) {}
+
+  UserTaskItemToInstall(const std::string& n, VerDirection d, const std::string& v)
+    : pkgName(n), verDir(d), version(v) {}
+
+  virtual ~UserTaskItemToInstall() {}
 
 public:
-  std::string makeStr() const
+  std::string toString() const
   {
-    assert(!less || !greater);
+    if (verDir == VerNone)
+      return pkgName;
     std::string s = pkgName;
-    if (version.empty())
-      return s;
     s += " ";
-    assert(less || equals || greater);
-    if (less && equals)
-      s += "less than or equals"; else
-    if (greater && equals)
-      s += "greater than or equals"; else
-    if (less)
-      s += "less than"; else
-    if (equals)
-s += "equals"; else
-    if (greater)
-      s += "greater than";
-    s += " " + version;
-    return s;
-    return "#Needs to implement!#";
+    if (verDir & VerLess)
+      s += "<";
+    if (verDir & VerGreater)
+      s += ">";
+    if (verDir & VerEquals)
+      s += "=";
+    return s + " " + version;
   }
 
 public:
   std::string pkgName;
+  VerDirection verDir;
   std::string version;
-  bool less, equals, greater;
 }; //class UserTaskItemToINstall;
 
 typedef std::vector<UserTaskItemToInstall> UserTaskItemToInstallVector;

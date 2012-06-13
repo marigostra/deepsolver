@@ -52,8 +52,6 @@ public:
   std::string ver;
 }; //class NamedPkgRel;
 
-std::ostream& operator <<(std::ostream& s, const NamedPkgRel& r);
-
 typedef std::list<NamedPkgRel> NamedPkgRelList;
 typedef std::vector<NamedPkgRel> NamedPkgRelVector;
 
@@ -123,10 +121,22 @@ public:
   ChangeLog changeLog;
 };
 
+typedef std::vector<Pkg> PkgVector;
+typedef std::list<Pkg> PkgList;
+
 class PkgFile: public PkgFileBase, public PkgRelations 
 {
 public:
   ChangeLog changeLog;
+};
+
+std::ostream& operator <<(std::ostream& s, const PkgBase& );
+std::ostream& operator <<(std::ostream& s, const NamedPkgRel& r);
+
+enum {
+  PkgFlagAvailableByRepo = 1,
+  PkgFlagAvailableByUrl = 2,
+PkgFlagInstalled = 4
 };
 
 #endif //DEEPSOLVER_PKG_H;

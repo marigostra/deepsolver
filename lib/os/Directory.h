@@ -124,6 +124,26 @@ public:
    */
   static void ensureExists(const std::string& path);
 
+  /**\brief Creates directory and/or makes it empty
+   *
+   * \return Non-zero if directory is empty, with eraseContent set to 1 always returns non-zero
+*/
+  static bool ensureExistsAndEmpty(const std::string& name, bool needEraseContent = 0);
+
+  static void eraseContent(const std::string& name);
+
+  /**\brief Removes an empty directory
+   *
+   * FIXME
+   */
+  static void remove(const std::string& name);
+
+  /**\brief Combines two parts of UNIX path
+   *
+   * FIXME 
+   */
+  static std::string mixNameComponents(const std::string& part1, const std::string& part2);
+
   /**\brief Creates the iterator over the files in the directory
    *
    * This method creates the iterator prepared for enumeration of all files

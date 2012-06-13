@@ -175,3 +175,40 @@ void File::unlink(const std::string& fileName)
 {
   TRY_SYS_CALL(::unlink(fileName.c_str()) == 0, "unlink(" + fileName + ")");
 }
+
+
+bool File::isRegFile(const std::string& fileName)
+{
+  assert(!fileName.empty());
+  struct stat s;
+  TRY_SYS_CALL(stat(fileName.c_str(), &s) == 0, "stat(" + fileName + ")");
+  return S_ISREG(s.st_mode);
+}
+
+bool File::isDir(const std::string& fileName)
+{
+  assert(!fileName.empty());
+  struct stat s;
+  TRY_SYS_CALL(stat(fileName.c_str(), &s) == 0, "stat(" + fileName + ")");
+  return S_ISDIR(s.st_mode);
+}
+
+bool File::isSymLink(const std::string& fileName)
+{
+  assert(!fileName.empty());
+  struct stat s;
+  TRY_SYS_CALL(stat(fileName.c_str(), &s) == 0, "stat(" + fileName + ")");
+  return S_ISLNK(s.st_mode);
+}
+
+void File::readAhead(const std::string& fileName)
+{
+  assert(!fileName.empty());
+  const int fd = ::open(fileName.c_str(), O_RDONLY);
+  TRY_SYS_CALL(fd >= 0, "open(" + fileName + ", O_RDONLY)");
+  struct stat st;
+  TRY_SYS_CALL(fstat(fd, &st) == 0, "stat(" + fileName + ")");
+  TRY_SYS_CALL(readahead(fd, 0, st.st_size) == 0, "readahead(" + fileName + ")");
+  ::close(fd);
+
+}

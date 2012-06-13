@@ -25,7 +25,7 @@
 #include"os/SystemException.h"
 #include"os/File.h"
 #include"os/Directory.h"
-#include"string-utils.h"
+#include"utils/string-utils.h"
 #include"DeepsolverTypes.h"
 
 #endif //DEEPSOLVER_H
