@@ -28,25 +28,31 @@
 #define PKG_DATA_FETCH_DIR "__tmp_pkg_data"
 
 //Repo structure;
-#define REPO_RPMS_DIR_NAME "RPMS"
-#define REPO_SRPMS_DIR_NAME "SRPMS"
-
-//Repo index parameters;
-#define REPO_INDEX_DIR "base" //KILLME:temporary for compatibility;
 #define REPO_INDEX_DIR_PREFIX "base."
+#define REPO_PACKAGES_DIR_NAME "RPMS"
+#define REPO_SOURCES_DIR_NAME "SRPMS"
+
+//Repo index structure;
 #define REPO_INDEX_INFO_FILE "info"
+#define REPO_INDEX_PACKAGES_FILE "rpms.data"
+#define REPO_INDEX_PACKAGES_DESCR_FILE "rpms.descr.data"
+#define REPO_INDEX_SOURCES_FILE "srpms.data"
+#define REPO_INDEX_SOURCES_DESCR_FILE "srpms.descr.data"
+#define REPO_INDEX_MD5SUM_FILE "md5sum.txt"
+
+//Info file;
 #define INFO_FILE_FORMAT_TYPE "format_type"
-#define INFO_FILE_COMPRESSION_TYPE "compression_type"
-#define INFO_FILE_MD5SUM "md5sum_file"
 #define INFO_FILE_FORMAT_TYPE_TEXT "text"
 #define INFO_FILE_FORMAT_TYPE_BINARY "binary"
+#define INFO_FILE_COMPRESSION_TYPE "compression_type"
 #define INFO_FILE_COMPRESSION_TYPE_NONE "none"
 #define INFO_FILE_COMPRESSION_TYPE_GZIP "gzip"
-#define REPO_INDEX_PACKAGES_DATA_FILE "rpms.data"
-#define REPO_INDEX_SOURCE_DATA_FILE "srpms.data"
-#define REPO_INDEX_PROVIDES_DATA_FILE "provides.data"
-#define REPO_INDEX_MD5SUM_FILE "md5sum.txt"
-#define DEFAULT_REPO_INDEX_COMPRESSION_TYPE CompressionTypeGzip
-#define DEFAULT_REPO_INDEX_FORMAT_TYPE FormatTypeText
+#define INFO_FILE_VERSION "version"
+#define INFO_FILE_MD5SUM "md5sum_file"
+#define INFO_FILE_FILTER_PROVIDES_BY_DIRS "filter_provides_by_dirs"
+#define INFO_FILE_FILTER_PROVIDES_BY_REFS "filter_provides_by_refs"
+#define INFO_FILE_EXCLUDE_REQUIRES "exclude_requires"
+#define INFO_FILE_CHANGELOG_BINARY "changelog_binary"
+#define INFO_FILE_CHANGELOG_SOURCES "changelog_sources"
 
 #endif //DEEPSOLVER_DEFAULT_VALUES_H;

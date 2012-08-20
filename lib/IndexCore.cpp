@@ -17,118 +17,193 @@
 
 #include"deepsolver.h"
 #include"IndexCore.h"
-#include"repo/RepoIndexInfoFile.h"
-#include"repo/RepoIndexTextFormatWriter.h"
-#include"rpm/RpmFile.h"
-#include"rpm/RpmFileHeaderReader.h"
+#include"AbstractPackageBackEnd.h"
+#include"repo/PkgSection.h"
+#include"repo/TextFormatSectionReader.h"
 #include"utils/MD5.h"
-#include"RequireFilter.h"
+#include"utils/GZipInterface.h"
 
-void IndexCore::collectRefs(const std::string& dirName, StringSet& res) 
-{
-  m_console.msg() << "Collecting additional references from " << dirName << "...";
-  std::auto_ptr<Directory::Iterator> it = Directory::enumerate(dirName);
-  while(it->moveNext())
-    {
-      if (it->getName() == "." || it->getName() == "..")
-	continue;
-      if (!checkExtension(it->getName(), ".rpm"))
-	continue;
-      NamedPkgRelVector requires, conflicts;
-      RpmFileHeaderReader reader;
-      reader.load(it->getFullPath());
-      reader.fillRequires(requires);
-      reader.fillConflicts(conflicts);
-      for(NamedPkgRelVector::size_type i =0; i < requires.size();i++)
-	res.insert(requires[i].pkgName);
-      for(NamedPkgRelVector::size_type i = 0;i < conflicts.size();i++)
-	res.insert(conflicts[i].pkgName);
-    }
-  m_console.msg() << " " << res.size() << " found!" << std::endl;
-}
+#define TMP_FILE_NAME "tmp_packages_data"
 
-void IndexCore::collectRefsFromDirs(const StringList& dirs, StringSet& res)
+class UnifiedOutput
 {
-  res.clear();
-  for(StringList::const_iterator it = dirs.begin();it != dirs.end();it++)
-    collectRefs(*it, res);
-}
+public:
+  UnifiedOutput() {}
+  virtual ~UnifiedOutput() {}
 
-void IndexCore::build(const RepoIndexParams& params)
-{
-  const std::string archDir = Directory::mixNameComponents(params.topDir, params.arch);
-  const std::string indexDir = Directory::mixNameComponents(archDir, REPO_INDEX_DIR);
-  const std::string infoFile = Directory::mixNameComponents(indexDir, REPO_INDEX_INFO_FILE);
-  Directory::ensureExists(indexDir);
-  writeInfoFile(infoFile, params);
-  processPackages(indexDir,
-		  Directory::mixNameComponents(archDir, REPO_RPMS_DIR_NAME),
-		  Directory::mixNameComponents(archDir, REPO_SRPMS_DIR_NAME),
-		  params);
-}
+public:
+  virtual void writeData(const std::string& str) = 0;
+  virtual void close() = 0;
+}; //class UnifiedOutput;
 
-void IndexCore::processPackages(const std::string& indexDir, const std::string& rpmsDir, const std::string& srpmsDir, const RepoIndexParams& params)
+class StdOutput: public UnifiedOutput
 {
-  assert(params.formatType == RepoIndexParams::FormatTypeText);//FIXME:binary format support;
-  logMsg(LOG_DEBUG, "IndexCore began processing directories with packages");
-  StringSet additionalRefs;
-  if (params.provideFilteringByRefs)
+public:
+  StdOutput() {}
+
+  StdOutput(const std::string& fileName)
+  {
+    open(fileName);
+  }
+
+  virtual ~StdOutput() 
+  {
+    close();
+  }
+
+public:
+  void open(const std::string& fileName)
+  {
+    assert(!m_stream.is_open());
+    assert(!fileName.empty());
+    m_stream.open(fileName.c_str());
+    assert(m_stream.is_open());//FIXME:Must be an exception;
+  }
+
+  void writeData(const std::string& str)
+  {
+    assert(m_stream.is_open());
+    m_stream << str;
+  }
+
+  void close()
+  {
+    if (!m_stream.is_open())
+      return;
+    m_stream << std::endl;
+    m_stream.flush();
+    m_stream.close();
+  }
+
+private:
+  std::ofstream m_stream;
+}; //class StdOutput;
+
+class GzipOutput: public UnifiedOutput
+{
+public:
+  GzipOutput() {}
+
+  GzipOutput(const std::string& fileName)
+  {
+    open(fileName);
+  }
+
+  virtual ~GzipOutput() 
+  {
+    close();
+  }
+
+public:
+  void open(const std::string& fileName)
+  {
+    m_file.open(fileName);
+  }
+
+  void writeData(const std::string& str)
+  {
+    m_file.write(str.c_str(), str.length());
+  }
+
+  void close()
+  {
+    m_file.close();
+  }
+
+private:
+  GZipOutputFile m_file;
+}; //class GzipOutput;
+
+void IndexCore::buildIndex(const RepoParams& params)
+{
+  assert(!params.indexPath.empty());
+  assert(!params.pkgSources.empty());
+  Directory::ensureExists(params.indexPath);
+  params.writeInfoFile(Directory::mixNameComponents(params.indexPath, REPO_INDEX_INFO_FILE));
+  StringSet providesRefs;
+  for(StringVector::size_type i = 0;i < params.providesRefsSources.size();i++)
+    collectRefs(params.providesRefsSources[i], providesRefs);
+
+  const std::string pkgFileName = REPO_INDEX_PACKAGES_FILE + compressionExtension(params.compressionType);
+  const std::string pkgDescrFileName = REPO_INDEX_PACKAGES_DESCR_FILE + compressionExtension(params.compressionType);
+  const std::string srcFileName = REPO_INDEX_SOURCES_FILE + compressionExtension(params.compressionType);
+  const std::string srcDescrFileName = REPO_INDEX_SOURCES_DESCR_FILE + compressionExtension(params.compressionType);
+  const std::string tmpFileName = TMP_FILE_NAME;
+  std::auto_ptr<UnifiedOutput> pkgFile, pkgDescrFile, srcFile, srcDescrFile;
+  if (params.compressionType == RepoParams::CompressionTypeGzip)
     {
-      logMsg(LOG_DEBUG, "Provide filtering by used references is enabled, checking additional directories with packages to collect references entries");
-      collectRefsFromDirs(params.takeRefsFromPackageDirs, additionalRefs);
-    }
-  RequireFilter requireFilter;
-  if (!params.excludeRequiresFile.empty())
-    requireFilter.load(params.excludeRequiresFile);
-  RepoIndexTextFormatWriter handler(requireFilter, params, m_console, indexDir, additionalRefs);
-  //Binary packages;
-  handler.initBinary();
-  logMsg(LOG_DEBUG, "RepoIndexTextFormatWriter created and initialized for binary packages");
-  m_console.msg() << "Looking through " << rpmsDir << " to pick packages for repository index...";
-  std::auto_ptr<Directory::Iterator> it = Directory::enumerate(rpmsDir);
-  logMsg(LOG_DEBUG, "Created directory iterator for enumerating \'%s\'", rpmsDir.c_str());
-  size_t count = 0;
-  while(it->moveNext())
+      if (params.filterProvidesByRefs)//That means additional phase is required;
+	pkgFile = std::auto_ptr<UnifiedOutput>(new StdOutput(tmpFileName)); else
+	pkgFile = std::auto_ptr<UnifiedOutput>(new GzipOutput(pkgFileName));
+      pkgDescrFile = std::auto_ptr<UnifiedOutput>(new GzipOutput(pkgDescrFileName));
+      srcFile = std::auto_ptr<UnifiedOutput>(new GzipOutput(srcFileName));
+      srcDescrFile = std::auto_ptr<UnifiedOutput>(new GzipOutput(srcDescrFileName));
+    } else 
     {
-      if (it->getName() == "." || it->getName() == "..")
-	continue;
-      if (!checkExtension(it->getName(), ".rpm"))
-	continue;
-      PkgFile pkgFile;
-      StringList files;
-      readRpmPkgFile(it->getFullPath(), pkgFile, files);
-      handler.addBinary(pkgFile, files);
-      count++;
+      assert(params.compressionType == RepoParams::CompressionTypeNone);
+      if (params.filterProvidesByRefs)//That means additional phase is required;
+	pkgFile = std::auto_ptr<UnifiedOutput>(new StdOutput(tmpFileName)); else
+	pkgFile = std::auto_ptr<UnifiedOutput>(new StdOutput(pkgFileName));
+      pkgDescrFile = std::auto_ptr<UnifiedOutput>(new StdOutput(pkgDescrFileName));
+      srcFile = std::auto_ptr<UnifiedOutput>(new StdOutput(srcFileName));
+      srcDescrFile = std::auto_ptr<UnifiedOutput>(new StdOutput(srcDescrFileName));
     }
-  m_console.msg() << " picked up " << count << " binary packages!" << std::endl;
-  handler.commitBinary();
-  logMsg(LOG_DEBUG, "Committed %zu binary packages", count);
-  //Source packages;
-  logMsg(LOG_DEBUG, "Binary packages processing is finished, switching to sources");
-  m_console.msg() << "Looking through " << srpmsDir << " to pick source packages...";
-  it = Directory::enumerate(srpmsDir);
-  logMsg(LOG_DEBUG, "Created directory iterator for enumerating \'%s\'", srpmsDir.c_str());
-  count = 0;
-  handler.initSource();
-  logMsg(LOG_DEBUG, "RepoIndexTextFormatWriter initialized for source packages");
-  while(it->moveNext())
+
+  std::auto_ptr<AbstractPackageBackEnd> backend = CREATE_PACKAGE_BACKEND;
+  //We ready to collect information about packages in specified directories;
+  for(StringVector::size_type i = 0;i < params.pkgSources.size();i++)
     {
-      if (it->getName() == "." || it->getName() == "..")
-	continue;
-      if (!checkExtension(it->getName(), ".src.rpm"))
-	continue;
-      PkgFile pkgFile;
-      StringList files;
-      readRpmPkgFile(it->getFullPath(), pkgFile, files);
-      handler.addSource(pkgFile);
-      count++;
-    }
-  m_console.msg() << " picked up " << count << " source packages!" << std::endl;
-  logMsg(LOG_DEBUG, "Committed %zu source packages", count);
-  handler.commitSource();
-  //Saving md5sum;
-  m_console.msg() << "Creating " << REPO_INDEX_MD5SUM_FILE << "...";
-  std::auto_ptr<AbstractTextFileWriter> md5sum = createTextFileWriter(TextFileStd, Directory::mixNameComponents(indexDir, REPO_INDEX_MD5SUM_FILE));
+      std::auto_ptr<Directory::Iterator> it = Directory::enumerate(params.pkgSources[i]);
+      while(it->moveNext())
+	{
+	  if (it->getName() == "." || it->getName() == "..")
+	    continue;
+	  if (!backend->validPkgFileName(it->getName()))
+	    continue;
+	  PkgFile pkg;
+	  backend->readPackageFile(it->getFullPath(), pkg);
+	  pkg.fileName = it->getName();
+	  if (!pkg.isSource)
+	    {
+	      pkgFile->writeData(PkgSection::saveBaseInfo(pkg));
+	      pkgDescrFile->writeData(PkgSection::saveBaseInfo(pkg));
+	    } else
+	    {
+	      srcFile->writeData(PkgSection::saveBaseInfo(pkg));
+	      srcDescrFile->writeData(PkgSection::saveBaseInfo(pkg));
+	    }
+	} //for package files;
+    } //for listed directories;
+  pkgFile->close();
+  pkgDescrFile->close();
+  srcFile->close();
+  srcDescrFile->close();
+  //Additional phase for provides filtering if needed;
+  if (params.filterProvidesByRefs)
+    {
+      TextFormatSectionReader reader;
+      reader.open(tmpFileName);
+      if (params.compressionType == RepoParams::CompressionTypeGzip)
+	pkgFile = std::auto_ptr<UnifiedOutput>(new GzipOutput(pkgFileName)); else
+	pkgFile = std::auto_ptr<UnifiedOutput>(new StdOutput(pkgFileName));
+      std::string sect;
+      while(reader.readNext(sect))
+	{
+	  /*
+      const std::string provideName = getPkgRelName(tail);
+      assert(!provideName.empty());
+      if (m_collectedRefs.find(provideName) != m_collectedRefs.end() || 
+	  m_additionalRefs.find(provideName) != m_additionalRefs.end() ||
+	  (!m_filterProvidesByDirs.empty() && fileFromDirs(provideName, m_filterProvidesByDirs)))
+	  */
+	  //FIXME:filtering;
+	  pkgFile->writeData(sect);
+	} //while(packages);
+      reader.close();
+      pkgFile->close();
+  File::unlink(tmpFileName);
+    } //Additional phase;
+  /*
   MD5 md5;
   md5.init();
   md5.updateFromFile(Directory::mixNameComponents(indexDir, REPO_INDEX_INFO_FILE));
@@ -142,44 +217,43 @@ void IndexCore::processPackages(const std::string& indexDir, const std::string& 
   md5.init();
   md5.updateFromFile(handler.getProvidesFileName());
   md5sum->writeLine(md5.commit(File::baseName(handler.getProvidesFileName())));
-  m_console.msg() << " OK!" << std::endl;
+  */
 }
 
-void IndexCore::writeInfoFile(const std::string& fileName, const RepoIndexParams& params)
+void IndexCore::collectRefs(const std::string& dirName, StringSet& res) 
 {
-  RepoIndexInfoFile infoFile;
-  switch(params.compressionType)
+  std::auto_ptr<AbstractPackageBackEnd> backend = CREATE_PACKAGE_BACKEND;
+  std::auto_ptr<Directory::Iterator> it = Directory::enumerate(dirName);
+  while(it->moveNext())
     {
-    case RepoIndexParams::CompressionTypeNone:
-      infoFile.setCompressionType("none");
-      break;
-    case RepoIndexParams::CompressionTypeGzip:
-      infoFile.setCompressionType("gzip");
-      break;
-    default:
-      assert(0);
-    }; //switch(compressionType);
-  switch(params.formatType)
+      if (it->getName() == "." || it->getName() == "..")
+	continue;
+      if (!backend->validPkgFileName(it->getName()))
+	continue;
+      PkgFile pkgFile;
+      backend->readPackageFile(it->getFullPath(), pkgFile);
+      for(NamedPkgRelVector::size_type i =0; i < pkgFile.requires.size();i++)
+	res.insert(pkgFile.requires[i].pkgName);
+      for(NamedPkgRelVector::size_type i = 0;i < pkgFile.conflicts.size();i++)
+	res.insert(pkgFile.conflicts[i].pkgName);
+    }
+}
+
+std::string IndexCore::compressionExtension(char compressionType)
+{
+  if (compressionType == RepoParams::CompressionTypeGzip)
+    return COMPRESSION_SUFFIX_GZIP;
+  assert(compressionType == RepoParams::CompressionTypeNone);
+  return "";
+}
+
+bool IndexCore::fileFromDirs(const std::string& fileName, const StringList& dirs)
+{
+  std::string tail;
+  for(StringList::const_iterator it = dirs.begin();it != dirs.end();it++)
     {
-    case RepoIndexParams::FormatTypeText:
-      infoFile.setFormatType("text");
-      break;
-    case RepoIndexParams::FormatTypeBinary:
-      infoFile.setFormatType("binary");
-      break;
-    default:
-      assert(0);
-    }; //switch(formatType);
-  infoFile.setFormatVersion(PACKAGE_VERSION);
-  infoFile.setMd5sumFile(REPO_INDEX_MD5SUM_FILE);
-  for(StringToStringMap::const_iterator it = params.userParams.begin();it != params.userParams.end();it++)
-    infoFile.addUserParam(it->first, it->second);
-  std::string errorMessage;
-  StringList warningMessages;
-  const bool res = infoFile.write(fileName, errorMessage, warningMessages);
-  for(StringList::const_iterator it = warningMessages.begin();it != warningMessages.end();it++)
-    m_warningHandler.onWarning(*it);
-  if (!res)
-    INDEX_CORE_STOP(errorMessage);
-  m_console.msg() << "Created repository index info file " << fileName << std::endl;
+      if (stringBegins(fileName, *it, tail))
+	return 1;
+    }
+  return 0;
 }

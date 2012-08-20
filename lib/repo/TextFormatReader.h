@@ -20,7 +20,6 @@
 
 #include"Pkg.h"
 #include"DeepsolverException.h"
-#include"utils/TextFiles.h"
 
 enum {
   TextFormatReaderErrorInvalidSectionHeader = 0
@@ -99,7 +98,6 @@ public:
   void openFile(const std::string& fileName, int textFileType);
   void close();
   bool readPackage(PkgFile& pkgFile);
-  bool readProvides(std::string& provideName, StringVector& providers);
 
 private:
   void translateRelType(const std::string& str, NamedPkgRel& rel);
@@ -108,7 +106,7 @@ private:
   bool readLine(std::string& line);
 
 private:
-  std::auto_ptr<AbstractTextFileReader> m_reader;
+  //FIXME:  std::auto_ptr<AbstractTextFileReader> m_reader;
   std::string m_lastSectionHeader;
   bool m_noMoreData;
   //The following fields are used for informative exception throwing;

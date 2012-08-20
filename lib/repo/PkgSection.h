@@ -15,16 +15,23 @@
    General Public License for more details.
 */
 
-#ifndef DEEPSOLVER_ABSTRACT_WARNING_HANDLER_H
-#define DEEPSOLVER_ABSTRACT_WARNING_HANDLER_H
+#ifndef DEEPSOLVER_PKG_SECTION_H
+#define DEEPSOLVER_PKG_SECTION_H
 
-class AbstractWarningHandler 
+#include"Pkg.h"
+
+class PkgSection
 {
 public:
-  virtual ~AbstractWarningHandler() {}
+  static std::string saveBaseInfo(const PkgFile& pkgFile);
+  static std::string saveDescr(const PkgFile& pkgFile, bool saveChangeLog);
 
-public:
-  virtual void onWarning(const std::string& message) = 0;
-}; //class AbstractWarningHandler;
+private:
+  static std::string encodeMultiline(const std::string& s);
+  static std::string encodeChangeLogEntry(const ChangeLogEntry& entry);
+  static std::string saveNamedPkgRel(const NamedPkgRel& r);
+  static std::string saveFileName(const std::string& fileName);
+  //FIXME:static std::string getPkgRelName(const std::string& line);
+}; //class PkgSection;
 
-#endif //DEEPSOLVER_ABSTRACT_WARNING_HANDLER_H;
+#endif //DEEPSOLVER_PKG_SECTION_H;

@@ -18,9 +18,7 @@
 #ifndef DEEPSOLVER_REQUIRE_FILTER_H
 #define DEEPSOLVER_REQUIRE_FILTER_H
 
-#include"repo/RepoIndexTextFormatWriter.h"
-
-class RequireFilter: public AbstractRequireFilter
+class RequireFilter//FIXME:: public AbstractRequireFilter
 {
 public:
   RequireFilter() {}

@@ -90,8 +90,8 @@ void Repository::addIndexFilesForFetch(StringToStringMap& files)
     dir += '/';
   dir += m_arch + "/";
   dir += REPO_INDEX_DIR_PREFIX + m_component + "/";
-  m_mainPkgFileUrl = dir + REPO_INDEX_PACKAGES_DATA_FILE;
-  m_providesFileUrl = dir + REPO_INDEX_PROVIDES_DATA_FILE;
+  m_mainPkgFileUrl = dir + REPO_INDEX_PACKAGES_FILE;
+  //FIXME:  m_providesFileUrl = dir + REPO_INDEX_PROVIDES_DATA_FILE;
   if (m_compressionType == CompressionTypeGzip)
     {
       m_mainPkgFileUrl += COMPRESSION_SUFFIX_GZIP;
@@ -104,7 +104,8 @@ void Repository::addIndexFilesForFetch(StringToStringMap& files)
 
 void Repository::addPackagesToScope(const StringToStringMap& files, PackageScopeContentBuilder& content)
 {
-  int textFileType;
+  //FIXME:  int textFileType;
+  /*FIXME:
   if (m_compressionType == CompressionTypeNone)
     textFileType = TextFileStd; else 
     if (m_compressionType == CompressionTypeGzip)
@@ -112,6 +113,7 @@ void Repository::addPackagesToScope(const StringToStringMap& files, PackageScope
       {
 	assert(0);
       }
+  */
   StringToStringMap::const_iterator it = files.find(m_mainPkgFileUrl);
   assert(it != files.end());
   const std::string pkgFileName = it->second;
@@ -122,7 +124,7 @@ void Repository::addPackagesToScope(const StringToStringMap& files, PackageScope
   TextFormatReader reader;
   logMsg(LOG_DEBUG, "Reading packages information from \'%s\' for repository \'%s\'", pkgFileName.c_str(), m_name.c_str());
   try {
-    reader.openFile(pkgFileName, textFileType);
+    reader.openFile(pkgFileName, 1);//FIXME:textFileType
     PkgFile pkgFile;
     while(reader.readPackage(pkgFile))
       content.addPkg(pkgFile);
@@ -136,10 +138,10 @@ void Repository::addPackagesToScope(const StringToStringMap& files, PackageScope
   logMsg(LOG_DEBUG, "Package data from \'%s\' was loaded successfully", pkgFileName.c_str());
   logMsg(LOG_DEBUG, "Reading provides information from \'%s\' for repository \'%s\'", providesFileName.c_str(), m_name.c_str());
   try {
-    reader.openFile(providesFileName, textFileType);
+    reader.openFile(providesFileName, 1);//FIXME:textFileType;
     std::string provideName;
     StringVector providers;
-    while(reader.readProvides(provideName, providers))
+    while(1)//FIXME:reader.readProvides(provideName, providers);
       {
 	assert(!provideName.empty());
 	for(StringVector::size_type i = 0;i < providers.size();i++ )

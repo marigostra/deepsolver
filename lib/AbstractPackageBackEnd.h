@@ -38,8 +38,13 @@ public:
 
 public:
   virtual std::auto_ptr<AbstractInstalledPackagesIterator> enumInstalledPackages() = 0;
+  virtual void readPackageFile(const std::string& fileName, PkgFile& pkgFile) = 0;
+  virtual bool validPkgFileName(const std::string& fileName) const = 0;
 }; //class AbstractPackageBackEnd;
 
 std::auto_ptr<AbstractPackageBackEnd> createRpmBackEnd();
+
+//General proposal consider this line as main switch what backend we want;
+#define CREATE_PACKAGE_BACKEND createRpmBackEnd()
 
 #endif //DEEPSOLVER_ABSTRACT_PACKAGE_BACK_END_H;

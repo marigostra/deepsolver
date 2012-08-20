@@ -139,19 +139,20 @@ class PkgFileBase: public PkgBase
 {
 public:
   PkgFileBase()
-    : source(0)  {}
+    : isSource(0)  {}
 
   virtual ~PkgFileBase() {}
 
 public:
   std::string fileName;
-  bool source;
+  bool isSource;
 }; //class PkgFileBase;
 
 class PkgRelations
 {
 public:
   NamedPkgRelVector requires, provides, conflicts, obsoletes;
+  StringVector fileList;
 }; //class PkgRelations;
 
 class Pkg: public PkgBase, public PkgRelations
