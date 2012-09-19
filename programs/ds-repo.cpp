@@ -17,36 +17,59 @@
 
 #include"deepsolver.h"
 #include"IndexCore.h"
-#include"rpm/RpmException.h"
+#include"CliParser.h"
 
 #define PREFIX "ds-repo:"
 
 static RepoParams params;
+static CliParser cliParser;
 
 class IndexConstructionListener: public AbstractIndexConstructionListener
 {
 public:
-  IndexConstructionListener() {}
+  IndexConstructionListener(bool suppress) 
+    : m_suppress(suppress) {}
+
   virtual ~IndexConstructionListener() {}
 
 public:
   void onReferenceCollecting(const std::string& path)
   {
+    if (m_suppress)
+      return;
     std::cout << "Collecting requires/conflicts in " << path << std::endl;
   }
 
   void onPackageCollecting(const std::string& path)
   {
+    if (m_suppress)
+      return;
     std::cout << "Reading packages in " << path << std::endl;
   }
 
   void onProvidesCleaning()
   {
+    if (m_suppress)
+      return;
     std::cout << "Provides filtering" << std::endl;
   }
+
+  void onChecksumWriting()
+  {
+    if (m_suppress)
+      return;
+    std::cout << "Writing checksum file" << std::endl;
+  }
+
+  void onChecksumVerifying() {}
+  void onPatchingFile(const std::string& fileName) {}
+  void onNoTwiceAdding(const std::string& fileName) {}
+
+private:
+  const bool m_suppress;
 }; //class IndexConstructionListener;
 
-static void splitColonDelimitedList(const std::string& str, StringVector& res)
+void splitColonDelimitedList(const std::string& str, StringVector& res)
 {
   std::string s;
   for(std::string::size_type i = 0;i < str.length();i++)
@@ -65,7 +88,7 @@ static void splitColonDelimitedList(const std::string& str, StringVector& res)
     res.push_back(s);
 }
 
-static bool splitUserParam(const std::string& str, std::string& name, std::string& value)
+bool splitUserParam(const std::string& str, std::string& name, std::string& value)
 {
   name.erase();
   value.erase();
@@ -82,26 +105,6 @@ static bool splitUserParam(const std::string& str, std::string& name, std::strin
 	value += str[i];
     }
   return wasEquals;
-}
-
-static void printHelp()
-{
-  printf("%s%s", PREFIX,
-	 "The utility to build index data of package repository\n\n"
-	 "Usage:\n"
-	 "\tgenbasedir [OPTIONS] [ARCH [TOPDIR]]\n\n"
-	 "Valid command line options are:\n"
-	 "\t-h - print this help screen;\n"
-	 "\t-c TYPE - choose compression type: none or gzip (default is gzip);\n"
-	 "\t-e FILENAME - ignore require entries mentioned in FILENAME;\n"
-	 "\t-d DIRLIST - add colon-delimited list of directories to take references from for provides filtering (in addition to \'-r\' if it is used);\n"
-	 "\t-l - include change log into binary and source indices;\n"
-	 //TODO:	 "\t-f FORMAT - choose data format: binary or text (default is text);\n"
-	 "\t-p DIRLIST - enable provides filtering by colon-delimited list of directories;\n"
-	 "\t-r - enable provides filtering by used requires/conflicts (recommended) (see also \'-d\' option);\n"
-	 "\t-u NAME=VALUE - add a user defined parameter to repository index information file.\n\n"
-	 "If directory is not specified current directory is used to search packages of repository.\n"
-	 );
 }
 
 char selectCompressionType(const std::string& value)
@@ -122,102 +125,137 @@ char selectFormatType(const std::string& value)
   return -1;
 }
 
-static bool processUserParam(const std::string& s)
+bool processUserParam(const std::string& s)
 {
-  //FIXME:do not allow using of reserved parameters;
   std::string name, value;
   if (!splitUserParam(s, name, value))
     return 0;
   for(std::string::size_type i = 0;i < name.length();i++)
     if (s[i] == '#' || s[i] == '\\' || BLANK_CHAR(s[i]))
       return 0;
+  if (name == INFO_FILE_FORMAT_TYPE ||
+      name == INFO_FILE_COMPRESSION_TYPE ||
+      name == INFO_FILE_VERSION ||
+      name == INFO_FILE_MD5SUM ||
+      name == INFO_FILE_FILTER_PROVIDES_BY_DIRS ||
+      name == INFO_FILE_FILTER_PROVIDES_BY_REFS ||
+      name == INFO_FILE_EXCLUDE_REQUIRES ||
+      name == INFO_FILE_CHANGELOG_SOURCES ||
+      name == INFO_FILE_CHANGELOG_BINARY)
+    return 0;
   params.userParams.insert(StringToStringMap::value_type(name, value));
   return 1;
 }
 
-static bool parseCmdLine(int argc, char* argv[])
+void initCliParser()
 {
-  while(1)
-    {
-      const int p = getopt(argc, argv, "c:d:e:hu:rp:l");
-      if (p == -1)
-	break;
-      if (p == '?')
-	return 0;
-      switch (p)
-	{
-	case 'h':
-	  printHelp();
-	  exit(EXIT_SUCCESS);
-	  break;
-	case 'l':
-	  params.changeLogSources = 1;
-	  params.changeLogBinary = 1;
-	  break;
-	case 'r':
-	  params.filterProvidesByRefs = 1;
-	  break;
-	case 'd':
-	  splitColonDelimitedList(optarg, params.providesRefsSources);
-	  break;
-	case 'e':
-	  //FIXME:	  params.excludeRequiresFile = optarg;
-	  break;
-	case 'p':
-	  splitColonDelimitedList(optarg, params.filterProvidesByDirs);
-	  break;
-	case 'u':
-	  if (!processUserParam(optarg))
-	    {
-	      std::cerr << PREFIX << "\'" << optarg << "\' is not a valid user-defined parameter for index information file (probably missed \'=\' sign)" << std::endl;
-return 0;
-	    }
-	  break;
-	case 'c':
-	  params.compressionType = selectCompressionType(optarg);
-	  if (params.compressionType < 0)
-	    {
-	      std::cerr << PREFIX << "value \'" << optarg << "\' is not a valid compression type" << std::endl;
-	      return 0;
-	    }
-	  break;
-	default:
-	  assert(0);
-	}; //switch(p);
-    } //while(1);
-  StringVector values;
-  for(int i = optind;i < argc;i++)
-    values.push_back(argv[i]);
-  if (values.empty())
-    {
-      std::cerr << PREFIX << "Index directory is not mentioned; try \'--help\' for usage information" << std::endl;
-	return 0;
-    }
-  params.indexPath = values[0];
-  if (values.size() == 1)
-    {
-      params.pkgSources.push_back(".");
-      return 1;
-    }
-  for(StringVector::size_type i = 1;i < values.size();i++)
-    params.pkgSources.push_back(values[i]);
-  return 1;
+  cliParser.addKeyDoubleName("-c", "--compression", "TYPE", "set compression method");
+  cliParser.addKeyDoubleName("-lb", "--changelog-binary", "include changelog for binary packages");
+  cliParser.addKeyDoubleName("-ls", "--changelog-source", "include changelog for source packages");
+  cliParser.addKeyDoubleName("-u", "--user", "NAME=VALUE", "add custom user parameter to information file");
+  cliParser.addKeyDoubleName("-r", "--references", "write only provides with known corresponding requires/conflicts");
+  cliParser.addKeyDoubleName("-s", "--ref-sources", "LIST", "take additional requires/conflicts for provides filtering in listed directories (list should be colon-delimited)");
+  cliParser.addKeyDoubleName("-d", "--dirs", "LIST", "write only file provides  from listed directories (list should be colon-delimited)");
+  cliParser.addKeyDoubleName("-nr", "--no-requires", "FILENAME", "skip requires listed in FILENAME");
+  cliParser.addKeyDoubleName("-h", "--help", "print this help screen and exit");
+  cliParser.addKey("--log", "print log to console instead of user progress information");
+  cliParser.addKey("--debug", "relax filtering level for log output");
 }
 
-void run()
+void printLogo()
 {
-  IndexConstructionListener listener;
-  IndexCore indexCore(listener);
-  indexCore.buildIndex(params);
+  std::cout << "ds-repo: the utility to create Deepsolver repository index" << std::endl;
+    std::cout << "Version: " << PACKAGE_VERSION << std::endl;
+  std::cout << std::endl;
+}
+
+void printHelp()
+{
+  printLogo();
+  printf("%s", 
+	 "Usage:\n"
+	 "\tds-repo [OPTIONS] INDEX_DIR [PACKAGES_DIR1 [PACKAGES_DIR2 [...]]]\n"
+	 "Valid command line options are:\n");
+  cliParser.printHelp(std::cout);
+  printf("\nIf PACKAGES_DIR1 is not specified current directory is used to search packages.\n");
+}
+
+void parseCmdLine(int argc, char* argv[])
+{
+  try {
+    cliParser.init(argc, argv);
+    cliParser.parse();
+  }
+  catch (const CliParserException& e)
+    {
+      switch (e.getCode())
+	{
+	case CliParserException::NoPrgName:
+	  std::cerr << PREFIX << "Command line has no program name" << std::endl;
+	  exit(EXIT_FAILURE);
+	case CliParserException::MissedArgument:
+	  std::cerr << PREFIX << "Command line argument \'" << e.getArg() << "\' requires additional parameter" << std::endl;exit(EXIT_FAILURE);
+	default:
+	  assert(0);
+	} //switch();
+    }
+  std::string arg;
+  if (cliParser.wasKeyUsed("--compression", arg))
+    {
+      params.compressionType = selectCompressionType(arg);
+      if (params.compressionType == -1)
+	{
+	  std::cerr << PREFIX << "unknown compression type \'" << arg << "\'" << std::endl;
+	  exit(EXIT_FAILURE);
+	}
+    }
+  params.changeLogBinary = cliParser.wasKeyUsed("--changelog-binary");
+  params.changeLogSources = cliParser.wasKeyUsed("--changelog-bsource");
+  if (cliParser.wasKeyUsed("--user", arg))
+    {
+      if (!processUserParam(arg))
+	{
+	  std::cerr << PREFIX << "invalid user parameter specification \'" << arg << "\'" << std::endl;
+	  exit(EXIT_FAILURE);
+	}
+    }
+  params.filterProvidesByRefs = cliParser.wasKeyUsed("--references");
+  if (cliParser.wasKeyUsed("--ref-sources", arg))
+    splitColonDelimitedList(arg, params.providesRefsSources);
+    if (cliParser.wasKeyUsed("--help"))
+      {
+	printHelp();
+	exit(EXIT_SUCCESS);
+      }
+    if (cliParser.wasKeyUsed("--dirs", arg))
+      splitColonDelimitedList(arg, params.filterProvidesByDirs);
+    //FIXME:exclude provides;
+    if (cliParser.files.empty() || cliParser.files[0].empty())
+      {
+	std::cerr << PREFIX << "index directory was not mentioned" << std::endl;
+	exit(EXIT_FAILURE);
+      }
+    params.indexPath = cliParser.files[0];
+    for(StringVector::size_type i = 1;i < cliParser.files.size();i++)
+      params.pkgSources.push_back(cliParser.files[i]);
+    if (params.pkgSources.empty())
+      params.pkgSources.push_back(".");
+    if (!params.filterProvidesByRefs)
+      params.providesRefsSources.clear();
 }
 
 int main(int argc, char* argv[])
 {
-  if (!parseCmdLine(argc, argv))
-    return 1;
-  initLogging("/tmp/genbasedir.log", LOG_DEBUG);//FIXME:
+  setlocale(LC_ALL, "");
+  initCliParser();
+  parseCmdLine(argc, argv);
+  initLogging(cliParser.wasKeyUsed("--debug")?LOG_DEBUG:LOG_INFO, cliParser.wasKeyUsed("--log"));
   try {
-    run();
+    if (!cliParser.wasKeyUsed("--log"))
+      printLogo();
+    IndexConstructionListener listener(cliParser.wasKeyUsed("--log"));
+    IndexCore indexCore(listener);
+    indexCore.buildIndex(params);
   }
   catch(const DeepsolverException& e)
     {

@@ -18,7 +18,7 @@
 #ifndef DEEPSOLVER_TEXT_FORMAT_SECTION_READER_H
 #define DEEPSOLVER_TEXT_FORMAT_SECTION_READER_H
 
-#include"utils/GZipInterface.h"
+#include"utils/GzipInterface.h"
 
 class AbstractTextFormatSectionReader
 {
@@ -27,10 +27,11 @@ public:
   virtual ~AbstractTextFormatSectionReader() {}
 
 public:
+  void init();
   bool readNext(std::string& s);
+  virtual void close() = 0;
 
 protected:
-  virtual void init();
   virtual size_t readData(void* buf, size_t bufSize) = 0;
 
 private:
@@ -77,6 +78,11 @@ public:
     m_file.open(fileName);
   }
 
+  void close()
+  {
+    m_file.close();
+  }
+
 protected:
   size_t readData(void* buf, size_t bufSize)
   {
@@ -84,7 +90,7 @@ protected:
   }
 
 private:
-  GZipInputFile m_file;
+  GzipInputFile m_file;
 }; //class TextFormatSectionReader;
 
 #endif //DEEPSOLVER_TEXT_FORMAT_SECTION_READER_H;

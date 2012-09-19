@@ -119,7 +119,7 @@ void File::open(const std::string fileName)
   if (m_fd < 0)
     {
       m_fd = -1;
-      SYS_STOP("open(" + fileName + "\', O_RDWR");
+      SYS_STOP("open(" + fileName + ", O_RDWR)");
     }
 }
 
@@ -130,7 +130,7 @@ void File::openReadOnly(const std::string& fileName)
   if (m_fd < 0)
     {
       m_fd = -1;
-      SYS_STOP("open(" + fileName + "\', O_RDONLY");
+      SYS_STOP("open(" + fileName + ", O_RDONLY)");
     }
 }
 
@@ -210,5 +210,51 @@ void File::readAhead(const std::string& fileName)
   TRY_SYS_CALL(fstat(fd, &st) == 0, "stat(" + fileName + ")");
   TRY_SYS_CALL(readahead(fd, 0, st.st_size) == 0, "readahead(" + fileName + ")");
   ::close(fd);
+}
 
+void File::readTextFile(StringVector& lines)
+{
+  assert(m_fd != -1);
+  char buf[IO_BUF_SIZE];
+  std::string line;
+  while(1)
+    {
+      int readCount = ::read(m_fd, buf, sizeof(buf));
+  TRY_SYS_CALL(readCount != -1, "read()");
+  if (readCount == 0)
+    break;
+  for(int i = 0;i < readCount;i++)
+    {
+      if (buf[i] == '\r')
+	continue;
+      if (buf[i] == '\n')
+	{
+	  lines.push_back(line);
+	  line.erase();
+	  continue;
+	}
+      line += buf[i];
+    }
+    }
+  if (!line.empty())
+    lines.push_back(line);
+}
+
+void File::readTextFile(std::string& text)
+{
+  assert(m_fd != -1);
+  char buf[IO_BUF_SIZE];
+  while(1)
+    {
+      int readCount = ::read(m_fd, buf, sizeof(buf));
+  TRY_SYS_CALL(readCount != -1, "read()");
+  if (readCount == 0)
+    break;
+  for(int i = 0;i < readCount;i++)
+    {
+      if (buf[i] == '\r')
+	continue;
+      text += buf[i];
+    }
+    }
 }

@@ -20,12 +20,15 @@
 
 #include"repo/RepoParams.h"
 
+enum {
+  IndexErrorInternalIOProblem = 0
+};
+
 class IndexCoreException: public DeepsolverException 
 {
 public:
-  IndexCoreException() {}
-  IndexCoreException(const std::string& message):
-    m_message(message) {}
+  IndexCoreException(int code)
+    : m_code(code) {}
 
   virtual ~IndexCoreException() {}
 
@@ -37,11 +40,11 @@ public:
 
   std::string getMessage() const
   {
-    return m_message;
+    return "FIXME";
   }
 
 private:
-  const std::string m_message;
+  const int m_code;
 }; //class IndexCoreException;
 
 class AbstractIndexConstructionListener
@@ -53,6 +56,10 @@ public:
   virtual void onReferenceCollecting(const std::string& path) = 0;
   virtual void onPackageCollecting(const std::string& path) = 0;
   virtual void onProvidesCleaning() = 0;
+  virtual void onChecksumWriting() = 0;
+  virtual void onChecksumVerifying() = 0;
+  virtual void onPatchingFile(const std::string& fileName) = 0;
+  virtual void onNoTwiceAdding(const std::string& fileName) = 0;
 }; //class AbstractIndexConstructionListener;
 
 class IndexCore
@@ -68,13 +75,10 @@ public:
 public:
   void buildIndex(const RepoParams& params);
   void rebuildIndex(const RepoParams& params, const StringVector& toAdd, const StringVector& toRemove);
+  void fixReferences(const RepoParams& params);
 
 private:
   void collectRefs(const std::string& dirName, StringSet& res);
-
-private:
-  static std::string compressionExtension(char compressionType);
-  static bool fileFromDirs(const std::string& fileName, const StringList& dirs);
 
 private:
   AbstractIndexConstructionListener& m_listener;

@@ -18,6 +18,8 @@
 #ifndef DEEPSOLVER_REPO_PARAMS_H
 #define DEEPSOLVER_REPO_PARAMS_H
 
+#include"InfoFileException.h"
+
 class RepoParams
 {
 public:
@@ -33,7 +35,7 @@ public:
 
   RepoParams()
     : version(PACKAGE_VERSION),
-      compressionType(CompressionTypeNone),
+      compressionType(CompressionTypeGzip),
       formatType(FormatTypeText),
       filterProvidesByRefs(0),
       changeLogBinary(0),
@@ -60,6 +62,12 @@ public:
 
 public:
   void writeInfoFile(const std::string& fileName) const;
+
+  /**\brief Reads repository parameters values from info file
+   *
+   * FIXME:Throws SystemException and InfoFileException
+   */
+  void readInfoFile(const std::string& fileName);
 }; //class RepoParams;
 
 #endif //DEEPSOLVER_REPO_PARAMS_H;

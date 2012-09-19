@@ -36,7 +36,7 @@
 #define OBSOLETES_STR "o:"
 #define CHANGELOG_STR "cl:"
 
-std::string PkgSection::saveBaseInfo(const PkgFile& pkgFile)
+std::string PkgSection::saveBaseInfo(const PkgFile& pkgFile, const StringVector& filterProvidesByDirs)
 {
   std::ostringstream ss;
   ss << "[" << File::baseName(pkgFile.fileName) << "]" << std::endl;
@@ -57,16 +57,8 @@ std::string PkgSection::saveBaseInfo(const PkgFile& pkgFile)
       ss << PROVIDES_STR << saveNamedPkgRel(*it) << std::endl;
     }
   for(StringVector::size_type i = 0;i < pkgFile.fileList.size();i++)
-    /*
-     * If filtering by references is enabled we are writing all possible
-     * provides to filter them on additional phase. If filterProvidesByDirs
-     * string list is empty it means filtering by directories is disabled and
-     * we also must write current file as provides. If filtering by
-     * directories is enabled we are writing file as provides only if its
-     * directory presents in directory list.
-     */
-    //FIXME:    if (m_filterProvidesByRefs || m_filterProvidesByDirs.empty() || fileFromDirs(*it, m_filterProvidesByDirs))
-    ss << PROVIDES_STR << saveFileName(pkgFile.fileList[i]) << std::endl;
+    if (filterProvidesByDirs.empty() || fileFromDirs(pkgFile.fileList[i], filterProvidesByDirs))
+      ss << PROVIDES_STR << saveFileName(pkgFile.fileList[i]) << std::endl;
   for(NamedPkgRelVector::const_iterator it = pkgFile.requires.begin();it != pkgFile.requires.end();it++)
       //FIXME:      if (m_requireFilter.excludeRequire(it->pkgName))
     ss << REQUIRES_STR << saveNamedPkgRel(*it) << std::endl;
@@ -95,6 +87,67 @@ std::string PkgSection::saveDescr(const PkgFile& pkgFile, bool saveChangeLog)
     }
   ss << std::endl;
   return ss.str();
+}
+
+std::string PkgSection::saveFileList(const PkgFile& pkgFile)
+{
+  std::ostringstream ss;
+  ss << "[" << pkgFile.fileName << "]" << std::endl;
+  for(StringVector::size_type i = 0;i < pkgFile.fileList.size();i++)
+    ss << pkgFile.fileList[i] << std::endl;
+  ss << std::endl;
+  return ss.str();
+}
+
+bool PkgSection::isProvidesLine(const std::string& line, std::string& pkgName)
+{
+  std::string tail;
+  if (!stringBegins(line, PROVIDES_STR, tail))
+    return 0;
+  pkgName = extractPkgRelName(tail);
+  return 1;
+}
+
+std::string PkgSection::getPkgFileName(const std::string& section)
+{
+  std::string::size_type i = 0;
+  while (i < section.length() && section[i] != '[')
+    i++;
+  if (i >= section.length())
+    return "";
+  std::string fileName;
+  i++;
+  while(i < section.length() && section[i] != ']')
+    fileName += section[i++];
+  return fileName;
+}
+
+void PkgSection::extractProvidesReferences(const std::string& section, StringSet& refs)
+{
+  std::string line;
+  for(std::string::size_type i = 0;i < section.length();i++)
+    {
+      if (section[i] == '\r')
+	continue;
+      if (section[i] != '\n')
+	{
+	  line += section[i];
+	  continue;
+	}
+      std::string tail;
+      if (stringBegins(line, REQUIRES_STR, tail))
+	refs.insert(extractPkgRelName(tail));
+      if (stringBegins(line, CONFLICTS_STR, tail))
+	refs.insert(extractPkgRelName(tail));
+      line.erase();
+    }
+  if (line.empty())
+    return;
+  std::string tail;
+  if (stringBegins(line, REQUIRES_STR, tail))
+    refs.insert(extractPkgRelName(tail));
+  if (stringBegins(line, CONFLICTS_STR, tail))
+    refs.insert(extractPkgRelName(tail));
 }
 
 std::string PkgSection::encodeMultiline(const std::string& s)
@@ -174,8 +227,16 @@ std::string PkgSection::saveFileName(const std::string& fileName)
   return s;
 }
 
-/*FIXME:
-std::string PkgSection::getPkgRelName(const std::string& line)
+bool PkgSection::fileFromDirs(const std::string& fileName, const StringVector& dirs)
+{
+  std::string tail;
+  for(StringVector::const_iterator it = dirs.begin();it != dirs.end();it++)
+    if (stringBegins(fileName, *it, tail))
+      return 1;
+  return 0;
+}
+
+std::string PkgSection::extractPkgRelName(const std::string& line)
 {
   //Name is stored at the beginning of line until first space without previously used backslash;
   std::string res;
@@ -186,7 +247,10 @@ std::string PkgSection::getPkgRelName(const std::string& line)
 	  i++;
 	  if (i < line.length())
 	    res += line[i]; else 
-	    return res + "\\";
+	    {
+	      logMsg(LOG_WARNING, "Found abnormal line in text format binary: \'%s\'", line.c_str());
+	      return res + "\\";
+	    }
 	  continue;
 	}
       if (line[i] == ' ')
@@ -195,4 +259,3 @@ std::string PkgSection::getPkgRelName(const std::string& line)
     } //for();
   return res;
 }
-*/

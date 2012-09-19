@@ -41,8 +41,9 @@ transact/ProvideMap.cpp \
 transact/sat.cpp \
 transact/StrictSolver.cpp \
 utils/CurlInterface.cpp \
-utils/GZipInterface.cpp \
-utils/MD5.cpp \
+utils/GzipInterface.cpp \
+utils/Md5.cpp \
+utils/Md5File.cpp \
 utils/string-utils.cpp \
 utils/TinyFileDownload.cpp \
 version.cpp
@@ -71,6 +72,7 @@ os/system.h \
 Pkg.h \
 PkgUtils.h \
 ProvidePriorityList.h \
+repo/InfoFileException.h \
 repo/InfoFileReader.h \
 repo/PkgSection.h \
 repo/RepoParams.h \
@@ -93,8 +95,9 @@ transact/TaskException.h \
 UserTask.h \
 utils/CurlInterface.h \
 utils/DateTime.h \
-utils/GZipInterface.h \
-utils/MD5.h \
+utils/GzipInterface.h \
+utils/Md5.h \
+utils/Md5File.h \
 utils/string-utils.h \
 utils/TinyFileDownload.h \
 version.h

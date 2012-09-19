@@ -23,15 +23,20 @@
 class PkgSection
 {
 public:
-  static std::string saveBaseInfo(const PkgFile& pkgFile);
+  static std::string saveBaseInfo(const PkgFile& pkgFile, const StringVector& filterProvidesByDirs);
   static std::string saveDescr(const PkgFile& pkgFile, bool saveChangeLog);
+  static std::string saveFileList(const PkgFile& pkgFile);
+  static bool isProvidesLine(const std::string& line, std::string& pkgName);
+  static std::string getPkgFileName(const std::string& section);
+  static void extractProvidesReferences(const std::string& section, StringSet& refs);
 
 private:
   static std::string encodeMultiline(const std::string& s);
   static std::string encodeChangeLogEntry(const ChangeLogEntry& entry);
   static std::string saveNamedPkgRel(const NamedPkgRel& r);
   static std::string saveFileName(const std::string& fileName);
-  //FIXME:static std::string getPkgRelName(const std::string& line);
+  static bool fileFromDirs(const std::string& fileName, const StringVector& dirs);
+  static std::string extractPkgRelName(const std::string& line);
 }; //class PkgSection;
 
 #endif //DEEPSOLVER_PKG_SECTION_H;
