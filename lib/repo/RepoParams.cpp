@@ -38,7 +38,7 @@ bool parseBooleanValue(const std::string& str, const std::string& paramName)
     return 0;
   if (str == "0")
     return 0;
-  throw InfoFileValueException(InfoFileValueErrorInvalidBooleanValue, paramName);
+  throw InfoFileValueException(InfoFileValueException::InvalidBooleanValue, paramName);
 }
 
 static std::string doubleQuotes(const std::string& str)
@@ -124,13 +124,11 @@ static void writeInfoFileParamsToDisk(const std::string& fileName, const StringT
   std::ostringstream ss;
   time_t t;
   time(&t);
-  ss << "# Repository index information file" << std::endl;
-  ss << "# Generated on " << ctime(&t) << std::endl;
-  ss << "# This file contains a set of options to control various parameters of" << std::endl;
-  ss << "# repository index structure. An empty lines are silently ignored. Any" << std::endl;
-  ss << "# line text after the character `#\' is skipped as a comment. " << std::endl;
-  ss << "# Character `\\\' should be used in the conjunction with the following character to" << std::endl;
-  ss << "# prevent special character processing." << std::endl;
+  ss << "# Deepsolver repository index information file" << std::endl;
+  ss << "# Generated on " << ctime(&t);
+  ss << "#" << std::endl;
+  ss << "# This file was created automatically. Do not edit!" << std::endl;
+  ss << "#" << std::endl;
   ss << std::endl;
   for(StringToStringMap::const_iterator it = params.begin();it != params.end();it++)
       ss << it->first << " = " << escapeString(it->second) << std::endl;
@@ -172,6 +170,7 @@ void RepoParams::writeInfoFile(const std::string& fileName) const
   params.insert(StringToStringMap::value_type(INFO_FILE_EXCLUDE_REQUIRES, saveStringVector(excludeRequiresRegExp)));
   params.insert(StringToStringMap::value_type(INFO_FILE_CHANGELOG_BINARY, booleanValue(changeLogBinary)));
   params.insert(StringToStringMap::value_type(INFO_FILE_CHANGELOG_SOURCES, booleanValue(changeLogSources)));
+  params.insert(StringToStringMap::value_type(INFO_FILE_MD5SUM, REPO_INDEX_MD5SUM_FILE));
   for(StringToStringMap::const_iterator it = userParams.begin();it != userParams.end();it++)
     params.insert(*it);
   writeInfoFileParamsToDisk(fileName, params);
@@ -199,7 +198,7 @@ void RepoParams::readInfoFile(const std::string& fileName)
 	    formatType = FormatTypeText; else
 	    if (trim(value) == INFO_FILE_FORMAT_TYPE_BINARY)
 	      formatType = FormatTypeBinary; else
-	      throw InfoFileValueException(InfoFileValueErrorInvalidFormatType, trim(value));
+	      throw InfoFileValueException(InfoFileValueException::InvalidFormatType, trim(value));
 	  continue;
 	} //Format type;
       //Compression type;
@@ -209,7 +208,7 @@ void RepoParams::readInfoFile(const std::string& fileName)
 	    compressionType = CompressionTypeNone; else
 	    if (trim(value) == INFO_FILE_COMPRESSION_TYPE_GZIP)
 	      compressionType = CompressionTypeGzip; else
-	      throw InfoFileValueException(InfoFileValueErrorInvalidCompressionType, trim(value));
+	      throw InfoFileValueException(InfoFileValueException::InvalidCompressionType, trim(value));
 	  continue;
 	} //Compression type;
       //Version;

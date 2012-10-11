@@ -19,7 +19,7 @@
 #include"IndexCore.h"
 #include"CliParser.h"
 
-#define PREFIX "ds-references:"
+#define PREFIX "ds-provides:"
 
 static RepoParams params;
 static CliParser cliParser;
@@ -41,7 +41,13 @@ public:
   }
 
   void onPackageCollecting(const std::string& path) {}
-  void onProvidesCleaning() {}
+
+  void onProvidesCleaning() 
+  {
+    if (m_suppress)
+      return;
+    std::cout << "Performing provides filtering" << std::endl;
+  }
 
   void onChecksumWriting()
   {
@@ -80,7 +86,7 @@ void initCliParser()
 
 void printLogo()
 {
-  std::cout << "ds-references: the utility to fix provides references in Deepsolver repository" << std::endl;
+  std::cout << "ds-provides: the utility to fix provides list in Deepsolver repository" << std::endl;
     std::cout << "Version: " << PACKAGE_VERSION << std::endl;
   std::cout << std::endl;
 }
@@ -90,7 +96,7 @@ void printHelp()
   printLogo();
   printf("%s", 
 	 "Usage:\n"
-	 "\tds-references [OPTIONS] INDEX_DIR\n"
+	 "\tds-provides [OPTIONS] INDEX_DIR\n"
 	 "\n"
 	 "Where:\n"
 	 "INDEX_DIR          - directory with indices to fix references in\n"
@@ -143,10 +149,7 @@ void parseCmdLine(int argc, char* argv[])
 	exit(EXIT_SUCCESS);
     }
   if (cliParser.files.empty())
-    {
-      std::cerr << PREFIX << "index directory was not mentioned" << std::endl;
-      exit(EXIT_FAILURE);
-    }
+    cliParser.files.push_back(".");
   if (cliParser.files.size() > 1)
     {
       std::cerr << PREFIX << "Extra command line argument \'" << cliParser.files[1] << "\'" << std::endl;
@@ -170,17 +173,21 @@ int main(int argc, char* argv[])
     params.readInfoFile(Directory::mixNameComponents(params.indexPath, REPO_INDEX_INFO_FILE));
     IndexReconstructionListener listener(cliParser.wasKeyUsed("--log"));
     IndexCore indexCore(listener);
-    indexCore.fixReferences(params);
+    indexCore.refilterProvides(params);
   }
   catch(const DeepsolverException& e)
     {
-      std::cerr << PREFIX << e.getType() << " error:" << e.getMessage() << std::endl;
-      return 1;
+      logMsg(LOG_CRIT, "%s error:%s", e.getType().c_str(), e.getMessage().c_str());
+      if (!cliParser.wasKeyUsed("--log"))
+	std::cerr << "ERROR:" << e.getMessage() << std::endl;
+      return EXIT_FAILURE;
     }
   catch(std::bad_alloc)
     {
-      std::cerr << PREFIX << "no enough free memory to complete operation" << std::endl;
-      return 1;
+      logMsg(LOG_CRIT, "No enough memory");
+      if (!cliParser.wasKeyUsed("--log"))
+	std::cerr << "ERROR:No enough memory" << std::endl;
+	  return EXIT_FAILURE;
     }
-  return 0;
+  return EXIT_SUCCESS;
 }
