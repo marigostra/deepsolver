@@ -1,6 +1,11 @@
 
   Deepsolver changes log
 
+	0.1.1 (2012-10-16)
+
+ds-patch utility:
+- --add-list and --del-list command line options support added.
+
 0.1.0 (2012-10-11)
 
 IndexCore changes:

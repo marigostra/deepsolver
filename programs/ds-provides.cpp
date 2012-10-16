@@ -86,7 +86,7 @@ void initCliParser()
 
 void printLogo()
 {
-  std::cout << "ds-provides: the utility to fix provides list in Deepsolver repository" << std::endl;
+  std::cout << "ds-provides: The utility to fix provides list in Deepsolver repository" << std::endl;
     std::cout << "Version: " << PACKAGE_VERSION << std::endl;
   std::cout << std::endl;
 }
@@ -139,6 +139,7 @@ void parseCmdLine(int argc, char* argv[])
 	  exit(EXIT_FAILURE);
 	case CliParserException::MissedArgument:
 	  std::cerr << PREFIX << "Command line argument \'" << e.getArg() << "\' requires additional parameter" << std::endl;exit(EXIT_FAILURE);
+	  exit(EXIT_FAILURE);
 	default:
 	  assert(0);
 	} //switch();
