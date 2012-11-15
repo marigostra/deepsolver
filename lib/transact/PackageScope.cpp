@@ -21,6 +21,10 @@
 
 #define HAS_VERSION(x) ((x).ver != NULL)
 
+static VersionCond constructVersionCondEquals(int epoch, 
+					      const std::string& version,
+					      const std::string& release);
+
 /**\brief Selects all variables to try by the specified package ID
  *
  * Selects all variables where specified package name is the name of the
@@ -73,9 +77,17 @@ void PackageScope::selectMatchingVarsNoProvides(PackageId packageId, const Versi
   for(VarId i = fromPos;i < toPos;i++)
     {
       assert(pkgs[i].pkgId == packageId);
-      if (versionSatisfies(ver, pkgs[i].epoch, pkgs[i].ver, pkgs[i].release))
+      if (versionOverlap(constructVersionCondEquals(pkgs[i].epoch, pkgs[i].ver, pkgs[i].release), ver))
 	vars.push_back(i);
     }
+}
+
+void PackageScope::selectMatchingVarsWithProvides(IdPkgRel& rel, VarIdVector& vars)
+{
+  vars.clear();
+  if (rel.hasVer())
+    selectMatchingVarsWithProvides(rel.pkgId, rel.extractVersionCond(), vars); else
+    selectMatchingVarsWithProvides(rel.pkgId, vars);
 }
 
 void PackageScope::selectMatchingVarsWithProvides(PackageId pkgId, VarIdVector& vars)
@@ -96,7 +108,7 @@ void PackageScope::selectMatchingVarsWithProvides(PackageId packageId, const Ver
   for(VarIdVector::size_type i = 0;i < toTry.size();i++)
     {
       assert(toTry[i] < pkgs.size());
-      if (pkgs[toTry[i]].pkgId == packageId && versionSatisfies(ver, pkgs[toTry[i]].epoch, pkgs[toTry[i]].ver, pkgs[toTry[i]].release))
+      if (pkgs[toTry[i]].pkgId == packageId && versionOverlap(constructVersionCondEquals(pkgs[toTry[i]].epoch, pkgs[toTry[i]].ver, pkgs[toTry[i]].release), ver))
 	{
 	  vars.push_back(toTry[i]);
 	  continue;
@@ -112,7 +124,7 @@ void PackageScope::selectMatchingVarsWithProvides(PackageId packageId, const Ver
 	  if (!HAS_VERSION(rels[pos + j]))
 	    continue;  
 	  assert(rels[pos + j].type != VerNone);
-	  if (rels[pos + j].pkgId == packageId && versionOverlap(ver, VersionCond(rels[pos + j].ver, rels[pos + j].type)))
+	  if (rels[pos + j].pkgId == packageId && versionOverlap(VersionCond(rels[pos + j].ver, rels[pos + j].type), ver))
 	    break;
 	}
       if (j < count)
@@ -140,8 +152,9 @@ void PackageScope::selectMatchingVarsAmongProvides(PackageId packageId, const Ve
       assert(toTry[i] < pkgs.size());
       const size_t pos = pkgs[toTry[i]].providesPos;
       const size_t count = pkgs[toTry[i]].providesCount;
-      if (count == 0)//There are no provides entries;
-	continue;
+      assert(count > 0);
+      //      if (count == 0)//There are no provides entries;
+      //	continue;
       size_t j;
       for(j = 0;j < count;j++)
 	{
@@ -149,7 +162,7 @@ void PackageScope::selectMatchingVarsAmongProvides(PackageId packageId, const Ve
 	  if (!HAS_VERSION(rels[pos + j]))
 	    continue;  
 	  assert(rels[pos + j].type != VerNone);
-	  if (rels[pos + j].pkgId == packageId && versionOverlap(ver, VersionCond(rels[pos + j].ver, rels[pos + j].type)))
+	  if (rels[pos + j].pkgId == packageId && versionOverlap(VersionCond(rels[pos + j].ver, rels[pos + j].type), ver))
 	    break;
 	}
       if (j < count)
@@ -293,6 +306,7 @@ bool PackageScope::allProvidesHaveTheVersion(const VarIdVector& vars, PackageId 
   return 1;
 }
 
+/*
 bool PackageScope::canBeSatisfiedByInstalled(PackageId pkgId)
 {
   assert(pkgId != BAD_PACKAGE_ID);
@@ -308,7 +322,9 @@ bool PackageScope::canBeSatisfiedByInstalled(PackageId pkgId)
     }
   return 0;
 }
+*/
 
+/*
 bool PackageScope ::canBeSatisfiedByInstalled(PackageId pkgId, const VersionCond& ver)
 {
   assert(pkgId != BAD_PACKAGE_ID);
@@ -322,13 +338,14 @@ bool PackageScope ::canBeSatisfiedByInstalled(PackageId pkgId, const VersionCond
       const PkgInfo& pkg = pkgs[vars[i]];
       if (!(pkg.flags & PkgFlagInstalled))
 	continue;
-      if (pkg.pkgId == pkgId && versionSatisfies(ver, pkg.epoch, pkg.ver, pkg.release))
+      if (pkg.pkgId == pkgId && versionOverlap(constructVersionCondEquals(pkg.epoch, pkg.ver, pkg.release), ver))
 	return 1;
       const size_t pos = pkg.providesPos;
       const size_t count = pkg.providesCount;
       if (count == 0)//There are no provides entries;
 	continue;
       size_t j;
+      //There is very important assuming only one provide entry with requested name is present (ALT Linux policy, subject to change for other distros);
       for(j = 0;j < count;j++)
 	{
 	  assert(pos + j < rels.size());
@@ -340,16 +357,20 @@ bool PackageScope ::canBeSatisfiedByInstalled(PackageId pkgId, const VersionCond
       if (!HAS_VERSION(rels[pos + j]))//Provide entry has no version;
 	continue;
       assert(rels[pos + j].type != VerNone);
-      if (versionOverlap(ver, VersionCond(rels[pos + j].ver, rels[pos + j].type)))
+      if (versionOverlap(VersionCond(rels[pos + j].ver, rels[pos + j].type), ver))
 	return 1;
     }
   return 0;
 }
+*/
 
 void PackageScope::whatSatisfiesAmongInstalled(const IdPkgRel& rel, VarIdVector& res)
 {
   assert(rel.pkgId != BAD_PACKAGE_ID);
   res.clear();
+
+
+  //If there is no version restrictions;
   if (!rel.hasVer())
     {
       VarIdVector vars;
@@ -363,6 +384,8 @@ void PackageScope::whatSatisfiesAmongInstalled(const IdPkgRel& rel, VarIdVector&
 	}
       return;
     } //without version;
+
+  //If there is version restriction;
   VarIdVector vars;
   selectVarsToTry(m_content, m_provideMap, rel.pkgId, vars, 1);//1 means to include package itself;
   const PkgInfoVector& pkgs = m_content.pkgInfoVector;
@@ -373,8 +396,12 @@ void PackageScope::whatSatisfiesAmongInstalled(const IdPkgRel& rel, VarIdVector&
       const PkgInfo& pkg = pkgs[vars[i]];
       if (!(pkg.flags & PkgFlagInstalled))
 	continue;
-      if (pkg.pkgId == rel.pkgId && versionSatisfies(VersionCond(rel.ver, rel.verDir), pkg.epoch, pkg.ver, pkg.release))
-	res.push_back(vars[i]);
+      if (pkg.pkgId == rel.pkgId &&
+	  versionOverlap(constructVersionCondEquals(pkg.epoch, pkg.ver, pkg.release), VersionCond(rel.ver, rel.verDir)))
+	{
+	  res.push_back(vars[i]);
+	  continue;
+	}
       const size_t pos = pkg.providesPos;
       const size_t count = pkg.providesCount;
       if (count == 0)//There are no provides entries;
@@ -383,17 +410,31 @@ void PackageScope::whatSatisfiesAmongInstalled(const IdPkgRel& rel, VarIdVector&
       for(j = 0;j < count;j++)
 	{
 	  assert(pos + j < rels.size());
-	  if (rels[pos + j].pkgId == rel.pkgId)//Again assuming each package can have only one provide entry for every pkgId;
-	    break;
-	}
-      if (j >= count)//No corresponding provide entry at all;
-	continue;
-      if (!HAS_VERSION(rels[pos + j]))//Provide entry has no version;
-	continue;
-      assert(rels[pos + j].type != VerNone);
-      if (versionOverlap(VersionCond(rel.ver, rel.verDir), VersionCond(rels[pos + j].ver, rels[pos + j].type)))
-	res.push_back(vars[i]);
-    }
+	  if (rels[pos + j].pkgId != rel.pkgId ||
+	      !HAS_VERSION(rels[pos + j]))//Provide entry has no version;
+	    continue;
+	  assert(rels[pos + j].type != VerNone);
+	  if (versionOverlap(VersionCond(rels[pos + j].ver, rels[pos + j].type), VersionCond(rel.ver, rel.verDir)))
+	    {
+	      res.push_back(vars[i]);
+	      break;
+	    }
+	} //for(provides);
+    } //for(packages);
+}
+
+void PackageScope::getRequires(VarId varId, IdPkgRelVector& res) const
+{
+  assert(varId != BAD_VAR_ID);
+  PackageIdVector withVersion, withoutVersion;
+  VersionCondVector versions;
+  getRequires(varId, withoutVersion, withVersion, versions);
+  assert(withVersion.size() == versions.size());
+  res.clear();
+  for(PackageIdVector::size_type i = 0;i < withoutVersion.size();i++)
+    res.push_back(IdPkgRel(withoutVersion[i]));
+  for(PackageIdVector::size_type i = 0;i < withVersion.size();i++)
+    res.push_back(IdPkgRel(withVersion[i], versions[i]));
 }
 
 void PackageScope::getRequires(VarId varId, PackageIdVector& depWithoutVersion, PackageIdVector& depWithVersion, VersionCondVector& versions) const
@@ -417,6 +458,20 @@ void PackageScope::getRequires(VarId varId, PackageIdVector& depWithoutVersion, 
 	  versions.push_back(VersionCond(rels[pos + i].ver, rels[pos + i].type));
 	}
     }
+}
+
+void PackageScope::getConflicts(VarId varId, IdPkgRelVector& res) const
+{
+  assert(varId != BAD_VAR_ID);
+  PackageIdVector withVersion, withoutVersion;
+  VersionCondVector versions;
+  getConflicts(varId, withoutVersion, withVersion, versions);
+  assert(withVersion.size() == versions.size());
+  res.clear();
+  for(PackageIdVector::size_type i = 0;i < withoutVersion.size();i++)
+    res.push_back(IdPkgRel(withoutVersion[i]));
+  for(PackageIdVector::size_type i = 0;i < withVersion.size();i++)
+    res.push_back(IdPkgRel(withVersion[i], versions[i]));
 }
 
 void PackageScope::getConflicts(VarId varId, PackageIdVector& withoutVersion, PackageIdVector& withVersion, VersionCondVector& versions) const
@@ -468,7 +523,7 @@ void PackageScope::whatDependsAmongInstalled(VarId varId, VarIdVector& res, IdPk
 	    resRels.push_back(IdPkgRel(withoutVersion[k]));
 	  }
       for(PackageIdVector::size_type k = 0;k < withVersion.size();k++)
-	if (withVersion[k] == pkg.pkgId && versionSatisfies(versions[k], pkg.epoch, pkg.ver, pkg.release))
+	if (withVersion[k] == pkg.pkgId && versionOverlap(constructVersionCondEquals(pkg.epoch, pkg.ver, pkg.release), versions[k]))
 	  {
 	    res.push_back(v[i]);
 	    resRels.push_back(IdPkgRel(withVersion[k], versions[k]));
@@ -503,7 +558,7 @@ void PackageScope::whatDependsAmongInstalled(VarId varId, VarIdVector& res, IdPk
 	    {
 	      assert(rel.type == VerEquals);//FIXME:Actually it shouldn't be an assert, we can silently skip this provide;
 	      for(PackageIdVector::size_type q = 0;q < withVersion.size();q++)
-		if (withVersion[q] == rel.pkgId && versionSatisfies(versions[q], rel.ver))
+		if (withVersion[q] == rel.pkgId && versionOverlap(VersionCond(rel.ver, VerEquals), versions[q]))
 		  {
 		    res.push_back(v[k]);
 		    resRels.push_back(IdPkgRel(withVersion[q], versions[q]));
@@ -539,7 +594,7 @@ void PackageScope::whatConflictsAmongInstalled(VarId varId, VarIdVector& res, Id
 	    resRels.push_back(IdPkgRel(withoutVersion[k]));
 	  }
       for(PackageIdVector::size_type k = 0;k < withVersion.size();k++)
-	if (withVersion[k] == pkg.pkgId && versionSatisfies(versions[k], pkg.epoch, pkg.ver, pkg.release))
+	if (withVersion[k] == pkg.pkgId && versionOverlap(constructVersionCondEquals(pkg.epoch, pkg.ver, pkg.release), versions[k]))
 	  {
 	    res.push_back(v[i]);
 	    resRels.push_back(IdPkgRel(withVersion[k], versions[k]));
@@ -574,7 +629,7 @@ void PackageScope::whatConflictsAmongInstalled(VarId varId, VarIdVector& res, Id
 	    {
 	      assert(rel.type == VerEquals);//FIXME:Actually it shouldn't be an assert, we can silently skip this provide;
 	      for(PackageIdVector::size_type q = 0;q < withVersion.size();q++)
-		if (withVersion[q] == rel.pkgId && versionSatisfies(versions[q], rel.ver))
+		if (withVersion[q] == rel.pkgId && versionOverlap(VersionCond(rel.ver, VerEquals), versions[q]))
 		  {
 		    res.push_back(v[k]);
 		    resRels.push_back(IdPkgRel(withVersion[q], versions[q]));
@@ -595,7 +650,7 @@ bool PackageScope::variableSatisfies(VarId varId, const IdPkgRel& rel)
     {
       if (!rel.hasVer())
 	return 1;
-      if (versionSatisfies(VersionCond(rel.ver, rel.verDir), pkg.epoch, pkg.ver, pkg.release))
+      if (versionOverlap(constructVersionCondEquals(pkg.epoch, pkg.ver, pkg.release), rel.extractVersionCond()))
 	return 1;
     }
   //The package itself does not match, checking its provides;
@@ -641,6 +696,19 @@ std::string PackageScope::constructPackageName(VarId varId) const
   return res;
 }
 
+std::string PackageScope::constructPackageNameWithBuildTime(VarId varId) const
+{
+  const PkgInfoVector& pkgs = m_content.pkgInfoVector;
+  assert(varId < pkgs.size());
+  const PackageScopeContent::PkgInfo& pkg = pkgs[varId];
+  std::ostringstream res;
+  res << packageIdToStr(pkg.pkgId);
+  assert(pkg.ver != NULL && pkg.release != NULL);
+  res << "-" << pkg.ver << "-" << pkg.release;
+  res << " (" << pkg.buildTime << ")";
+  return res.str();
+}
+
 std::string PackageScope::constructFullVersion(VarId varId) const
 {
   const PkgInfoVector& pkgs = m_content.pkgInfoVector;
@@ -669,3 +737,13 @@ std::string PackageScope::packageIdToStr(PackageId packageId) const
   return m_content.packageIdToStr(packageId);
 }
 
+VersionCond constructVersionCondEquals(int epoch, 
+					      const std::string& version,
+					      const std::string& release)
+{
+  assert(!version.empty());
+  assert(!release.empty());
+  std::ostringstream ss;
+  ss  << epoch << ":" << version << "-" << release;
+  return VersionCond(ss.str(), VerEquals);
+}

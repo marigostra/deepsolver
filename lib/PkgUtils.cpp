@@ -20,7 +20,6 @@
 
 void fillWithhInstalledPackages(AbstractPackageBackEnd& backEnd, PackageScopeContent& content)
 {
-  logMsg(LOG_DEBUG, "Filling package scope content with installed packages");
   PackageScopeContent::PkgInfoVector& pkgs = content.pkgInfoVector;
   std::auto_ptr<AbstractInstalledPackagesIterator> it = backEnd.enumInstalledPackages();
   size_t installedCount = 0;
@@ -45,7 +44,9 @@ void fillWithhInstalledPackages(AbstractPackageBackEnd& backEnd, PackageScopeCon
 	  PackageScopeContent::PkgInfo& info = pkgs[varId];
 	  assert(info.pkgId == pkgId);
 	  //Extremely important place: the following line determines is installed package the same as one available from repository index;
-	  if (pkg.version == info.ver && pkg.release == info.release && pkg.buildTime == info.buildTime)
+	  if (pkg.version == info.ver &&
+	      pkg.release == info.release &&
+	      pkg.buildTime == info.buildTime)
 	    {
 	      info.flags |= PkgFlagInstalled;
 	      found = 1;
@@ -55,7 +56,6 @@ void fillWithhInstalledPackages(AbstractPackageBackEnd& backEnd, PackageScopeCon
 	continue;
       toInhanceWith.push_back(pkg);
     } //while(installed packages);
-  logMsg(LOG_DEBUG, "The system has %zu installed packages, %zu of them should be added to database since there are absent in attached repositories", installedCount, toInhanceWith.size());
+  logMsg(LOG_DEBUG, "installed:the system has %zu installed packages, %zu of them should be added to database since there are absent in attached repositories", installedCount, toInhanceWith.size());
   content.enhance(toInhanceWith, PkgFlagInstalled);
-  logMsg(LOG_DEBUG, "The database of known packages was updated with list of installed packages");
 }

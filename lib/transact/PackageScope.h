@@ -42,6 +42,7 @@ public:
 public:
   PackageId packageIdOfVarId(VarId varId) const;
   std::string constructPackageName(VarId varId) const;
+  std::string constructPackageNameWithBuildTime(VarId varId) const;
   std::string constructFullVersion(VarId varId) const;
   bool checkName(const std::string& name) const;
 
@@ -60,6 +61,7 @@ public:
   void selectMatchingVarsNoProvides(PackageId packageId, VarIdVector& vars);
   void selectMatchingVarsNoProvides(PackageId packageId, const VersionCond& ver, VarIdVector& vars);
 
+  void selectMatchingVarsWithProvides(IdPkgRel& rel, VarIdVector& vars);
   void selectMatchingVarsWithProvides(PackageId packageId, VarIdVector& vars);
   void selectMatchingVarsWithProvides(PackageId packageId, const VersionCond& ver, VarIdVector& vars);
 
@@ -67,18 +69,31 @@ public:
   void selectMatchingVarsAmongProvides(PackageId packageId, const VersionCond& ver, VarIdVector& vars);
 
   bool isInstalled(VarId varId) const;
-  bool isInstalledWithMatchingAlternatives(VarId varId) const;
+  bool isInstalledWithMatchingAlternatives(VarId varId) const;//FIXME:Give new name;;
   void selectInstalledNoProvides(PackageId pkgId, VarIdVector& vars) const;
 
   void selectTheNewest(VarIdVector& vars);
   void selectTheNewestByProvide(VarIdVector& vars, PackageId provideEntry);
   bool allProvidesHaveTheVersion(const VarIdVector& vars, PackageId provideEntry);
 
-  void getRequires(VarId varId, PackageIdVector& depWithoutVersion, PackageIdVector& depWithVersion, VersionCondVector& versions) const;
-  void getConflicts(VarId varId, PackageIdVector& withoutVersion, PackageIdVector& withVersion, VersionCondVector& versions) const;
+  void getRequires(VarId varId, IdPkgRelVector& res) const;
 
-  bool canBeSatisfiedByInstalled(PackageId pkgId);
-  bool canBeSatisfiedByInstalled(PackageId pkgId, const VersionCond& ver);
+  void getRequires(VarId varId,
+		   PackageIdVector& depWithoutVersion,
+		   PackageIdVector& depWithVersion,
+		   VersionCondVector& versions) const;
+
+  void getConflicts(VarId varId, IdPkgRelVector& res) const;
+
+  void getConflicts(VarId varId,
+		    PackageIdVector& withoutVersion,
+		    PackageIdVector& withVersion,
+		    VersionCondVector& versions) const;
+
+  //  bool canBeSatisfiedByInstalled(PackageId pkgId);
+
+  //  bool canBeSatisfiedByInstalled(PackageId pkgId, const VersionCond& ver);
+
   void whatSatisfiesAmongInstalled(const IdPkgRel& rel, VarIdVector& res);
 
   void whatDependsAmongInstalled(VarId varId, VarIdVector& res, IdPkgRelVector& resRels);

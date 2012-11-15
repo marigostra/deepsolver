@@ -25,7 +25,8 @@
 enum {
   OperationErrorInvalidInfoFile = 0,
   OperationErrorInvalidChecksum = 1,
-  OperationErrorBrokenIndexFile = 2
+  OperationErrorBrokenIndexFile = 2,
+OperationErrorInternalIOProblem = 3
 };
 
 /**\brief The exception class for general operation problems
@@ -64,12 +65,6 @@ public:
     return m_code;
   }
 
-  /**\brief Returns the type of exception
-   *
-   * Use this method to get type of exception (always "operation" by this class). 
-   *
-   * \return The type of exception (always "operation")
-   */
   std::string getType() const
   {
     return "operation";

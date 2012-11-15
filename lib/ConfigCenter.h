@@ -24,9 +24,9 @@
 
 enum {
   ConfigErrorUnknownParam = 0,
-  ConfigErrorIncompletePath = 1,
-  ConfigErrorValueCannotBeEmpty = 2,
-  ConfigErrorAddingNotPermitted = 3 
+  ConfigErrorValueCannotBeEmpty = 1,
+  ConfigErrorAddingNotPermitted = 2,
+ConfigErrorInvalidBooleanValue = 3
 };
 
 /**\brief Indicates the error in configuration data
@@ -192,7 +192,7 @@ class ConfigCenter: private AbstractConfigFileHandler
 {
 public:
   /**\brief The default constructor*/
-  ConfigCenter() {}
+  ConfigCenter() {initValues();}
 
   /**\brief The destructor*/
   virtual ~ConfigCenter() {}
@@ -239,25 +239,184 @@ public:
   }
 
 private:
-    void onCoreConfigValue(const StringVector&path,
-			   const std::string& sectArg,
-			   const std::string& value,
-			   bool adding, 
-			   const ConfigFilePosInfo& pos);
+  enum {
+    ValueTypeString = 1,
+    ValueTypeStringList = 2,
+    ValueTypeBoolean = 3
+  };
 
-    void onCoreDirConfigValue(const StringVector&path,
-			   const std::string& sectArg,
-			   const std::string& value,
-			   bool adding, 
-			   const ConfigFilePosInfo& pos);
+  class StringValue//FIXME:General parent;
+  {
+  public:
+  StringValue()
+    : canBeEmpty(0),
+      value(NULL) {}
 
-    void onRepoConfigValue(const StringVector&path,
-			   const std::string& sectArg,
-			   const std::string& value,
-			   bool adding, 
-			   const ConfigFilePosInfo& pos);
+  StringValue(std::string& v)
+    : canBeEmpty(0),
+      value(&v) {}
 
-  ConfRepo& findRepo(const std::string& name);
+  public:
+    bool pathMatches(const StringVector& p, const std::string& a) const 
+      {
+	if (path.size() != p.size())
+	  return 0;
+	for(StringVector::size_type i = 0;i < path.size();i++)
+	  if (path[i] != p[i])
+	    return 0;
+	if (!sectArg.empty() && sectArg != a)
+	  return 0;
+	return 1;
+      }
+
+  public:
+    std::string pathToString()
+    {
+      assert(!path.empty());
+      std::string value = path[0];
+      if (!sectArg.empty())
+	value += " \"" + sectArg + "\"";
+      for(StringVector::size_type i = 1;i < path.size();i++)
+	value += "." + path[i];
+      return value;
+    }
+
+  public:
+    StringVector path;
+    std::string sectArg;
+    bool canBeEmpty;
+    std::string* value;
+  }; //class StringValue;
+
+  class StringListValue
+  {
+  public:
+  StringListValue()
+    : canContainEmptyItem(0),
+      value(NULL) {}
+
+  StringListValue(StringVector& v)
+    : canContainEmptyItem(0),
+      value(&v) {}
+
+  public:
+    bool pathMatches(const StringVector& p, const std::string& a) const 
+      {
+	if (path.size() != p.size())
+	  return 0;
+	for(StringVector::size_type i = 0;i < path.size();i++)
+	  if (path[i] != p[i])
+	    return 0;
+	if (!sectArg.empty() && sectArg != a)
+	  return 0;
+	return 1;
+      }
+
+  public:
+    std::string pathToString()
+    {
+      assert(!path.empty());
+      std::string value = path[0];
+      if (!sectArg.empty())
+	value += " \"" + sectArg + "\"";
+      for(StringVector::size_type i = 1;i < path.size();i++)
+	value += "." + path[i];
+      return value;
+    }
+
+  public:
+    StringVector path;
+    std::string sectArg;
+    bool canContainEmptyItem;
+    std::string delimiters;
+    StringVector* value;
+  }; //class StringListValue;
+
+  class BooleanValue
+  {
+  public:
+  BooleanValue()
+    : value(NULL) {}
+
+  BooleanValue(bool& v)
+    : value(&v) {}
+
+  public:
+    bool pathMatches(const StringVector& p, const std::string& a) const 
+      {
+	if (path.size() != p.size())
+	  return 0;
+	for(StringVector::size_type i = 0;i < path.size();i++)
+	  if (path[i] != p[i])
+	    return 0;
+	if (!sectArg.empty() && sectArg != a)
+	  return 0;
+	return 1;
+      }
+
+  public:
+    std::string pathToString()
+    {
+      assert(!path.empty());
+      std::string value = path[0];
+      if (!sectArg.empty())
+	value += " \"" + sectArg + "\"";
+      for(StringVector::size_type i = 1;i < path.size();i++)
+	value += "." + path[i];
+      return value;
+    }
+
+  public:
+    StringVector path;
+    std::string sectArg;
+    bool* value;
+  }; //class BooleanValue;
+
+private:
+  void initValues();
+  void reinitRepoValues();
+  int getParamType(const StringVector& path, const std::string& sectArg, const ConfigFilePosInfo& pos) const;
+
+  void addStringParam3(const std::string& path1,
+		       const std::string& path2,
+		       const std::string& path3,
+		       std::string& value);
+
+  void addNonEmptyStringParam3(const std::string& path1,
+			       const std::string& path2,
+			       const std::string& path3,
+			       std::string& value);
+
+private:
+  void processStringValue(const StringVector& path, 
+			 const std::string& sectArg,
+			 const std::string& value,
+			 bool adding,
+			 const ConfigFilePosInfo& pos);
+
+  void findStringValue(const StringVector& path, 
+			 const std::string& sectArg,
+		       StringValue& stringValue);
+
+  void processStringListValue(const StringVector& path, 
+			 const std::string& sectArg,
+			 const std::string& value,
+			 bool adding,
+			 const ConfigFilePosInfo& pos);
+
+  void findStringListValue(const StringVector& path, 
+			 const std::string& sectArg,
+		       StringListValue& stringListValue);
+
+  void processBooleanValue(const StringVector& path, 
+			 const std::string& sectArg,
+			 const std::string& value,
+			 bool adding,
+			 const ConfigFilePosInfo& pos);
+
+  void findBooleanValue(const StringVector& path, 
+			 const std::string& sectArg,
+		       BooleanValue& booleanValue);
 
 private://AbstractConfigFileHandler;
   void onConfigFileValue(const StringVector& path, 
@@ -267,7 +426,15 @@ private://AbstractConfigFileHandler;
 			 const ConfigFilePosInfo& pos);
 
 private:
+  typedef std::vector<StringValue> StringValueVector;
+  typedef std::vector<StringListValue> StringListValueVector;
+  typedef std::vector<BooleanValue> BooleanValueVector;
+
+private:
   ConfRoot m_root;
+  StringValueVector m_stringValues, m_repoStringValues;
+  StringListValueVector m_stringListValues, m_repoStringListValues;
+  BooleanValueVector m_booleanValues, m_repoBooleanValues;
 }; //class ConfigCenter;
 
 #endif //DEEPSOLVER_CONFIG_CENTER_H;

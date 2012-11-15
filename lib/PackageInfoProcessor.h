@@ -15,31 +15,28 @@
    General Public License for more details.
 */
 
-#ifndef DEEPSOLVER_PACKAGE_SCOPE_CONTENT_LOADER_H
-#define DEEPSOLVER_PACKAGE_SCOPE_CONTENT_LOADER_H
+#ifndef DEEPSOLVER_PACKAGE_INFO_PROCESSOR_H
+#define DEEPSOLVER_PACKAGE_INFO_PROCESSOR_H
 
-#include"transact/PackageScopeContent.h"
+#include"AbstractPackageRecipient.h"
 
-class PackageScopeContentLoader
+class PackageInfoProcessor: public AbstractPackageRecipient
 {
 public:
-  /**\brief The constructor*/
-  PackageScopeContentLoader(PackageScopeContent& content) 
-    : m_c(content) {}
+  /**\brief The default constructor*/
+  PackageInfoProcessor() {}
 
   /**\brief The destructor*/
-  virtual ~PackageScopeContentLoader() {}
+  virtual ~PackageInfoProcessor() {}
 
 public:
-  void loadFromFile(const std::string& fileName);
+  /**\brief Accepts new package file entry
+   *
+   * This method is called each time new package file information is available.
+   *
+   * \param [in] pkgFile The newly available package file entry
+   */
+  void onNewPkgFile(const PkgFile& pkgFile) {}//FIXME:
+}; //class PackageInfoProcessor;
 
-private:
-  void readNames(std::ifstream& s, size_t namesBufSize);
-  void onNewName(const char* name, bool complete);
-
-private:
-  PackageScopeContent& m_c;
-  std::string m_nameChunk;
-}; //class PackageScopeContentLoader;
-
-#endif //DEEPSOLVER_PACKAGE_SCOPE_CONTENT_LOADER_H;
+#endif //DEEPSOLVER_PACKAGE_INFO_PROCESSOR_H;

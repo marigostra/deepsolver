@@ -6,7 +6,9 @@
 #include"deepsolver.h"
 #include"Messages.h"
 
-#define PREFIX "ds:"
+//TODO:OperationErrorInvalidIOProblem;
+
+std::string messagesProgramName;
 
 struct ConfigSyntaxErrorMessage 
 {
@@ -50,7 +52,7 @@ void Messages::onSystemError(const SystemException& e)
 
 void Messages::onConfigSyntaxError(const ConfigFileException& e)
 {
-  m_stream << PREFIX << "configuration file syntax error:" << getConfigSyntaxErrorText(e.getCode()) << std::endl;
+  m_stream << messagesProgramName << ":Configuration file syntax error:" << getConfigSyntaxErrorText(e.getCode()) << std::endl;
   std::ostringstream ss;
   ss << e.getFileName() << "(" << e.getLineNumber() << "):";
   const size_t pos = ss.str().length() + e.getPos();//FIXME:UTF-8 character make this value incorrect;
@@ -62,20 +64,20 @@ void Messages::onConfigSyntaxError(const ConfigFileException& e)
 
 void Messages::onConfigError(const ConfigException& e)
 {
-  m_stream << PREFIX << "configuration file error:";
+  m_stream << messagesProgramName << ":Configuration file error:";
   switch(e.getCode())
     {
     case ConfigErrorUnknownParam:
       m_stream << "unknown parameter: " << e.getArg() << std::endl;
-  break;
-    case ConfigErrorIncompletePath:
-      m_stream << "incomplete path: " << e.getArg() << std::endl;
   break;
     case ConfigErrorValueCannotBeEmpty:
       m_stream << "value of parameter \'" << e.getArg() << "\' cannot be empty" << std::endl;
   break;
     case ConfigErrorAddingNotPermitted:
       m_stream << "adding not permitted" << std::endl;
+  break;
+    case ConfigErrorInvalidBooleanValue:
+      m_stream << "invalid boolean valuepermitted" << std::endl;
   break;
     default:
       assert(0);
@@ -87,7 +89,7 @@ void Messages::onConfigError(const ConfigException& e)
 
 void Messages::onCurlError(const CurlException& e)
 {
-  m_stream << PREFIX << e.getUrl() << ":curl error " << e.getCode() << ":" << e.getText() << std::endl;
+  m_stream << messagesProgramName << ":" << e.getUrl() << ":curl error " << e.getCode() << ":" << e.getText() << std::endl;
 }
 
 void Messages::onOperationError(const OperationException& e)
@@ -112,4 +114,82 @@ void Messages::onOperationError(const OperationException& e)
     default:
       assert(0);
     } //switch(e.getCode());
+}
+
+//Command line errors;
+
+void Messages::onMissedProgramName() const
+{
+  m_stream << messagesProgramName << ":The command line doesn\'t contain program name" << std::endl;
+}
+
+void Messages::onMissedCommandLineArgument(const std::string& arg) const
+{
+  m_stream << messagesProgramName << ":The command line argument \'" << arg << "\' requires additional parameter" << std::endl;
+}
+
+//ds-update;
+
+void Messages::dsUpdateLogo() const
+{
+  m_stream << "ds-update: The utility to fetch repository headers" << std::endl;
+  m_stream << "Version: " << PACKAGE_VERSION << std::endl;
+  m_stream << std::endl;
+}
+
+void Messages::dsUpdateInitCliParser(CliParser& cliParser) const
+{
+  cliParser.addKeyDoubleName("-h", "--help", "print this help screen and exit");
+  cliParser.addKey("--log", "print log to console instead of user progress information");
+  cliParser.addKey("--debug", "relax filtering level for log output");
+}
+
+void Messages::dsUpdateHelp(const CliParser& cliParser) const
+{
+  dsUpdateLogo();
+  m_stream << "Usage: ds-update [OPTIONS]" << std::endl;
+  m_stream << std::endl;
+  m_stream << "Valid command line options are:" << std::endl;
+  cliParser.printHelp(m_stream);
+}
+
+void Messages::introduceRepoSet(const ConfigCenter& conf) const
+{
+  for(ConfRepoVector::size_type i = 0;i < conf.root().repo.size();i++)
+    {
+      const ConfRepo& repo = conf.root().repo[i];
+      std::cout << "Repo: " << repo.name << " (" << repo.url << ")" << std::endl;
+      std::cout << "Arch:";
+      for(StringVector::size_type k = 0;k < repo.arch.size();k++)
+	std::cout << " " << repo.arch[k];
+      std::cout << std::endl;
+      std::cout << "Components:";
+      for(StringVector::size_type k = 0;k < repo.components.size();k++)
+	std::cout << " " << repo.components[k];
+      std::cout << std::endl;
+      std::cout << std::endl;
+    }
+}
+
+void Messages::dsInstallLogo() const
+{
+  m_stream << "ds-install: The Deepsolver utility for package installation" << std::endl;
+  m_stream << "Version: " << PACKAGE_VERSION << std::endl;
+  m_stream << std::endl;
+}
+
+void Messages::dsInstallInitCliParser(CliParser& cliParser) const
+{
+  cliParser.addKeyDoubleName("-h", "--help", "print this help screen and exit");
+  cliParser.addKey("--log", "print log to console instead of user progress information");
+  cliParser.addKey("--debug", "relax filtering level for log output");
+}
+
+void Messages::dsInstallHelp(const CliParser& cliParser) const
+{
+  dsUpdateLogo();
+  m_stream << "Usage: ds-install [OPTIONS] [PKG1 [(<|<=|=|>=|>) VERSION] [...]]" << std::endl;
+  m_stream << std::endl;
+  m_stream << "Valid command line options are:" << std::endl;
+  cliParser.printHelp(m_stream);
 }

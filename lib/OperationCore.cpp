@@ -18,10 +18,12 @@
 #include"deepsolver.h"
 #include"OperationCore.h"
 #include"Repository.h"
+#include"PackageInfoProcessor.h"
 #include"IndexFetch.h"
 #include"AbstractPackageBackEnd.h"
 #include"AbstractTaskSolver.h"
 #include"io/PackageScopeContentLoader.h"
+#include"io/PackageScopeContentBuilder.h"
 #include"PkgUtils.h"
 
 static std::string urlToFileName(const std::string& url)
@@ -84,8 +86,9 @@ void OperationCore::fetchIndices(AbstractIndexFetchListener& listener,
   indexFetch.fetch(files);
   listener.onIndexFilesReading();
   PackageScopeContentBuilder scope;
+  PackageInfoProcessor infoProcessor;
   for(RepositoryVector::size_type i = 0; i < repo.size();i++)
-    repo[i].addPackagesToScope(files, scope);
+    repo[i].loadPackageData(files, scope, infoProcessor);
   logMsg(LOG_DEBUG, "Committing loaded packages data");
   scope.commit();
   const std::string outputFileName = Directory::mixNameComponents(root.dir.pkgData, PKG_DATA_FILE_NAME);
@@ -103,14 +106,20 @@ void OperationCore::fetchIndices(AbstractIndexFetchListener& listener,
 void OperationCore::doInstallRemove(const UserTask& userTask)
 {
   File::readAhead("/var/lib/rpm/Packages");//FIXME:take the value from configuration;
-  std::auto_ptr<AbstractPackageBackEnd> backEnd = createRpmBackEnd();
+  std::auto_ptr<AbstractPackageBackEnd> backEnd = CREATE_PACKAGE_BACKEND;
   PackageScopeContent content;
   PackageScopeContentLoader loader(content);
   loader.loadFromFile(Directory::mixNameComponents(m_conf.root().dir.pkgData, PKG_DATA_FILE_NAME));
+  logMsg(LOG_DEBUG, "Index package list loaded");
+  const clock_t fillingStart = clock();
   fillWithhInstalledPackages(*backEnd.get(), content);
+  const double fillingDuration = ((double)clock() - fillingStart) / CLOCKS_PER_SEC;
+  logMsg(LOG_DEBUG, "Installed packages adding takes %f sec", fillingDuration);
+  logMsg(LOG_DEBUG, "Merged list of installed packages");
   ProvideMap provideMap;
   InstalledReferences requiresReferences, conflictsReferences;
   provideMap.fillWith(content);
+  logMsg(LOG_DEBUG, "Provide map filled");
   const PackageScopeContent::PkgInfoVector& pkgs = content.pkgInfoVector;
   const PackageScopeContent::RelInfoVector& rels = content.relInfoVector; 
   for(PackageScopeContent::PkgInfoVector::size_type i = 0;i < pkgs.size();i++)
@@ -133,8 +142,20 @@ void OperationCore::doInstallRemove(const UserTask& userTask)
       }
   requiresReferences.commit();
   conflictsReferences.commit();
-  std::auto_ptr<AbstractTaskSolver> solver = createStrictTaskSolver(content, provideMap, requiresReferences, conflictsReferences);
+  logMsg(LOG_DEBUG, "Requires and Conflicts references filled");
+  std::auto_ptr<AbstractTaskSolver> solver = createGeneralTaskSolver(content, provideMap, requiresReferences, conflictsReferences);
   VarIdVector toInstall, toRemove;
   VarIdToVarIdMap toUpgrade;
-  solver->solve(userTask, toInstall, toRemove, toUpgrade);
+
+  UserTask t;
+  t.itemsToInstall.push_back(UserTaskItemToInstall("gnome3-default"));
+  //  t.namesToRemove.insert("voiceman");
+  //  t.namesToRemove.insert("gcc4.3");
+  //  t.namesToRemove.insert("dbus");
+
+  const clock_t solverStart = clock();
+  solver->solve(t, toInstall, toRemove, toUpgrade);//FIXME:userTask;
+  const double solverDuration = ((double)clock() - solverStart) / CLOCKS_PER_SEC;
+  logMsg(LOG_DEBUG, "Solver takes %f seconds", solverDuration);
+
 }

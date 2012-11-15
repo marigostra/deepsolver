@@ -19,21 +19,11 @@
 #define DEEPSOLVER_REPOSITORY_H
 
 #include"ConfigCenter.h"
-#include"io/PackageScopeContentBuilder.h"
+#include"AbstractPackageRecipient.h"
+#include"repo/RepoParams.h"
 
 class Repository
 {
-private:
-  enum {
-    CompressionTypeNone = 0,
-    CompressionTypeGzip = 1
-  };
-
-  enum {
-    FormatTypeText = 0,
-    FormatTypeBinary = 1
-  };
-
 public:
   Repository(const ConfRepo& confRepo,
 	     const std::string& arch,
@@ -42,8 +32,8 @@ public:
       m_url(confRepo.url), 
       m_arch(arch),
       m_component(component),
-      m_compressionType(CompressionTypeNone),
-      m_formatType(FormatTypeText)
+    m_compressionType(RepoParams::CompressionTypeNone),
+    m_formatType(RepoParams::FormatTypeText)
   {
     assert(!m_url.empty());
     assert(!m_arch.empty());
@@ -61,7 +51,9 @@ public:
 
   void fetchInfoAndChecksum();
   void addIndexFilesForFetch(StringToStringMap& files);
-  void addPackagesToScope(const StringToStringMap& files, PackageScopeContentBuilder& content);
+  void loadPackageData(const StringToStringMap& files, 
+		       AbstractPackageRecipient& transactData,
+		       AbstractPackageRecipient& pkgInfoData);
 
 private:
   std::string buildInfoFileUrl() const;
@@ -71,7 +63,7 @@ private:
   //  std::string m_checksum;
   char m_compressionType;
   char m_formatType;
-  std::string m_mainPkgFileUrl, m_providesFileUrl;
+  std::string m_pkgFileUrl, m_pkgDescrFileUrl, m_srcFileUrl, m_srcDescrFileUrl;
   std::string m_checksumFileName;
 }; //class Repository;
 

@@ -74,6 +74,18 @@ public:
     : pkgId(id), verDir(cond.type), ver(cond.version) {}
 
 public:
+  bool operator ==(const IdPkgRel& rel) const
+  {
+    return pkgId == rel.pkgId && verDir == rel.verDir && ver == rel.ver;
+  }
+
+  bool operator !=(const IdPkgRel& rel) const
+  {
+    return pkgId != rel.pkgId || verDir != rel.verDir || ver == rel.ver;
+  }
+
+
+public:
   bool hasVer() const
   {
     if (verDir == VerNone)
@@ -83,6 +95,26 @@ public:
       }
     assert(!ver.empty());
     return 1;
+  }
+
+  std::string verString() const
+  {
+    if (!hasVer())
+      return "";
+    std::string s;
+    if (verDir & VerLess)
+      s += "<";
+    if (verDir & VerGreater)
+      s += ">";
+    if (verDir & VerEquals)
+      s += "=";
+    s += " " + ver;
+    return s;
+  }
+
+  VersionCond extractVersionCond() const
+  {
+    return VersionCond(ver, verDir);
   }
 
 public:

@@ -1,6 +1,6 @@
 
 AM_CXXFLAGS = $(DEEPSOLVER_CXXFLAGS) $(DEEPSOLVER_INCLUDES)
-LIBS += -lrpm -lcurl
+LIBS += -lrpm -lcurl -lminisat
 LIBdir=${libdir}
 LDFLAGS=-version-info ${LT_CURRENT}:$(LT_REVISION):$(LT_AGE) -release $(LT_RELEASE)
 
@@ -27,7 +27,6 @@ repo/InfoFileReader.cpp \
 repo/PkgSection.cpp \
 repo/RepoParams.cpp \
 Repository.cpp \
-repo/TextFormatReader.cpp \
 repo/TextFormatSectionReader.cpp \
 RequireFilter.cpp \
 RpmBackEnd.cpp \
@@ -35,12 +34,12 @@ rpm/Rpmdb.cpp \
 rpm/RpmFileHeaderReader.cpp \
 rpm/RpmHeaderReading.cpp \
 rpm/vercmp.cpp \
+transact/GeneralSolver.cpp \
 transact/InstalledReferences.cpp \
+transact/LibMinisatSolver.cpp \
 transact/PackageScopeContent.cpp \
 transact/PackageScope.cpp \
 transact/ProvideMap.cpp \
-transact/sat.cpp \
-transact/StrictSolver.cpp \
 utils/CurlInterface.cpp \
 utils/GzipInterface.cpp \
 utils/Md5.cpp \
@@ -52,6 +51,8 @@ version.cpp
 
 libdeepsolver_la_HEADERS = \
 AbstractPackageBackEnd.h \
+AbstractPackageRecipient.h \
+AbstractSatSolver.h \
 AbstractTaskSolver.h \
 ConfigCenter.h \
 ConfigData.h \
@@ -71,6 +72,7 @@ os/Directory.h \
 os/File.h \
 os/SystemException.h \
 os/system.h \
+PackageInfoProcessor.h \
 Pkg.h \
 PkgUtils.h \
 ProvidePriorityList.h \
@@ -79,7 +81,6 @@ repo/InfoFileReader.h \
 repo/PkgSection.h \
 repo/RepoParams.h \
 Repository.h \
-repo/TextFormatReader.h \
 repo/TextFormatSectionReader.h \
 RequireFilter.h \
 rpm/Rpmdb.h \
@@ -92,14 +93,12 @@ transact/InstalledReferences.h \
 transact/PackageScopeContent.h \
 transact/PackageScope.h \
 transact/ProvideMap.h \
-transact/sat.h \
 transact/TaskException.h \
 UserTask.h \
 utils/CurlInterface.h \
 utils/DateTime.h \
 utils/GzipInterface.h \
 utils/Md5.h \
-utils/Md5File.h \
 utils/Md5File.h \
 utils/string-utils.h \
 utils/TinyFileDownload.h \
