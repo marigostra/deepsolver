@@ -19,8 +19,29 @@
 #define DEEPSOLVER_PKG_UTILS_H
 
 #include"AbstractPackageBackEnd.h"
+#include"transact/AbstractPackageScope.h"
+#include"transact/AbstractSatSolver.h"
 #include"transact/PackageScopeContent.h"
+#include"transact/ProvideMap.h"
+#include"transact/InstalledReferences.h"
 
-void fillWithhInstalledPackages(AbstractPackageBackEnd& backEnd, PackageScopeContent& content);
+class PkgUtils
+{
+public:
+  static void fillWithhInstalledPackages(AbstractPackageBackEnd& backEnd, PackageScopeContent& content);
+
+  static void prepareReversedMaps(const PackageScopeContent& content,
+			   ProvideMap& provideMap,
+			   InstalledReferences& requires,
+			   InstalledReferences& conflicts);
+
+  static std::string satToString(const AbstractPackageScope& scope, 
+				 const Sat& sat,
+				 const StringVector& annotations);
+
+  static void printSolution(const AbstractPackageScope& scope,
+			    const VarIdVector& install,
+			    const VarIdVector& remove);
+}; //class PkgUtils;
 
 #endif //DEEPSOLVER_PKG_UTILS_H;

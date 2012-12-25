@@ -71,15 +71,17 @@ int main(int argc, char* argv[])
   parseCmdLine(argc, argv);
   initLogging(cliParser.wasKeyUsed("--debug")?LOG_DEBUG:LOG_INFO, cliParser.wasKeyUsed("--log"));
   try{
-    logMsg(LOG_INFO, "Starting repo index updating");
     AlwaysTrueContinueRequest alwaysTrueContinueRequest;
-    Messages(std::cout).dsUpdateLogo();
+    if (!cliParser.wasKeyUsed("--log"))
+      Messages(std::cout).dsUpdateLogo();
     ConfigCenter conf;
-    conf.loadFromFile("/tmp/ds.ini");
+    conf.loadFromFile(DEFAULT_CONFIG_FILE_NAME);
+    conf.loadFromDir(DEFAULT_CONFIG_DIR_NAME);
     conf.commit();
-    Messages(std::cout).introduceRepoSet(conf);
+    if (!cliParser.wasKeyUsed("--log"))
+      Messages(std::cout).introduceRepoSet(conf);
     OperationCore core(conf);
-    IndexFetchProgress progress(std::cout);
+    IndexFetchProgress progress(std::cout, cliParser.wasKeyUsed("--log"));
     core.fetchIndices(progress, alwaysTrueContinueRequest);
   }
   catch (const ConfigFileException& e)
@@ -97,9 +99,19 @@ int main(int argc, char* argv[])
       Messages(std::cerr).onOperationError(e);
       return EXIT_FAILURE;
     }
+  catch(const CurlException& e)
+    {
+      Messages(std::cerr).onCurlError(e);
+      return EXIT_FAILURE;
+    }
   catch(const SystemException& e)
     {
       Messages(std::cerr).onSystemError(e);
+      return EXIT_FAILURE;
+    }
+  catch(const NotImplementedException& e)
+    {
+      std::cerr << "Feature not implemented:" << e.getMessage() << std::endl;
       return EXIT_FAILURE;
     }
   return EXIT_SUCCESS;

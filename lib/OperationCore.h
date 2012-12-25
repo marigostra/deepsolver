@@ -18,77 +18,7 @@
 #ifndef DEEPSOLVER_OPERATION_CORE_H
 #define DEEPSOLVER_OPERATION_CORE_H
 
-#include"DeepsolverException.h"
 #include"ConfigCenter.h"
-#include"UserTask.h"
-
-enum {
-  OperationErrorInvalidInfoFile = 0,
-  OperationErrorInvalidChecksum = 1,
-  OperationErrorBrokenIndexFile = 2,
-OperationErrorInternalIOProblem = 3
-};
-
-/**\brief The exception class for general operation problems
- *
- * This class is purposed for various general operation problems.
- * The errors can be thrown only by the methods of
- * OperationCore class covering transaction processing as well as index
- * updating. General error types are checksum
- * mismatch, invalid content of repo file and so on. Downloading problems
- * have their own exception class called CurlException.
- *
- * \sa OperationCore CurlException System Exception RpmException
- */
-class OperationException
-{
-public:
-  /**\brief The constructor
-   *
-   * \param [in] code The error code
-   */
-  OperationException(int code) 
-    : m_code(code) {}
-
-  /**\brief The destructor*/
-  virtual ~OperationException() {}
-
-public:
-  /**\brief Returns the error code
-   *
-   * Use this method to get error code.
-   *
-   * \return The error code
-   */
-  int getCode() const
-  {
-    return m_code;
-  }
-
-  std::string getType() const
-  {
-    return "operation";
-  }
-
-  std::string getMessage() const
-  {
-    switch (m_code)
-      {
-      case OperationErrorInvalidInfoFile:
-	return "repository info file has an invalid content";
-	break;
-      case OperationErrorInvalidChecksum :
-	return "one or more files were corrupted (invalid checksum)";
-	break;
-      default:
-	assert(0);
-      } //switch(m_code);
-    return "";//just to reduce warning messages;
-  }
-
-private:
-  const int m_code;
-}; //class OperationException;
 
 /**\brief The abstract interface for continuous process interruption
  *
@@ -134,19 +64,46 @@ public:
 				  const std::string& currentPartName) = 0;
 }; //class AbstractIndexFetchListener;
 
+class AbstractTransactionListener
+{
+public:
+  /**\brief The default constructor*/
+  AbstractTransactionListener() {}
+
+  /**\brief The destructor*/
+  virtual ~AbstractTransactionListener() {}
+
+public:
+  virtual void onAvailablePkgListProcessing() = 0;
+  virtual void onInstalledPkgListProcessing() = 0;
+  virtual void onInstallRemovePkgListProcessing() = 0;
+}; //class abstractTransactionListener;
+
 class OperationCore
 {
 public:
+  /**\brief constructor
+   *
+   * \param [in] conf The configuration data
+   */
   OperationCore(const ConfigCenter& conf): 
     m_conf(conf)  {}
 
+  /**\brief The destructor*/
     virtual ~OperationCore() {}
 
 public:
+    /**\brief Updates repository content information
+     *
+     * \throws OperationException
+     * \throws CurlException
+     * \throws SystemException
+     */
   void fetchIndices(AbstractIndexFetchListener& listener,
-		    const AbstractOperationContinueRequest& continueRequest);
+		    const AbstractOperationContinueRequest& continueRequest) const;
 
-  void doInstallRemove(const UserTask& task);
+  void transaction(AbstractTransactionListener& listener, const UserTask& task) const;
+  std::string generateSat(AbstractTransactionListener& listener, const UserTask& task) const;
 
 private:
   const ConfigCenter& m_conf;

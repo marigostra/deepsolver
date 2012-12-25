@@ -16,43 +16,30 @@
 */
 
 #include"deepsolver.h"
-#include <rpm/rpmlib.h>                                                                                                                                        
-#include <rpm/header.h>                                                                                                                                        
-#include <rpm/rpmdb.h>                                                                                                                                         
-#include"Rpmdb.h"
-#include"RpmException.h"
-#include"RpmHeaderReading.h"
+#include"RpmInstalledPackagesIterator.h"
+#include"rpmHeader.h"
 
-static bool alreadyReadConfigFiles = 0;
-
-void Rpmdb::openEnum()
+void RpmInstalledPackagesIterator::openEnum()
 {
-  if (!alreadyReadConfigFiles)
-    {
-      rpmReadConfigFiles( NULL, NULL );                                                                                                                          
-      alreadyReadConfigFiles = 1;
-    }
   if (rpmdbOpen( "", &m_db, O_RDONLY, 0644 ) != 0)
-    RPM_STOP("Could not open rpmdb");
+    throw RpmException("Could not open rpmdb");
   m_it = rpmdbInitIterator(m_db, RPMDBI_PACKAGES, NULL, 0);
 }
 
-void Rpmdb::close()
-{
-  rpmdbFreeIterator(m_it);                                                                                                                                     
-  rpmdbClose(m_db);                                                                                                                                            
-}
-
-bool Rpmdb::moveNext(Pkg& pkg)
+bool RpmInstalledPackagesIterator::moveNext(Pkg& pkg)
 {                                                                                                                                                              
   Header h = rpmdbNextIterator(m_it);
   if (!h)
-    return 0;
+    {
+      rpmdbFreeIterator(m_it);                                                                                                                                     
+      rpmdbClose(m_db);                                                                                                                                            
+      return 0;
+    }
   rpmFillMainData(h, pkg);
   rpmFillProvides(h, pkg.provides);
   rpmFillRequires(h, pkg.requires);
   rpmFillObsoletes(h, pkg.obsoletes);
   rpmFillConflicts(h, pkg.conflicts);
   rpmFillFileList(h, pkg.fileList);
-      return 1;
+  return 1;
 }                                                                                                                                                              

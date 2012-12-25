@@ -19,8 +19,8 @@
 #define DEEPSOLVER_DEFAULT_VALUES_H
 
 //Configuration parameters;
-#define DEFAULT_CONFIG_DIR "/etc/deepsolver"
-#define DEFAULT_CONFIG_FILE_NAME "ds.ini"
+#define DEFAULT_CONFIG_FILE_NAME "/etc/deepsolver/ds.conf"
+#define DEFAULT_CONFIG_DIR_NAME "/etc/deepsolver/conf.d"
 
 //Data files and directories;
 #define COMPRESSION_SUFFIX_GZIP ".gz"

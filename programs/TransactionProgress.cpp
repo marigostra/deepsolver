@@ -16,27 +16,25 @@
 */
 
 #include"deepsolver.h"
-#include<rpm/rpmlib.h>
+#include"TransactionProgress.h"
 
-int rpmVerCmp(const std::string& ver1, const std::string& ver2)
+void TransactionProgress::onAvailablePkgListProcessing()
 {
-  return rpmvercmp(ver1.c_str(), ver2.c_str());
+  if (m_suppress)
+    return;
+  m_stream << "Processing package lists from all repositories" << std::endl;
 }
 
-static int buildSenseFlags(const VersionCond& c)
+void TransactionProgress::onInstalledPkgListProcessing()
 {
-  int value = 0;
-  if (c.isEqual())
-    value |= RPMSENSE_EQUAL;
-  if (c.isLess())
-    value |= RPMSENSE_LESS;
-  if (c.isGreater())
-    value |= RPMSENSE_GREATER;
-  return value;
+  if (m_suppress)
+    return;
+  m_stream << "Processing installed package list" << std::endl;
 }
 
-int rpmVerOverlap(const VersionCond& v1, const VersionCond& v2)
+void TransactionProgress::onInstallRemovePkgListProcessing()
 {
-  return rpmRangesOverlap("", v1.version.c_str(), buildSenseFlags(v1),
-			  "", v2.version.c_str(), buildSenseFlags(v2));
+  if (m_suppress)
+    return;
+  m_stream << "Calculating package lists for installation and removing" << std::endl;
 }

@@ -23,7 +23,7 @@
 
 #include"deepsolver.h"
 #include"RpmFileHeaderReader.h"
-#include"RpmHeaderReading.h"
+#include"rpmHeader.h"
 
 void RpmFileHeaderReader::load(const std::string& fileName)
 {
@@ -31,7 +31,7 @@ void RpmFileHeaderReader::load(const std::string& fileName)
   assert(m_header == NULL);
   m_fd = Fopen(fileName.c_str(), "r");
   if (m_fd == NULL)
-    RPM_STOP("Could not open rpm file \'" + fileName + "\' for header reading");
+    throw RpmException("Could not open rpm file \'" + fileName + "\' for header reading");
   const rpmRC rc = rpmReadPackageHeader(m_fd, &m_header, 0, NULL, NULL);
   if (rc != RPMRC_OK || m_header == NULL)
     {
@@ -40,7 +40,7 @@ void RpmFileHeaderReader::load(const std::string& fileName)
       Fclose(m_fd);
       m_fd = NULL;
       m_header = NULL;
-      RPM_STOP("Could not read header from rpm file \'" + fileName + "\'");
+      throw RpmException("Could not read header from rpm file \'" + fileName + "\'");
     }
   m_fileName = fileName;
 }
@@ -88,19 +88,4 @@ void RpmFileHeaderReader::fillChangeLog(ChangeLog& changeLog)
 void RpmFileHeaderReader::fillFileList(StringVector& v)
 {
   rpmFillFileList(m_header, v);
-}
-
-void readRpmPkgFile(const std::string& fileName, PkgFile& pkgFile)
-{
-  RpmFileHeaderReader reader;
-  reader.load(fileName);
-  reader.fillMainData(pkgFile);
-  reader.fillProvides(pkgFile.provides);
-  reader.fillConflicts(pkgFile.conflicts);
-  reader.fillObsoletes(pkgFile.obsoletes);
-  reader.fillRequires(pkgFile.requires);
-  reader.fillChangeLog(pkgFile.changeLog);
-  reader.fillFileList(pkgFile.fileList);
-  reader.close();
-  pkgFile.fileName = fileName;
 }

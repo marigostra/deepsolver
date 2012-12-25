@@ -2,7 +2,6 @@
 #ifndef DEEPSOLVER_MESSAGES_H
 #define DEEPSOLVER_MESSAGES_H
 
-#include"os/SystemException.h"
 #include"ConfigCenter.h"
 #include"utils/CurlInterface.h"
 #include"OperationCore.h"
@@ -23,11 +22,16 @@ public:
   void onConfigSyntaxError(const ConfigFileException& e);
   void onConfigError(const ConfigException& e);
   void onCurlError(const CurlException& e);
+  void onRpmError(const RpmException& e);
   void onOperationError(const OperationException& e);
+  void onTaskError(const TaskException& e);
 
   //Command line errors;
   void onMissedProgramName() const;
   void onMissedCommandLineArgument(const std::string& arg) const;
+
+  //User input errors;
+  void onNoPackagesMentionedError() const;
 
   //ds-update;
   void dsUpdateLogo() const;
@@ -39,6 +43,11 @@ public:
   void dsInstallLogo() const;
   void dsInstallInitCliParser(CliParser& cliParser) const;
   void dsInstallHelp(const CliParser& cliParser) const;
+
+  //ds-remove;
+  void dsRemoveLogo() const;
+  void dsRemoveInitCliParser(CliParser& cliParser) const;
+  void dsRemoveHelp(const CliParser& cliParser) const;
 
 private:
   std::ostream& m_stream;

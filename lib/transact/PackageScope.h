@@ -18,24 +18,25 @@
 #ifndef DEEPSOLVER_PACKAGE_SCOPE_H
 #define DEEPSOLVER_PACKAGE_SCOPE_H
 
-#include"Pkg.h"
+#include"AbstractPackageScope.h"
+#include"AbstractPackageBackEnd.h"
 #include"PackageScopeContent.h"
 #include"ProvideMap.h"
 #include"InstalledReferences.h"
 
-//All methods can throw only SystemException and RpmException;
-//Vars is the indices in the main PackageScopeContent array;
-class PackageScope 
+class PackageScope: public AbstractPackageScope
 {
 public:
-  PackageScope(const PackageScopeContent& content,
+  PackageScope(const AbstractPackageBackEnd& backEnd,
+	       const PackageScopeContent& content,
 	       const ProvideMap& provideMap,
-	       const InstalledReferences& requiresReferences,
-	       const InstalledReferences& conflictsReferences)
-    : m_content(content), 
+	       const InstalledReferences& installedRequiresEntries,
+	       const InstalledReferences& installedConflictsEntries)
+    : m_backEnd(backEnd),
+      m_content(content), 
       m_provideMap(provideMap),
-      m_requiresReferences(requiresReferences),
-      m_conflictsReferences(conflictsReferences) {}
+      m_installedRequiresEntries(installedRequiresEntries),
+      m_installedConflictsEntries(installedConflictsEntries) {}
 
   virtual ~PackageScope() {}
 
@@ -43,63 +44,49 @@ public:
   PackageId packageIdOfVarId(VarId varId) const;
   std::string constructPackageName(VarId varId) const;
   std::string constructPackageNameWithBuildTime(VarId varId) const;
-  std::string constructFullVersion(VarId varId) const;
   bool checkName(const std::string& name) const;
-
-  /**\brief Translates package name as a string to PackageId value
-   *
-   * Package Id replaces both the real names and provides entries
-   */
   PackageId strToPackageId(const std::string& name) const;
-
-  /**\brief Translates the package name replaced by PackageId value to original string
-   *
-   * Package Id replaces both the real names and provides entries
-   */
   std::string packageIdToStr(PackageId packageId) const;
 
-  void selectMatchingVarsNoProvides(PackageId packageId, VarIdVector& vars);
-  void selectMatchingVarsNoProvides(PackageId packageId, const VersionCond& ver, VarIdVector& vars);
-
-  void selectMatchingVarsWithProvides(IdPkgRel& rel, VarIdVector& vars);
+  void selectMatchingVarsAmongProvides(const IdPkgRel& rel, VarIdVector& vars);
+  void selectMatchingVarsAmongProvides(PackageId packageId, VarIdVector& vars);
+  void selectMatchingVarsAmongProvides(PackageId packageId, const VersionCond& ver, VarIdVector& vars);
+  void selectMatchingVarsRealNames(const IdPkgRel& rel, VarIdVector& vars);
+  void selectMatchingVarsRealNames(PackageId packageId, VarIdVector& vars);
+  void selectMatchingVarsRealNames(PackageId packageId, const VersionCond& ver, VarIdVector& vars);
+  void selectMatchingVarsWithProvides(const IdPkgRel& rel, VarIdVector& vars);
   void selectMatchingVarsWithProvides(PackageId packageId, VarIdVector& vars);
   void selectMatchingVarsWithProvides(PackageId packageId, const VersionCond& ver, VarIdVector& vars);
 
-  void selectMatchingVarsAmongProvides(PackageId packageId, VarIdVector& vars);
-  void selectMatchingVarsAmongProvides(PackageId packageId, const VersionCond& ver, VarIdVector& vars);
-
   bool isInstalled(VarId varId) const;
-  bool isInstalledWithMatchingAlternatives(VarId varId) const;//FIXME:Give new name;;
-  void selectInstalledNoProvides(PackageId pkgId, VarIdVector& vars) const;
-
   void selectTheNewest(VarIdVector& vars);
   void selectTheNewestByProvide(VarIdVector& vars, PackageId provideEntry);
   bool allProvidesHaveTheVersion(const VarIdVector& vars, PackageId provideEntry);
 
-  void getRequires(VarId varId, IdPkgRelVector& res) const;
+  void getRequires(VarId varId, IdPkgRelVector& res);
+  void getConflicts(VarId varId, IdPkgRelVector& res);
 
+  void whatConflictsAmongInstalled(VarId varId, VarIdVector& res, IdPkgRelVector& resRels);
+  void whatDependsAmongInstalled(VarId varId, VarIdVector& res, IdPkgRelVector& resRels);
+  void whatSatisfiesAmongInstalled(const IdPkgRel& rel, VarIdVector& res);
+
+private:
   void getRequires(VarId varId,
 		   PackageIdVector& depWithoutVersion,
 		   PackageIdVector& depWithVersion,
 		   VersionCondVector& versions) const;
-
-  void getConflicts(VarId varId, IdPkgRelVector& res) const;
 
   void getConflicts(VarId varId,
 		    PackageIdVector& withoutVersion,
 		    PackageIdVector& withVersion,
 		    VersionCondVector& versions) const;
 
-  //  bool canBeSatisfiedByInstalled(PackageId pkgId);
-
-  //  bool canBeSatisfiedByInstalled(PackageId pkgId, const VersionCond& ver);
-
-  void whatSatisfiesAmongInstalled(const IdPkgRel& rel, VarIdVector& res);
-
-  void whatDependsAmongInstalled(VarId varId, VarIdVector& res, IdPkgRelVector& resRels);
-  void whatConflictsAmongInstalled(VarId varId, VarIdVector& res, IdPkgRelVector& resRels);
-
-  bool variableSatisfies(VarId varId, const IdPkgRel& rel);
+private:
+  int versionCompare(const std::string& ver1, const std::string& ver2) const;
+  bool versionOverlap(const VersionCond& ver1, const VersionCond& ver2) const;
+  bool versionEqual(const std::string& ver1, const std::string& ver2) const;
+bool versionGreater(const std::string& ver1, const std::string& ver2) const;
+  std::string constructFullVersion(VarId varId) const;
 
 private:
   typedef PackageScopeContent::PkgInfo PkgInfo;
@@ -108,10 +95,11 @@ private:
   typedef PackageScopeContent::RelInfoVector RelInfoVector;
 
 private:
+  const AbstractPackageBackEnd& m_backEnd;
   const PackageScopeContent& m_content;
   const ProvideMap& m_provideMap;
-  const InstalledReferences& m_requiresReferences;
-  const InstalledReferences& m_conflictsReferences; 
+  const InstalledReferences& m_installedRequiresEntries;
+  const InstalledReferences& m_installedConflictsEntries;
 }; //class PackageScope; 
 
 #endif //DEEPSOLVER_PACKAGE_SCOPE_H;

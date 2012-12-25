@@ -24,21 +24,25 @@ struct ConfDir
   //FIXME:default values;
 
     std::string pkgData;
-  std::string tmpPkgDataFetch;
 }; //struct ConfDir;
+
+struct ConfOs
+{
+  StringVector transactReadAhead;
+}; //struct ConfOs;
 
 struct ConfRepo
 {
   ConfRepo()
     : enabled(1),
-      takeDescr(0),
+      takeDescr(1),
       takeFileList(0),
       takeSources(0) {}
 
   ConfRepo(const std::string& n)
     : name(n),
       enabled(1),
-      takeDescr(0),
+      takeDescr(1),
       takeFileList(0),
       takeSources(0) {}
 
@@ -56,10 +60,26 @@ struct ConfRepo
 typedef std::vector<ConfRepo> ConfRepoVector;
 typedef std::list<ConfRepo> ConfRepoList;
 
+struct ConfProvide
+{
+  ConfProvide() {}
+
+  ConfProvide(const std::string& n)
+    : name(n) {}
+
+  std::string name;
+  StringVector providers;
+}; //struct ConfProvide;
+
+typedef std::vector<ConfProvide> ConfProvideVector;
+typedef std::list<ConfProvide> ConfProvideList;
+
 struct ConfRoot
 {
   ConfDir dir;
+  ConfOs os;
   ConfRepoVector repo;
+  ConfProvideVector provide;
 }; //struct ConfRoot;
 
 #endif //DEEPSOLVER_CONFIG_DATA_H;

@@ -19,82 +19,13 @@
 #include"OperationCore.h"
 #include"TransactionProgress.h"
 #include"Messages.h"
+#include"CliParser.h"
 
-class DsInstallCliParser: public CliParser
-{
-public:
-  /**\brief The default constructor*/
-  DsInstallCliParser() {}
-
-  /**\brief The destructor*/
-  virtual ~DsInstallCliParser() {}
-
-protected:
-  size_t recognizeCluster(const StringVector& params, int& mode) const
-  {
-  assert(!params.empty());
-  if (mode == 0 && params[0] == "--")
-    return 0;
-  if (mode == 0 && findKey(params[0]) != (KeyVector::size_type)-1)
-    return CliParser::recognizeCluster(params, mode);
-  if (params.size() < 3 ||
-      (params[1] != "=" && params[1] != "<=" && params[1] != ">=" && params[1] != "<" && params[1] != ">"))
-    return CliParser::recognizeCluster(params, mode);
-  return 2;
-  }
-
-  void parseCluster(const StringVector& cluster, int& mode)
-  {
-    if (mode == 0 && cluster.size() == 1 && cluster[0] == "--")
-      {
-	mode = 1;
-	return ;
-      }
-    if (mode == 0 && findKey(cluster[0]) != (KeyVector::size_type)-1)
-      {
-	CliParser::parseCluster(cluster, mode);
-	return;
-      }
-    if(cluster.size() != 1 && cluster.size() != 3)
-      {
-	CliParser::parseCluster(cluster, mode);
-	return;
-      }
-    if (trim(cluster[0]).empty())
-      return;
-    if (cluster.size() == 1)
-      {
-	userTask.itemsToInstall.push_back(UserTaskItemToInstall(cluster[0]));
-	return;
-      }
-    if (trim(cluster[2]).empty())
-      return;
-    VerDirection verDir = VerNone;
-    if (cluster[1] == "=")
-      verDir = VerEquals; else
-      if (cluster[1] == "<=")
-	verDir = VerLess | VerEquals; else
-	if (cluster[1] == ">=")
-	  verDir = VerGreater | VerEquals; else
-	  if (cluster[1] == "<")
-	    verDir = VerLess; else 
-	    if (cluster[1] == ">")
-	      verDir = VerGreater; else
-	      {
-		assert(0);
-	      }
-    userTask.itemsToInstall.push_back(UserTaskItemToInstall(cluster[0], verDir, cluster[2]));
-  }
-
-public:
-  UserTask userTask;
-}; //class DsInstallCliParser;
-
-static DsInstallCliParser cliParser;
+static CliParser cliParser;
 
 void parseCmdLine(int argc, char* argv[])
 {
-  Messages(std::cout).dsInstallInitCliParser(cliParser);
+  Messages(std::cout).dsRemoveInitCliParser(cliParser);
   try {
     cliParser.init(argc, argv);
     cliParser.parse();
@@ -115,14 +46,14 @@ void parseCmdLine(int argc, char* argv[])
     }
   if (cliParser.wasKeyUsed("--help"))
     {
-      Messages(std::cout).dsInstallHelp(cliParser);
+      Messages(std::cout).dsRemoveHelp(cliParser);
       exit(EXIT_SUCCESS);
     }
 }
 
 int main(int argc, char* argv[])
 {
-  messagesProgramName = "ds-install";
+  messagesProgramName = "ds-remove";
   setlocale(LC_ALL, "");
   parseCmdLine(argc, argv);
   initLogging(cliParser.wasKeyUsed("--debug")?LOG_DEBUG:LOG_INFO, cliParser.wasKeyUsed("--log"));
@@ -133,19 +64,23 @@ int main(int argc, char* argv[])
     conf.loadFromDir(DEFAULT_CONFIG_DIR_NAME);
     conf.commit();
     if (!cliParser.wasKeyUsed("--log"))
-      Messages(std::cout).dsInstallLogo();
+      Messages(std::cout).dsRemoveLogo();
     OperationCore core(conf);
-    if (cliParser.userTask.itemsToInstall.empty())
+    UserTask userTask;
+    for(StringVector::size_type i = 0;i < cliParser.files.size();i++)
+      if (!cliParser.files[i].empty())
+	userTask.namesToRemove.insert(cliParser.files[i]);
+    if (userTask.namesToRemove.empty())
       {
 	Messages(std::cerr).onNoPackagesMentionedError();
 	return EXIT_FAILURE;
       }
     if (!cliParser.wasKeyUsed("--sat"))
       {
-	core.transaction(transactionProgress, cliParser.userTask);
+	core.transaction(transactionProgress, userTask);
       } else
       {
-	const std::string res = core.generateSat(transactionProgress, cliParser.userTask);
+	const std::string res = core.generateSat(transactionProgress, userTask);
 	std::cout << std::endl;
 	std::cout << res;
       }

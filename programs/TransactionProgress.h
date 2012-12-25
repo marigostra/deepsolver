@@ -15,34 +15,28 @@
    General Public License for more details.
 */
 
-#ifndef DEEPSOLVER_RPM_EXCEPTION_H
-#define DEEPSOLVER_RPM_EXCEPTION_H
+#ifndef DEEPSOLVER_TRANSACTION_PROGRESS_H
+#define DEEPSOLVER_TRANSACTION_PROGRESS_H
 
-class RpmException: public DeepsolverException
+#include"OperationCore.h"
+
+class TransactionProgress: public AbstractTransactionListener
 {
 public:
-  RpmException() {}
-  RpmException(const std::string& message)
-    : m_message(message
-) {}
+  TransactionProgress(std::ostream& stream, bool suppress)
+    : m_stream(stream),
+      m_suppress(suppress) {}
 
-      virtual ~RpmException() {}
+  virtual ~TransactionProgress() {}
 
 public:
-  std::string getType() const
-  {
-    return "rpm";
-  }
-
-  std::string getMessage() const
-  {
-    return m_message;
-  }
+  void onAvailablePkgListProcessing();
+  void onInstalledPkgListProcessing();
+  void onInstallRemovePkgListProcessing();
 
 private:
-  std::string m_message;
-}; //class RpmException;
+  std::ostream& m_stream;
+  const bool m_suppress;
+}; //class abstractTransactionListener;
 
-#define RPM_STOP(x) throw RpmException(x)
-
-#endif //DEEPSOLVER_RPM_EXCEPTION_H;
+#endif //DEEPSOLVER_TRANSACTION_PROGRESS_H;

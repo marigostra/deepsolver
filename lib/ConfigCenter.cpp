@@ -18,24 +18,26 @@
 #include"deepsolver.h"
 #include"ConfigCenter.h"
 
-#define DELIMITERS ",;"
+#define DELIMITERS ";"
 
 static std::string buildConfigParamTitle(const StringVector& path, const std::string& sectArg);
 static bool parseBooleanValue(const StringVector& path,
 		       const std::string& sectArg,
 		       const std::string& str,
 		       const ConfigFilePosInfo& pos);
+static unsigned int parseUintValue(const StringVector& path,
+		       const std::string& sectArg,
+		       const std::string& str,
+				   const ConfigFilePosInfo& pos);
 
 void ConfigCenter::initValues()
 {
-  addNonEmptyStringParam3("core", "dir", "pkg-data", m_root.dir.pkgData );
+  addNonEmptyStringParam3("core", "dir", "pkg-data", m_root.dir.pkgData);
+  addStringListParam3("core", "os", "transact-read-ahead", m_root.os.transactReadAhead);
 }
 
-void ConfigCenter::reinitRepoValues()
+void ConfigCenter::initRepoValues()
 {
-  m_repoStringValues.clear();
-  m_repoStringListValues.clear();
-  m_repoBooleanValues.clear();
   for(ConfRepoVector::size_type i = 0;i < m_root.repo.size();i++)
     {
       ConfRepo& repo = m_root.repo[i];
@@ -46,12 +48,12 @@ void ConfigCenter::reinitRepoValues()
       stringValue.path.push_back("url");
       stringValue.value = &repo.url;
       stringValue.canBeEmpty = 0;
-      m_repoStringValues.push_back(stringValue);
+      m_stringValues.push_back(stringValue);
       //Vendor;
       stringValue.path[1] = "vendor";
       stringValue.value = &repo.vendor;
       stringValue.canBeEmpty = 1;
-      m_repoStringValues.push_back(stringValue);
+      m_stringValues.push_back(stringValue);
       //Arch;
       StringListValue stringListValue;
       stringListValue.sectArg = repo.name;
@@ -59,22 +61,64 @@ void ConfigCenter::reinitRepoValues()
       stringListValue.path.push_back("arch");
       stringListValue.delimiters = DELIMITERS;
       stringListValue.canContainEmptyItem = 0;
+      stringListValue.canBeEmpty = 0;
       stringListValue.value = &repo.arch;
-      m_repoStringListValues.push_back(stringListValue);
+      m_stringListValues.push_back(stringListValue);
       //Components;
       stringListValue.path[1] = "components";
       stringListValue.value = &repo.components;
-      m_repoStringListValues.push_back(stringListValue);
-      //FIXME:take-*;
+      m_stringListValues.push_back(stringListValue);
+      //Enabled;
+      BooleanValue booleanValue;
+      booleanValue.sectArg = repo.name;
+      booleanValue.path.push_back("repo");
+      booleanValue.path.push_back("enabled");
+      booleanValue.value = &repo.enabled;
+      m_booleanValues.push_back(booleanValue);
+      //Take*;
+      booleanValue.path[1] = "take-descr";
+      booleanValue.value = &repo.takeDescr;
+      m_booleanValues.push_back(booleanValue);
+      booleanValue.path[1] = "take-file-list";
+      booleanValue.value = &repo.takeFileList;
+      m_booleanValues.push_back(booleanValue);
+      booleanValue.path[1] = "take-sources";
+      booleanValue.value = &repo.takeSources;
+      m_booleanValues.push_back(booleanValue);
     }
 }
 
+void ConfigCenter::initProvideValues()
+{
+  for(ConfProvideVector::size_type i = 0;i < m_root.provide.size();i++)
+    {
+      ConfProvide& provide = m_root.provide[i];
+      StringListValue stringListValue;
+      stringListValue.sectArg = provide.name;
+      stringListValue.path.push_back("provide");
+      stringListValue.path.push_back("providers");
+      stringListValue.delimiters = DELIMITERS;
+      stringListValue.canContainEmptyItem = 0;
+      stringListValue.canBeEmpty = 1;
+      stringListValue.value = &provide.providers;
+      m_stringListValues.push_back(stringListValue);
+    }
+}
+
+
 void ConfigCenter::commit()
 {
-  logMsg(LOG_DEBUG, "Committing configuration");
-  logMsg(LOG_DEBUG, "Adjusting values");
-  //Adjusting;
+  logMsg(LOG_DEBUG, "config:about to commit configuration values");
   m_root.dir.pkgData = trim(m_root.dir.pkgData);
+  for(StringVector::size_type i = 0;i < m_root.os.transactReadAhead.size();i++)
+    m_root.os.transactReadAhead[i] = trim(m_root.os.transactReadAhead[i]);
+  for(ConfProvideVector::size_type i = 0;i < m_root.provide.size();i++)
+    {
+      ConfProvide& provide = m_root.provide[i];
+      provide.name = trim(provide.name);
+      for(StringVector::size_type k = 0;k < provide.providers.size();k++)
+	provide.providers[k] = trim(provide.providers[k]);
+    }
   for(ConfRepoVector::size_type i = 0;i < m_root.repo.size();i++)
     {
       ConfRepo& repo = m_root.repo[i];
@@ -86,60 +130,43 @@ void ConfigCenter::commit()
       for(StringVector::size_type k = 0;k < repo.components.size();k++)
 	repo.components[k] = trim(repo.components[k]);
     }
-      //Common checking;
-  logMsg(LOG_DEBUG, "Common values checking");
   for(StringValueVector::size_type i = 0;i < m_stringValues.size();i++)
     if (!m_stringValues[i].canBeEmpty && trim(*m_stringValues[i].value).empty())
-      throw ConfigException(ConfigErrorValueCannotBeEmpty, m_stringValues[i].pathToString());
-  for(StringValueVector::size_type i = 0;i < m_repoStringValues.size();i++)
-    if (!m_repoStringValues[i].canBeEmpty && trim(*m_repoStringValues[i].value).empty())
-      throw ConfigException(ConfigErrorValueCannotBeEmpty, m_stringValues[i].pathToString());
-  //Custom commit;
-  logMsg(LOG_DEBUG, "Custom commit");
-  m_root.dir.tmpPkgDataFetch = Directory::mixNameComponents(m_root.dir.pkgData, PKG_DATA_FETCH_DIR);//Real constant can be found in DefaultValues.h;
-  logMsg(LOG_DEBUG, "Configuration data commit completed");
+      throw ConfigException(ConfigException::ValueCannotBeEmpty, m_stringValues[i].pathToString());
+  for(StringListValueVector::size_type i = 0;i < m_stringListValues.size();i++)
+    if (!m_stringListValues[i].canBeEmpty && (*m_stringListValues[i].value).empty())
+      throw ConfigException(ConfigException::ValueCannotBeEmpty, m_stringListValues[i].pathToString());
+  logMsg(LOG_DEBUG, "config:commit completed");
 }
 
-void ConfigCenter::addStringParam3(const std::string& path1,
-				   const std::string& path2,
-				   const std::string& path3,
-				   std::string& value)
+void ConfigCenter::printConfigData(std::ostream& s) const
 {
-  assert(!path1.empty() && !path2.empty() && !path3.empty());
-  StringValue stringValue(value);
-  stringValue.canBeEmpty = 1;
-  stringValue.path.push_back(path1);
-  stringValue.path.push_back(path2);
-  stringValue.path.push_back(path3);
-  m_stringValues.push_back(stringValue);
-}
-
-void ConfigCenter::addNonEmptyStringParam3(const std::string& path1,
-					   const std::string& path2,
-					   const std::string& path3,
-					   std::string& value)
-{
-  assert(!path1.empty() && !path2.empty() && !path3.empty());
-  StringValue stringValue(value);
-  stringValue.canBeEmpty = 0;
-  stringValue.path.push_back(path1);
-  stringValue.path.push_back(path2);
-  stringValue.path.push_back(path3);
-  m_stringValues.push_back(stringValue);
-}
-
-void ConfigCenter::loadFromFile(const std::string& fileName)
-{
-  logMsg(LOG_DEBUG, "Reading configuration from \'%s\'", fileName.c_str());
-  assert(!fileName.empty());
-  File f;
-  f.openReadOnly(fileName);
-  StringVector lines;
-  f.readTextFile(lines);
-  f.close();
-  ConfigFile parser(*this, fileName);
-  for(StringVector::size_type i = 0;i < lines.size();i++)
-      parser.processLine(lines[i]);
+  StringVector v;
+  for(StringValueVector::size_type i = 0;i < m_stringValues.size();i++)
+    v.push_back(m_stringValues[i].pathToString() + " = \"" + (*m_stringValues[i].value) + "\"");
+  for(StringListValueVector::size_type i = 0;i < m_stringListValues.size();i++)
+    {
+      std::string k = m_stringListValues[i].pathToString() + " =";
+      const StringVector& values = *m_stringListValues[i].value;
+      for(StringVector::size_type j = 0;j < values.size();j++)
+	{
+	  k += " \"" + values[j] + "\"";
+	  if (j + 1 < values.size())
+	    k += ",";
+	}
+      v.push_back(k);
+    }
+  for(BooleanValueVector::size_type i = 0;i < m_booleanValues.size();i++)
+    v.push_back(m_booleanValues[i].pathToString() + " = " + ((*m_booleanValues[i].value)?"yes":"no"));
+  for(UintValueVector::size_type i = 0;i < m_uintValues.size();i++)
+    {
+      std::ostringstream ss;
+      ss << m_uintValues[i].pathToString() << " = " << (*m_uintValues[i].value);
+      v.push_back(ss.str());
+    }
+  std::sort(v.begin(), v.end());
+  for(StringVector::size_type i = 0;i < v.size();i++)
+    s << v[i] << std::endl;
 }
 
 void ConfigCenter::onConfigFileValue(const StringVector& path, 
@@ -151,13 +178,41 @@ void ConfigCenter::onConfigFileValue(const StringVector& path,
   assert(!path.empty());
   if (path[0] == "repo")
     {
-      assert(!sectArg.empty());//FIXME:
+      if (trim(sectArg).empty())
+	throw NotImplementedException("Empty configuration file section argument");
       ConfRepoVector::size_type i = 0;
       while(i < m_root.repo.size() && m_root.repo[i].name != sectArg)
 	i++;
       if (i >= m_root.repo.size())
-	m_root.repo.push_back(ConfRepo(sectArg));
-      reinitRepoValues();
+	{
+	  m_root.repo.push_back(ConfRepo(sectArg));
+	  m_stringValues.clear();
+	  m_stringListValues.clear();
+	  m_booleanValues.clear();
+	  m_uintValues.clear();
+	  initValues();
+	  initRepoValues();
+	  initProvideValues();
+	}
+    }
+  if (path[0] == "provide")
+    {
+      if (trim(sectArg).empty())
+	throw NotImplementedException("Empty configuration file section argument");
+      ConfProvideVector::size_type i = 0;
+      while(i < m_root.provide.size() && m_root.provide[i].name != sectArg)
+	i++;
+      if (i >= m_root.provide.size())
+	{
+	  m_root.provide.push_back(ConfProvide(sectArg));
+	  m_stringValues.clear();
+	  m_stringListValues.clear();
+	  m_booleanValues.clear();
+	  m_uintValues.clear();
+	  initValues();
+	  initRepoValues();
+	  initProvideValues();
+	}
     }
   const int paramType = getParamType(path, sectArg, pos);
   if (paramType == ValueTypeString)
@@ -173,6 +228,11 @@ void ConfigCenter::onConfigFileValue(const StringVector& path,
   if (paramType == ValueTypeBoolean)
     {
       processBooleanValue(path, sectArg, value, adding, pos);
+      return;
+    }
+  if (paramType == ValueTypeUint)
+    {
+      processUintValue(path, sectArg, value, adding, pos);
       return;
     }
   assert(0);
@@ -216,12 +276,12 @@ void ConfigCenter::processStringListValue(const StringVector& path,
 	  continue;
 	}
       if (!stringListValue.canContainEmptyItem && trim(item).empty())
-	throw ConfigException(ConfigErrorValueCannotBeEmpty, buildConfigParamTitle(path, sectArg), pos);
+	throw ConfigException(ConfigException::ValueCannotBeEmpty, buildConfigParamTitle(path, sectArg), pos.fileName, pos.lineNumber, pos.line);
       v.push_back(item);
       item.erase();
     }
   if (!stringListValue.canContainEmptyItem && trim(item).empty())
-    throw ConfigException(ConfigErrorValueCannotBeEmpty, buildConfigParamTitle(path, sectArg), pos);
+    throw ConfigException(ConfigException::ValueCannotBeEmpty, buildConfigParamTitle(path, sectArg), pos.fileName, pos.lineNumber, pos.line);
   v.push_back(item);
 }
 
@@ -236,8 +296,21 @@ void ConfigCenter::processBooleanValue(const StringVector& path,
   assert(booleanValue.value != NULL);
   bool& v = *(booleanValue.value);
   if (adding)
-	throw ConfigException(ConfigErrorAddingNotPermitted, buildConfigParamTitle(path, sectArg), pos);
-  v = parseBooleanValue(path, sectArg, value, pos);
+    throw ConfigException(ConfigException::AddingNotPermitted, buildConfigParamTitle(path, sectArg), pos.fileName, pos.lineNumber, pos.line);
+  v = parseBooleanValue(path, sectArg, trim(value), pos);
+}
+
+void ConfigCenter::processUintValue(const StringVector& path, 
+				      const std::string& sectArg,
+				      const std::string& value,
+				      bool adding,
+				      const ConfigFilePosInfo& pos)
+{
+  UintValue uintValue;
+  findUintValue(path, sectArg, uintValue);
+  assert(uintValue.value != NULL);
+  unsigned int& v = *(uintValue.value);
+  v = parseUintValue(path, sectArg, value, pos);
 }
 
 int ConfigCenter::getParamType(const StringVector& path, const std::string& sectArg, const ConfigFilePosInfo& pos) const
@@ -246,24 +319,19 @@ int ConfigCenter::getParamType(const StringVector& path, const std::string& sect
   for(StringValueVector::size_type i = 0;i < m_stringValues.size();i++)
     if (m_stringValues[i].pathMatches(path, sectArg))
       return ValueTypeString;
-  for(StringValueVector::size_type i = 0;i < m_repoStringValues.size();i++)
-    if (m_repoStringValues[i].pathMatches(path, sectArg))
-      return ValueTypeString;
   //StringList;
   for(StringListValueVector::size_type i = 0;i < m_stringListValues.size();i++)
     if (m_stringListValues[i].pathMatches(path, sectArg))
-      return ValueTypeStringList;
-  for(StringListValueVector::size_type i = 0;i < m_repoStringListValues.size();i++)
-    if (m_repoStringListValues[i].pathMatches(path, sectArg))
       return ValueTypeStringList;
   //Boolean;
   for(BooleanValueVector::size_type i = 0;i < m_booleanValues.size();i++)
     if (m_booleanValues[i].pathMatches(path, sectArg))
       return ValueTypeBoolean;
-  for(BooleanValueVector::size_type i = 0;i < m_repoBooleanValues.size();i++)
-    if (m_repoBooleanValues[i].pathMatches(path, sectArg))
-      return ValueTypeBoolean;
-  throw ConfigException(ConfigErrorUnknownParam, buildConfigParamTitle(path, sectArg), pos);
+  //Unsigned integer;
+  for(UintValueVector::size_type i = 0;i < m_uintValues.size();i++)
+    if (m_uintValues[i].pathMatches(path, sectArg))
+      return ValueTypeUint;
+  throw ConfigException(ConfigException::UnknownParam, buildConfigParamTitle(path, sectArg), pos.fileName, pos.lineNumber, pos.line);
 }
 
 void ConfigCenter::findStringValue(const StringVector& path, 
@@ -274,12 +342,6 @@ void ConfigCenter::findStringValue(const StringVector& path,
     if (m_stringValues[i].pathMatches(path, sectArg))
       {
 	stringValue = m_stringValues[i];
-	return;
-      }
-  for(StringValueVector::size_type i = 0;i < m_repoStringValues.size();i++)
-    if (m_repoStringValues[i].pathMatches(path, sectArg))
-      {
-	stringValue = m_repoStringValues[i];
 	return;
       }
   assert(0);
@@ -295,12 +357,6 @@ void ConfigCenter::findStringListValue(const StringVector& path,
 	stringListValue = m_stringListValues[i];
 	return;
       }
-  for(StringListValueVector::size_type i = 0;i < m_repoStringValues.size();i++)
-    if (m_repoStringListValues[i].pathMatches(path, sectArg))
-      {
-	stringListValue = m_repoStringListValues[i];
-	return;
-      }
   assert(0);
 }
 
@@ -314,14 +370,112 @@ void ConfigCenter::findBooleanValue(const StringVector& path,
 	booleanValue = m_booleanValues[i];
 	return;
       }
-  for(BooleanValueVector::size_type i = 0;i < m_repoBooleanValues.size();i++)
-    if (m_repoBooleanValues[i].pathMatches(path, sectArg))
+  assert(0);
+}
+
+void ConfigCenter::findUintValue(const StringVector& path, 
+				   const std::string& sectArg,
+				   UintValue& uintValue)
+{
+  for(BooleanValueVector::size_type i = 0;i < m_uintValues.size();i++)
+    if (m_uintValues[i].pathMatches(path, sectArg))
       {
-	booleanValue = m_repoBooleanValues[i];
+	uintValue = m_uintValues[i];
 	return;
       }
   assert(0);
 }
+
+void ConfigCenter::loadFromFile(const std::string& fileName)
+{
+  logMsg(LOG_DEBUG, "config:reading configuration from \'%s\'", fileName.c_str());
+  assert(!fileName.empty());
+  File f;
+  f.openReadOnly(fileName);
+  StringVector lines;
+  f.readTextFile(lines);
+  f.close();
+  ConfigFile parser(*this, fileName);
+  for(StringVector::size_type i = 0;i < lines.size();i++)
+      parser.processLine(lines[i]);
+}
+
+void ConfigCenter::loadFromDir(const std::string& path)
+{
+  logMsg(LOG_DEBUG, "config:reading config file fragments from \'%s\'", path.c_str());
+  StringVector files;
+  std::auto_ptr<Directory::Iterator> it = Directory::enumerate(path);
+  while(it->moveNext())
+    {
+      const std::string fileName = it->fullPath();
+      if (File::isDir(fileName) || (!File::isRegFile(fileName) && !File::isSymLink(path)))//FIXME:Check exact symlink behaviour;
+	continue;
+      files.push_back(fileName);
+    }
+  std::sort(files.begin(), files.end());
+  for(StringVector::size_type i = 0;i < files.size();i++)
+    loadFromFile(files[i]);
+}
+
+void ConfigCenter::addStringParam3(const std::string& path1,
+				   const std::string& path2,
+				   const std::string& path3,
+				   std::string& value)
+{
+  assert(!path1.empty() && !path2.empty() && !path3.empty());
+  StringValue stringValue(value);
+  stringValue.canBeEmpty = 1;
+  stringValue.path.push_back(path1);
+  stringValue.path.push_back(path2);
+  stringValue.path.push_back(path3);
+  m_stringValues.push_back(stringValue);
+}
+
+void ConfigCenter::addNonEmptyStringParam3(const std::string& path1,
+					   const std::string& path2,
+					   const std::string& path3,
+					   std::string& value)
+{
+  assert(!path1.empty() && !path2.empty() && !path3.empty());
+  StringValue stringValue(value);
+  stringValue.canBeEmpty = 0;
+  stringValue.path.push_back(path1);
+  stringValue.path.push_back(path2);
+  stringValue.path.push_back(path3);
+  m_stringValues.push_back(stringValue);
+}
+
+void ConfigCenter::addStringListParam3(const std::string& path1,
+				   const std::string& path2,
+				   const std::string& path3,
+				   StringVector& value)
+{
+  assert(!path1.empty() && !path2.empty() && !path3.empty());
+  StringListValue stringListValue(value);
+  stringListValue.canContainEmptyItem = 1;
+  stringListValue.canBeEmpty = 1;
+  stringListValue.path.push_back(path1);
+  stringListValue.path.push_back(path2);
+  stringListValue.path.push_back(path3);
+  m_stringListValues.push_back(stringListValue);
+}
+
+void ConfigCenter::addNonEmptyStringListParam3(const std::string& path1,
+					   const std::string& path2,
+					   const std::string& path3,
+					   StringVector& value)
+{
+  assert(!path1.empty() && !path2.empty() && !path3.empty());
+  StringListValue stringListValue(value);
+  stringListValue.canContainEmptyItem = 0;
+  stringListValue.canBeEmpty = 0;
+  stringListValue.path.push_back(path1);
+  stringListValue.path.push_back(path2);
+  stringListValue.path.push_back(path3);
+  m_stringListValues.push_back(stringListValue);
+}
+
+// Static functions;
 
 std::string buildConfigParamTitle(const StringVector& path, const std::string& sectArg)
 {
@@ -351,6 +505,19 @@ bool parseBooleanValue(const StringVector& path,
     return 0;
   if (str == "0")
     return 0;
-  throw ConfigException(ConfigErrorInvalidBooleanValue, buildConfigParamTitle(path, sectArg), pos);
+  throw ConfigException(ConfigException::InvalidBooleanValue, buildConfigParamTitle(path, sectArg), pos.fileName, pos.lineNumber, pos.line);
 }
 
+unsigned int parseUintValue(const StringVector& path,
+		       const std::string& sectArg,
+		       const std::string& str,
+		       const ConfigFilePosInfo& pos)
+{
+  if (trim(str).empty())
+    throw ConfigException(ConfigException::InvalidUintValue, buildConfigParamTitle(path, sectArg), pos.fileName, pos.lineNumber, pos.line);
+  std::istringstream ss(trim(str));
+  unsigned int k;
+  if (!(ss >> k))
+    throw ConfigException(ConfigException::InvalidUintValue, buildConfigParamTitle(path, sectArg), pos.fileName, pos.lineNumber, pos.line);
+  return k;
+}
