@@ -1,6 +1,6 @@
 /*
-   Copyright 2011-2012 ALT Linux
-   Copyright 2011-2012 Michael Pozhidaev
+   Copyright 2011-2013 ALT Linux
+   Copyright 2011-2013 Michael Pozhidaev
 
    This file is part of the Deepsolver.
 
@@ -35,7 +35,7 @@ static void selectVarsToTry(const PackageScopeContent& content,
 			    VarIdVector& toTry,
 			    bool includeItself);
 
-void PackageScope::selectMatchingVarsAmongProvides(const IdPkgRel& rel, VarIdVector& vars)
+void PackageScope::selectMatchingVarsAmongProvides(const IdPkgRel& rel, VarIdVector& vars) const
 {
   vars.clear();
   if (rel.hasVer())
@@ -43,14 +43,14 @@ void PackageScope::selectMatchingVarsAmongProvides(const IdPkgRel& rel, VarIdVec
     selectMatchingVarsAmongProvides(rel.pkgId, vars);
 }
 
-void PackageScope::selectMatchingVarsAmongProvides(PackageId pkgId, VarIdVector& vars)
+void PackageScope::selectMatchingVarsAmongProvides(PackageId pkgId, VarIdVector& vars) const
 {
   //Only provides must be considered here;
   vars.clear();
   selectVarsToTry(m_content, m_provideMap, pkgId, vars, 0);//0 means do not include packageId itself;
 }
 
-void PackageScope::selectMatchingVarsAmongProvides(PackageId packageId, const VersionCond& ver, VarIdVector& vars)
+void PackageScope::selectMatchingVarsAmongProvides(PackageId packageId, const VersionCond& ver, VarIdVector& vars) const
 {
   //Considering only provides entries and only with version information;
   vars.clear();
@@ -81,7 +81,7 @@ void PackageScope::selectMatchingVarsAmongProvides(PackageId packageId, const Ve
     }
 }
 
-void PackageScope::selectMatchingVarsRealNames(const IdPkgRel& rel, VarIdVector& vars)
+void PackageScope::selectMatchingVarsRealNames(const IdPkgRel& rel, VarIdVector& vars) const
 {
   vars.clear();
   if (rel.hasVer())
@@ -89,7 +89,7 @@ void PackageScope::selectMatchingVarsRealNames(const IdPkgRel& rel, VarIdVector&
     selectMatchingVarsRealNames(rel.pkgId, vars);
 }
 
-void PackageScope::selectMatchingVarsRealNames(PackageId packageId, VarIdVector& vars)
+void PackageScope::selectMatchingVarsRealNames(PackageId packageId, VarIdVector& vars) const
 {
   //Here we must process only real package names, no provides are required;
   vars.clear();
@@ -103,7 +103,7 @@ void PackageScope::selectMatchingVarsRealNames(PackageId packageId, VarIdVector&
     }
 }
 
-void PackageScope::selectMatchingVarsRealNames(PackageId packageId, const VersionCond& ver, VarIdVector& vars)
+void PackageScope::selectMatchingVarsRealNames(PackageId packageId, const VersionCond& ver, VarIdVector& vars) const
 {
   //Here we must process only real package names, no provides are required;
   vars.clear();
@@ -119,7 +119,7 @@ void PackageScope::selectMatchingVarsRealNames(PackageId packageId, const Versio
     }
 }
 
-void PackageScope::selectMatchingVarsWithProvides(const IdPkgRel& rel, VarIdVector& vars)
+void PackageScope::selectMatchingVarsWithProvides(const IdPkgRel& rel, VarIdVector& vars) const
 {
   vars.clear();
   if (rel.hasVer())
@@ -127,14 +127,14 @@ void PackageScope::selectMatchingVarsWithProvides(const IdPkgRel& rel, VarIdVect
     selectMatchingVarsWithProvides(rel.pkgId, vars);
 }
 
-void PackageScope::selectMatchingVarsWithProvides(PackageId pkgId, VarIdVector& vars)
+void PackageScope::selectMatchingVarsWithProvides(PackageId pkgId, VarIdVector& vars) const
 {
   //Package names and all their provides must be considered;
   vars.clear();
   selectVarsToTry(m_content, m_provideMap, pkgId, vars, 1);//1 means include packageId itself;
 }
 
-void PackageScope::selectMatchingVarsWithProvides(PackageId packageId, const VersionCond& ver, VarIdVector& vars)
+void PackageScope::selectMatchingVarsWithProvides(PackageId packageId, const VersionCond& ver, VarIdVector& vars) const
 {
   //Considering all package and provide names only with version information;
   vars.clear();
@@ -177,7 +177,7 @@ bool PackageScope::isInstalled(VarId varId) const
   return pkgs[varId].flags & PkgFlagInstalled;
 }
 
-void PackageScope::selectTheNewest(VarIdVector& vars)
+void PackageScope::selectTheNewest(VarIdVector& vars) const
 {
   //Processing only real version of provided packages;
   if (vars.size() < 2)
@@ -203,7 +203,7 @@ void PackageScope::selectTheNewest(VarIdVector& vars)
   vars.resize(hasCount);
 }
 
-void PackageScope::selectTheNewestByProvide(VarIdVector& vars, PackageId provideEntry)
+void PackageScope::selectTheNewestByProvide(VarIdVector& vars, PackageId provideEntry) const
 {
   if (vars.size() < 2)
     return;
@@ -244,7 +244,7 @@ void PackageScope::selectTheNewestByProvide(VarIdVector& vars, PackageId provide
   vars.resize(hasCount);
 }
 
-bool PackageScope::allProvidesHaveTheVersion(const VarIdVector& vars, PackageId provideEntry)
+bool PackageScope::allProvidesHaveTheVersion(const VarIdVector& vars, PackageId provideEntry) const
 {
   const PkgInfoVector& pkgs = m_content.pkgInfoVector;
       const RelInfoVector& rels = m_content.relInfoVector;
@@ -269,7 +269,7 @@ bool PackageScope::allProvidesHaveTheVersion(const VarIdVector& vars, PackageId 
   return 1;
 }
 
-void PackageScope::getRequires(VarId varId, IdPkgRelVector& res)
+void PackageScope::getRequires(VarId varId, IdPkgRelVector& res) const
 {
   assert(varId != BAD_VAR_ID);
   PackageIdVector withVersion, withoutVersion;
@@ -283,7 +283,7 @@ void PackageScope::getRequires(VarId varId, IdPkgRelVector& res)
     res.push_back(IdPkgRel(withVersion[i], versions[i]));
 }
 
-void PackageScope::getConflicts(VarId varId, IdPkgRelVector& res)
+void PackageScope::getConflicts(VarId varId, IdPkgRelVector& res) const
 {
   assert(varId != BAD_VAR_ID);
   PackageIdVector withVersion, withoutVersion;
@@ -297,7 +297,7 @@ void PackageScope::getConflicts(VarId varId, IdPkgRelVector& res)
     res.push_back(IdPkgRel(withVersion[i], versions[i]));
 }
 
-void PackageScope::whatSatisfiesAmongInstalled(const IdPkgRel& rel, VarIdVector& res)
+void PackageScope::whatSatisfiesAmongInstalled(const IdPkgRel& rel, VarIdVector& res) const
 {
   assert(rel.pkgId != BAD_PACKAGE_ID);
   res.clear();
@@ -355,7 +355,7 @@ void PackageScope::whatSatisfiesAmongInstalled(const IdPkgRel& rel, VarIdVector&
     } //for(packages);
 }
 
-void PackageScope::whatDependsAmongInstalled(VarId varId, VarIdVector& res, IdPkgRelVector& resRels)
+void PackageScope::whatDependsAmongInstalled(VarId varId, VarIdVector& res, IdPkgRelVector& resRels) const
 {
   res.clear();
   resRels.clear();
@@ -426,7 +426,7 @@ void PackageScope::whatDependsAmongInstalled(VarId varId, VarIdVector& res, IdPk
     } //for provides;
 }
 
-void PackageScope::whatConflictsAmongInstalled(VarId varId, VarIdVector& res, IdPkgRelVector& resRels)
+void PackageScope::whatConflictsAmongInstalled(VarId varId, VarIdVector& res, IdPkgRelVector& resRels) const
 {
   res.clear();
   resRels.clear();
@@ -505,6 +505,18 @@ PackageId PackageScope::packageIdOfVarId(VarId varId) const
   assert(varId < pkgs.size());
   return pkgs[varId].pkgId;
 }
+
+std::string PackageScope::getVersion(VarId varId) const
+{
+  const PkgInfoVector& pkgs = m_content.pkgInfoVector;
+  assert(varId < pkgs.size());
+  const PackageScopeContent::PkgInfo& pkg = pkgs[varId];
+  assert(pkg.ver != NULL && pkg.release != NULL);
+  std::ostringstream res;
+  res << pkg.epoch << ":" << pkg.ver << "-" << pkg.release;
+  return res.str();
+}
+
 
 std::string PackageScope::constructPackageName(VarId varId) const
 {

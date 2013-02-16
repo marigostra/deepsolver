@@ -1,6 +1,6 @@
 /*
-   Copyright 2011-2012 ALT Linux
-   Copyright 2011-2012 Michael Pozhidaev
+   Copyright 2011-2013 ALT Linux
+   Copyright 2011-2013 Michael Pozhidaev
 
    This file is part of the Deepsolver.
 
@@ -88,7 +88,7 @@ public:
 public:
   virtual void reset() = 0;
   virtual void addClause(const Clause& clause) = 0;
-  virtual bool solve(const VarIdToBoolMap& assumptions, VarIdToBoolMap& res) = 0;
+  virtual bool solve(const VarIdToBoolMap& assumptions, VarIdToBoolMap& res, VarIdVector& conflicts) = 0;
 }; //class AbstractSatSolver;
 
 std::auto_ptr<AbstractSatSolver> createLibMinisatSolver();

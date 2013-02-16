@@ -1,6 +1,6 @@
 /*
-   Copyright 2011-2012 ALT Linux
-   Copyright 2011-2012 Michael Pozhidaev
+   Copyright 2011-2013 ALT Linux
+   Copyright 2011-2013 Michael Pozhidaev
 
    This file is part of the Deepsolver.
 
@@ -101,6 +101,48 @@ void PkgUtils::prepareReversedMaps(const PackageScopeContent& content,
   logMsg(LOG_DEBUG, "Installed package requires/conflicts reversed map construction takes %f sec", installedDuration);
 }
 
+void PkgUtils::fillUpgradeDowngrade(const AbstractPackageBackEnd& backEnd,
+				    const AbstractPackageScope& scope,
+				    VarIdVector& install,
+				    VarIdVector& remove,
+				    VarIdToVarIdMap& upgrade,
+				    VarIdToVarIdMap& downgrade)
+{
+  upgrade.clear();
+  downgrade.clear();
+  for(VarIdVector::size_type i = 0;i < install.size();i++)
+    {
+      if (install[i] == BAD_VAR_ID)
+	continue;
+      VarIdVector::size_type j;
+      for(j = 0;j < remove.size();j++)
+	if (remove[j] != BAD_VAR_ID && scope.packageIdOfVarId(remove[j]) == scope.packageIdOfVarId(install[i]))
+	  break;
+      if (j >= remove.size())
+	continue;
+      const std::string versionToInstall = scope.getVersion(install[i]);
+      const std::string versionToRemove = scope.getVersion(remove[j]);
+      assert(!backEnd.versionEqual(versionToInstall, versionToRemove));
+      if (backEnd.versionGreater(versionToInstall, versionToRemove))
+	upgrade.insert(VarIdToVarIdMap::value_type(remove[j], install[i])); else
+	downgrade.insert(VarIdToVarIdMap::value_type(remove[j], install[i]));
+      install[i] = BAD_VAR_ID;
+      remove[j] = BAD_VAR_ID;
+    }
+  for(VarIdVector::size_type i = 0;i < install.size();i++)
+    while (i < install.size() && install[i] == BAD_VAR_ID)
+      {
+	install[i] = install.back();
+	install.pop_back();
+      }
+  for(VarIdVector::size_type i = 0;i < remove.size();i++)
+    while (i < remove.size() && remove[i] == BAD_VAR_ID)
+      {
+	remove[i] = remove.back();
+	remove.pop_back();
+      }
+}
+
 std::string PkgUtils::satToString(const AbstractPackageScope& scope, 
 	      const Sat& sat,
 	      const StringVector& annotations)
@@ -136,10 +178,15 @@ std::string PkgUtils::satToString(const AbstractPackageScope& scope,
 
 void PkgUtils::printSolution(const AbstractPackageScope& scope,
 			     const VarIdVector& install,
-			     const VarIdVector& remove)
+			     const VarIdVector& remove,
+			     const VarIdToVarIdMap& upgrade,
+			     const VarIdToVarIdMap& downgrade)
 {
   std::cout << std::endl;
-  std::cout << install.size() << " packages to install, " << remove.size() << " packages to remove" << std::endl;
+  std::cout << install.size() << " packages to install, " <<
+    remove.size() << " packages to remove, " <<
+    upgrade.size() << " packages to upgrade, " <<
+    downgrade.size() << " packages to downgrade" << std::endl;
   if (!install.empty())
     {
       std::cout << std::endl;
@@ -158,6 +205,26 @@ void PkgUtils::printSolution(const AbstractPackageScope& scope,
 	v.push_back(scope.constructPackageName(remove[k]));
       printThreeColumns(v);
       std::cout << std::endl;
+    }
+
+
+  if (!upgrade.empty())
+    {
+      std::cout << std::endl;
+      std::cout << "The following packages must be upgraded:" << std::endl;
+      StringVector v;
+      for(VarIdToVarIdMap::const_iterator it = upgrade.begin();it != upgrade.end();it++)
+	v.push_back(scope.constructPackageName(it->first));
+      printThreeColumns(v);
+    }
+  if (!downgrade.empty())
+    {
+      std::cout << std::endl;
+      std::cout << "The following packages must be downgraded:" << std::endl;
+      StringVector v;
+      for(VarIdToVarIdMap::const_iterator it = downgrade.begin();it != downgrade.end();it++)
+	v.push_back(scope.constructPackageName(it->first));
+      printThreeColumns(v);
     }
 }
 

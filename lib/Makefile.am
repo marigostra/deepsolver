@@ -31,13 +31,18 @@ rpm/RpmBackEnd.cpp \
 rpm/RpmFileHeaderReader.cpp \
 rpm/rpmHeader.cpp \
 rpm/RpmInstalledPackagesIterator.cpp \
-transact/GeneralSolver.cpp \
 transact/InstalledReferences.cpp \
 transact/LibMinisatSolver.cpp \
 transact/PackageScopeContent.cpp \
 transact/PackageScope.cpp \
+transact/PackageSelection.cpp \
+transact/PostponedRequire.cpp \
 transact/ProvideMap.cpp \
 transact/ProvidePriorityList.cpp \
+transact/SatWriter.cpp \
+transact/TaskSolver.cpp \
+transact/TaskTranslator.cpp \
+transact/TaskTranslatorOutputOptimization.cpp \
 utils/CurlInterface.cpp \
 utils/GzipInterface.cpp \
 utils/Md5.cpp \
@@ -81,18 +86,26 @@ rpm/RpmInstalledPackagesIterator.h \
 transact/AbstractPackageScope.h \
 transact/AbstractSatSolver.h \
 transact/AbstractTaskSolver.h \
-transact/GeneralSolver.h \
+transact/AbstractTaskTranslatorOutput.h \
 transact/InstalledReferences.h \
 transact/PackageNameSorting.h \
 transact/PackageScopeContent.h \
 transact/PackageScope.h \
+transact/PackageSelection.h \
+transact/PostponedRequire.h \
 transact/ProvideMap.h \
 transact/ProvidePriorityList.h \
+transact/SatWriter.h \
+transact/TaskSolver.h \
+transact/TaskTranslator.h \
+transact/TaskTranslatorOutputOptimization.h \
 utils/CurlInterface.h \
 utils/DateTime.h \
+utils/doubling.h \
 utils/GzipInterface.h \
 utils/Md5File.h \
 utils/Md5.h \
 utils/RegExp.h \
 utils/StringUtils.h \
 utils/TinyFileDownload.h
+

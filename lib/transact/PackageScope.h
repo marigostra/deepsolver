@@ -1,6 +1,6 @@
 /*
-   Copyright 2011-2012 ALT Linux
-   Copyright 2011-2012 Michael Pozhidaev
+   Copyright 2011-2013 ALT Linux
+   Copyright 2011-2013 Michael Pozhidaev
 
    This file is part of the Deepsolver.
 
@@ -42,33 +42,34 @@ public:
 
 public:
   PackageId packageIdOfVarId(VarId varId) const;
+  std::string getVersion(VarId varId) const;
   std::string constructPackageName(VarId varId) const;
   std::string constructPackageNameWithBuildTime(VarId varId) const;
   bool checkName(const std::string& name) const;
   PackageId strToPackageId(const std::string& name) const;
   std::string packageIdToStr(PackageId packageId) const;
 
-  void selectMatchingVarsAmongProvides(const IdPkgRel& rel, VarIdVector& vars);
-  void selectMatchingVarsAmongProvides(PackageId packageId, VarIdVector& vars);
-  void selectMatchingVarsAmongProvides(PackageId packageId, const VersionCond& ver, VarIdVector& vars);
-  void selectMatchingVarsRealNames(const IdPkgRel& rel, VarIdVector& vars);
-  void selectMatchingVarsRealNames(PackageId packageId, VarIdVector& vars);
-  void selectMatchingVarsRealNames(PackageId packageId, const VersionCond& ver, VarIdVector& vars);
-  void selectMatchingVarsWithProvides(const IdPkgRel& rel, VarIdVector& vars);
-  void selectMatchingVarsWithProvides(PackageId packageId, VarIdVector& vars);
-  void selectMatchingVarsWithProvides(PackageId packageId, const VersionCond& ver, VarIdVector& vars);
+  void selectMatchingVarsAmongProvides(const IdPkgRel& rel, VarIdVector& vars) const;
+  void selectMatchingVarsAmongProvides(PackageId packageId, VarIdVector& vars) const;
+  void selectMatchingVarsAmongProvides(PackageId packageId, const VersionCond& ver, VarIdVector& vars) const;
+  void selectMatchingVarsRealNames(const IdPkgRel& rel, VarIdVector& vars) const;
+  void selectMatchingVarsRealNames(PackageId packageId, VarIdVector& vars) const;
+  void selectMatchingVarsRealNames(PackageId packageId, const VersionCond& ver, VarIdVector& vars) const;
+  void selectMatchingVarsWithProvides(const IdPkgRel& rel, VarIdVector& vars) const;
+  void selectMatchingVarsWithProvides(PackageId packageId, VarIdVector& vars) const;
+  void selectMatchingVarsWithProvides(PackageId packageId, const VersionCond& ver, VarIdVector& vars) const;
 
   bool isInstalled(VarId varId) const;
-  void selectTheNewest(VarIdVector& vars);
-  void selectTheNewestByProvide(VarIdVector& vars, PackageId provideEntry);
-  bool allProvidesHaveTheVersion(const VarIdVector& vars, PackageId provideEntry);
+  void selectTheNewest(VarIdVector& vars) const;
+  void selectTheNewestByProvide(VarIdVector& vars, PackageId provideEntry) const;
+  bool allProvidesHaveTheVersion(const VarIdVector& vars, PackageId provideEntry) const;
 
-  void getRequires(VarId varId, IdPkgRelVector& res);
-  void getConflicts(VarId varId, IdPkgRelVector& res);
+  void getRequires(VarId varId, IdPkgRelVector& res) const;
+  void getConflicts(VarId varId, IdPkgRelVector& res) const;
 
-  void whatConflictsAmongInstalled(VarId varId, VarIdVector& res, IdPkgRelVector& resRels);
-  void whatDependsAmongInstalled(VarId varId, VarIdVector& res, IdPkgRelVector& resRels);
-  void whatSatisfiesAmongInstalled(const IdPkgRel& rel, VarIdVector& res);
+  void whatConflictsAmongInstalled(VarId varId, VarIdVector& res, IdPkgRelVector& resRels) const;
+  void whatDependsAmongInstalled(VarId varId, VarIdVector& res, IdPkgRelVector& resRels) const;
+  void whatSatisfiesAmongInstalled(const IdPkgRel& rel, VarIdVector& res) const;
 
 private:
   void getRequires(VarId varId,

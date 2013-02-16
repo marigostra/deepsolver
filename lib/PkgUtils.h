@@ -1,6 +1,6 @@
 /*
-   Copyright 2011-2012 ALT Linux
-   Copyright 2011-2012 Michael Pozhidaev
+   Copyright 2011-2013 ALT Linux
+   Copyright 2011-2013 Michael Pozhidaev
 
    This file is part of the Deepsolver.
 
@@ -35,13 +35,22 @@ public:
 			   InstalledReferences& requires,
 			   InstalledReferences& conflicts);
 
+  static void fillUpgradeDowngrade(const AbstractPackageBackEnd& backEnd,
+				   const AbstractPackageScope& scope,
+				   VarIdVector& install,
+				   VarIdVector& remove,
+				   VarIdToVarIdMap& upgrade,
+				   VarIdToVarIdMap& downgrade);
+
   static std::string satToString(const AbstractPackageScope& scope, 
 				 const Sat& sat,
 				 const StringVector& annotations);
 
   static void printSolution(const AbstractPackageScope& scope,
 			    const VarIdVector& install,
-			    const VarIdVector& remove);
+			    const VarIdVector& remove,
+			    const VarIdToVarIdMap& upgrade,
+			    const VarIdToVarIdMap& downgrade);
 }; //class PkgUtils;
 
 #endif //DEEPSOLVER_PKG_UTILS_H;

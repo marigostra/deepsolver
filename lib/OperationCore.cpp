@@ -1,6 +1,6 @@
 /*
-   Copyright 2011-2012 ALT Linux
-   Copyright 2011-2012 Michael Pozhidaev
+   Copyright 2011-2013 ALT Linux
+   Copyright 2011-2013 Michael Pozhidaev
 
    This file is part of the Deepsolver.
 
@@ -24,6 +24,7 @@
 #include"transact/AbstractTaskSolver.h"
 #include"transact/AbstractSatSolver.h"
 #include"transact/PackageScope.h"
+#include"transact/SatWriter.h"
 #include"io/PackageScopeContentLoader.h"
 #include"io/PackageScopeContentBuilder.h"
 #include"PkgUtils.h"
@@ -122,10 +123,12 @@ void OperationCore::transaction(AbstractTransactionListener& listener, const Use
 	info.providers.push_back(root.provide[i].providers[k]);
       taskSolverData.provides.push_back(info);
     }
-  std::auto_ptr<AbstractTaskSolver> solver = createGeneralTaskSolver(taskSolverData);
+  std::auto_ptr<AbstractTaskSolver> solver = createTaskSolver(taskSolverData);
   VarIdVector toInstall, toRemove;
   solver->solve(userTask, toInstall, toRemove);
-  PkgUtils::printSolution(scope, toInstall, toRemove);
+  VarIdToVarIdMap toUpgrade, toDowngrade;
+  PkgUtils::fillUpgradeDowngrade(*backEnd.get(), scope, toInstall, toRemove, toUpgrade, toDowngrade);
+  PkgUtils::printSolution(scope, toInstall, toRemove, toUpgrade, toDowngrade);
 }
 
 std::string OperationCore::generateSat(AbstractTransactionListener& listener, const UserTask& userTask) const
@@ -157,8 +160,48 @@ std::string OperationCore::generateSat(AbstractTransactionListener& listener, co
 	info.providers.push_back(root.provide[i].providers[k]);
       taskSolverData.provides.push_back(info);
     }
-  std::auto_ptr<AbstractTaskSolver> solver = createGeneralTaskSolver(taskSolverData);
-  return solver->constructSat(userTask);
+  SatWriter writer(taskSolverData);
+  return writer.generateSat(userTask);
+}
+
+void OperationCore::printPackagesByRequire(const NamedPkgRel& rel, std::ostream& s) const
+{
+  const ConfRoot& root = m_conf.root();
+  for(StringVector::size_type i = 0;i < root.os.transactReadAhead.size();i++)
+    File::readAhead(root.os.transactReadAhead[i]);
+  std::auto_ptr<AbstractPackageBackEnd> backEnd = CREATE_PACKAGE_BACKEND;
+  backEnd->initialize();
+  PackageScopeContent content;
+  PackageScopeContentLoader loader(content);
+  loader.loadFromFile(Directory::mixNameComponents(m_conf.root().dir.pkgData, PKG_DATA_FILE_NAME));
+  logMsg(LOG_DEBUG, "operation:index package list loaded");
+  if (content.pkgInfoVector.empty())//FIXME:
+    throw NotImplementedException("Empty set of attached repositories");
+  PkgUtils::fillWithhInstalledPackages(*backEnd.get(), content);
+  ProvideMap provideMap;
+  InstalledReferences requiresReferences, conflictsReferences;
+  PkgUtils::prepareReversedMaps(content, provideMap, requiresReferences, conflictsReferences);
+  PackageScope scope(*backEnd.get(), content, provideMap, requiresReferences, conflictsReferences);
+  if (!scope.checkName(rel.pkgName))
+    {
+      logMsg(LOG_DEBUG, "operation:package name \'%s\' is unknown", rel.pkgName.c_str());
+      return;
+    }
+  const PackageId pkgId = scope.strToPackageId(rel.pkgName);
+  const IdPkgRel idPkgRel(pkgId, rel.type, rel.ver);
+  logMsg(LOG_DEBUG, "operation:processing %zu %s", idPkgRel.pkgId, idPkgRel.verString().c_str());
+  VarIdVector vars;
+  scope.selectMatchingVarsWithProvides(idPkgRel, vars);
+  rmDub(vars);
+  logMsg(LOG_DEBUG, "operation:found %zu packages matching given require", vars.size());
+  for(VarIdVector::size_type i = 0;i < vars.size();i++)
+    {
+      s << scope.constructPackageName(vars[i]);
+      if (scope.isInstalled(vars[i]))
+	s << " (installed)";
+      s << std::endl;
+      }
+
 }
 
 // Static functions;

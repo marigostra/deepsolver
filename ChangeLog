@@ -1,6 +1,22 @@
 
   Deepsolver changes log
 
+	0.2.10 (2013-02-17)
+
+General:
+- significantly improved solver (details below);
+- ds-require utility for requires processing is added.
+
+Transaction processing:
+- GeneralSolver class is removed;
+- TaskTranslator class is added partially replacing GeneralSolver;
+- AbstractTaskTranslatorOutput with its descendants
+  (TaskSolver, SatWriter and TaskTranslatorOutputOptimizer) is added;
+- postponed require processing technique is added (PostponedRequire class).
+
+Other:
+- technical assignment document is removed from source code tree.
+
 0.2.5 (2012-12-26)
 
 Applications:

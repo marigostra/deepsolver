@@ -1,6 +1,6 @@
 /*
-   Copyright 2011-2012 ALT Linux
-   Copyright 2011-2012 Michael Pozhidaev
+   Copyright 2011-2013 ALT Linux
+   Copyright 2011-2013 Michael Pozhidaev
 
    This file is part of the Deepsolver.
 
@@ -54,9 +54,8 @@ public:
 
 public:
   virtual void solve(const UserTask& task, VarIdVector& toInstall, VarIdVector& toRemove) = 0;
-  virtual std::string constructSat(const UserTask& task) = 0;
 }; //class AbstractTaskSolver;
 
-std::auto_ptr<AbstractTaskSolver> createGeneralTaskSolver(TaskSolverData& taskSolverData);
+std::auto_ptr<AbstractTaskSolver> createTaskSolver(TaskSolverData& taskSolverData);
 
 #endif //DEEPSOLVER_ABSTRACT_TASK_SOLVER_H;
