@@ -150,6 +150,8 @@ public:
    */
   static std::string baseName(const std::string& fileName);
 
+  static std::string baseNameFromUrl(const std::string& fileName);
+
   /**\brief Removes the file or remove the hard link if there are more than one
    *
    * This method removes the hard link to the file. Usually the file has

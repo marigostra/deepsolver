@@ -16,9 +16,9 @@
 */
 
 #include"deepsolver.h"
-#include"IndexFetch.h"
+#include"FilesFetch.h"
 
-void IndexFetch::fetch(const StringToStringMap& files)
+void FilesFetch::fetch(const StringToStringMap& files)
 {
   curlInitialize();
   m_lastPartPercents = 0;
@@ -27,16 +27,14 @@ void IndexFetch::fetch(const StringToStringMap& files)
   m_currentPartNumber = 0;
   for(StringToStringMap::const_iterator it = files.begin();it != files.end();it++)
     {
-      logMsg(LOG_DEBUG, "Fetching of \'%s\'", it->first.c_str());
+      logMsg(LOG_DEBUG, "fetch:fetching \'%s\'", it->first.c_str());
       m_currentFileName = it->first;
       processFile(it->first, it->second);
       m_currentPartNumber++;
     }
-    {
-    }
 }
 
-void IndexFetch::processFile(const std::string& url, const std::string localFile)
+void FilesFetch::processFile(const std::string& url, const std::string localFile)
 {
   assert(!url.empty());
   assert(!localFile.empty());
@@ -49,14 +47,14 @@ void IndexFetch::processFile(const std::string& url, const std::string localFile
   m_file.close();
 }
 
-size_t IndexFetch::onNewDataBlock(const void* buf, size_t bufSize)
+size_t FilesFetch::onNewDataBlock(const void* buf, size_t bufSize)
 {
   assert(m_file.opened());
   m_file.write(buf, bufSize);
   return bufSize;
 }
 
-bool IndexFetch::onCurlProgress(size_t now, size_t total)
+bool FilesFetch::onCurlProgress(size_t now, size_t total)
 {
   assert(m_partCount > 0);
   const double inOnePart = 100 / m_partCount;
@@ -76,6 +74,6 @@ bool IndexFetch::onCurlProgress(size_t now, size_t total)
     return 1;
   m_lastPartPercents = intPartPercents;
   m_lastTotalPercents = intPercents;
-  m_listener.onIndexFetchStatus(intPartPercents, intPercents, m_currentPartNumber, m_partCount, total, m_currentFileName);
+  m_listener.onFetchStatus(intPartPercents, intPercents, m_currentPartNumber, m_partCount, total, m_currentFileName);
   return m_continueRequest.onContinueOperationRequest();
 }

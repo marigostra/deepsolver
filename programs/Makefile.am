@@ -8,7 +8,9 @@ $(top_srcdir)/lib/libdeepsolver.la
 ds_install_DEPENDENCIES = $(ds_install_LDADD)
 ds_install_SOURCES=\
 CliParser.cpp \
+FilesFetchProgress.cpp \
 Messages.cpp \
+PackageListPrinting.cpp \
 TransactionProgress.cpp \
 ds-install.cpp
 
@@ -17,7 +19,9 @@ $(top_srcdir)/lib/libdeepsolver.la
 ds_remove_DEPENDENCIES = $(ds_remove_LDADD)
 ds_remove_SOURCES=\
 CliParser.cpp \
+FilesFetchProgress.cpp \
 Messages.cpp \
+PackageListPrinting.cpp \
 TransactionProgress.cpp \
 ds-remove.cpp
 
@@ -27,7 +31,7 @@ ds_update_DEPENDENCIES = $(ds_update_LDADD)
 ds_update_SOURCES=\
 CliParser.cpp \
 Messages.cpp \
-IndexFetchProgress.cpp \
+FilesFetchProgress.cpp \
 ds-update.cpp
 
 ds_conf_LDADD = \

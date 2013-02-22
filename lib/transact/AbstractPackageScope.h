@@ -27,7 +27,9 @@ public:
 public:
   virtual bool allProvidesHaveTheVersion(const VarIdVector& vars, PackageId provideEntry) const = 0;
   virtual bool checkName(const std::string& name) const = 0;
+  virtual void fillPkgData(VarId varId, Pkg& pkg) const = 0;
   virtual std::string constructPackageName(VarId varId) const = 0;
+  virtual std::string getPackageName(VarId varId) const = 0;
   virtual std::string constructPackageNameWithBuildTime(VarId varId) const = 0;
   virtual void getConflicts(VarId varId, IdPkgRelVector& res) const = 0;
   virtual void getRequires(VarId varId, IdPkgRelVector& res) const = 0;

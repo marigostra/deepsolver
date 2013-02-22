@@ -19,6 +19,9 @@
 #include"OperationCore.h"
 #include"TransactionProgress.h"
 #include"Messages.h"
+#include"PackageListPrinting.h"
+#include"AlwaysTrueContinueRequest.h"
+#include"FilesFetchProgress.h"
 
 class DsInstallCliParser: public CliParser
 {
@@ -142,7 +145,12 @@ int main(int argc, char* argv[])
       }
     if (!cliParser.wasKeyUsed("--sat"))
       {
-	core.transaction(transactionProgress, cliParser.userTask);
+	std::auto_ptr<TransactionIterator> it = core.transaction(transactionProgress, cliParser.userTask);
+	PackageListPrinting(conf).printSolution(*it.get());
+	std::cout << std::endl;
+	FilesFetchProgress progress(std::cout, cliParser.wasKeyUsed("--log"));
+	AlwaysTrueContinueRequest continueRequest;
+	it->fetchPackages(progress, continueRequest);
       } else
       {
 	const std::string res = core.generateSat(transactionProgress, cliParser.userTask);

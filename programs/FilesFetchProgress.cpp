@@ -16,23 +16,23 @@
 */
 
 #include"deepsolver.h"
-#include"IndexFetchProgress.h"
+#include"FilesFetchProgress.h"
 
-void IndexFetchProgress::onInfoFilesFetch()
+void FilesFetchProgress::onHeadersFetch()
 {
   if (m_suppressed)
     return;
   m_stream << "Downloading basic repository data" << std::endl;
 }
 
-void IndexFetchProgress::onIndexFetchBegin()
+void FilesFetchProgress::onFetchBegin()
 {
   if (m_suppressed)
     return;
-  m_stream << "Downloading package lists" << std::endl;
+  m_stream << "Starting files downloading" << std::endl;
 }
 
-void IndexFetchProgress::onIndexFilesReading()
+void FilesFetchProgress::onFilesReading()
 {
   if (m_suppressed)
     return;
@@ -42,14 +42,17 @@ void IndexFetchProgress::onIndexFilesReading()
   m_stream << "Reading downloaded data" << std::endl;
 }
 
-void IndexFetchProgress::onIndexFetchComplete()
+void FilesFetchProgress::onFetchIsCompleted()
 {
   if (m_suppressed)
     return;
-  m_stream << "Your indices were successfully updated!" << std::endl;
+  for(std::string::size_type i = 0;i < m_prevStrLen;i++)
+    m_stream << "\b";
+  m_prevStrLen = 0;
+  m_stream << "Downloading is completed!" << std::endl;
 }
 
-void IndexFetchProgress::onIndexFetchStatus(unsigned char currentPartPercents,
+void FilesFetchProgress::onFetchStatus(unsigned char currentPartPercents,
 					    unsigned char totalPercents,
 					    size_t partNumber,
 					    size_t partCount,

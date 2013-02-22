@@ -41,16 +41,6 @@ public:
 				   VarIdVector& remove,
 				   VarIdToVarIdMap& upgrade,
 				   VarIdToVarIdMap& downgrade);
-
-  static std::string satToString(const AbstractPackageScope& scope, 
-				 const Sat& sat,
-				 const StringVector& annotations);
-
-  static void printSolution(const AbstractPackageScope& scope,
-			    const VarIdVector& install,
-			    const VarIdVector& remove,
-			    const VarIdToVarIdMap& upgrade,
-			    const VarIdToVarIdMap& downgrade);
 }; //class PkgUtils;
 
 #endif //DEEPSOLVER_PKG_UTILS_H;

@@ -1,6 +1,15 @@
 
   Deepsolver changes log
 
+0.2.11 (2013-02-22)
+
+General:
+- package lists printing code goes from lib/ to programs/;
+- added configuration parameters for packages cache directory and lists printing;
+- OperationCore::transaction() now returns TransactionIterator object;
+- package fetching implemented;
+- INdexFetch class renamed to FilesFetch (since it is also used for package fetching).
+
 	0.2.10 (2013-02-17)
 
 General:

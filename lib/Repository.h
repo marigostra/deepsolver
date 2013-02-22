@@ -21,6 +21,7 @@
 #include"ConfigCenter.h"
 #include"AbstractPackageRecipient.h"
 #include"repo/RepoParams.h"
+#include"PkgUrlsFile.h"
 
 class Repository
 {
@@ -54,13 +55,16 @@ public:
 
   void fetchInfoAndChecksum();
   void addIndexFilesForFetch(StringToStringMap& files);
+
   void loadPackageData(const StringToStringMap& files, 
 		       AbstractPackageRecipient& transactData,
+		       PkgUrlsFile& urlsFile,
 		       AbstractPackageRecipient& pkgInfoData);
 
 private:
   std::string buildInfoFileUrl() const;
   std::string buildChecksumFileUrl() const;
+  std::string buildBinaryPackageUrl(const PkgFile& pkgFile) const;
 
 private:
   std::string m_name, m_url, m_arch, m_component;

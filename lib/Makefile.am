@@ -12,7 +12,7 @@ libdeepsolver_la_SOURCES = \
 ConfigCenter.cpp \
 ConfigFile.cpp \
 IndexCore.cpp \
-IndexFetch.cpp \
+FilesFetch.cpp \
 InfoCore.cpp \
 io/PackageScopeContentBuilder.cpp \
 io/PackageScopeContentLoader.cpp \
@@ -21,6 +21,7 @@ OperationCore.cpp \
 os/Directory.cpp \
 os/File.cpp \
 Pkg.cpp \
+PkgUrlsFile.cpp \
 PkgUtils.cpp \
 repo/InfoFileReader.cpp \
 repo/PkgSection.cpp \
@@ -43,6 +44,7 @@ transact/SatWriter.cpp \
 transact/TaskSolver.cpp \
 transact/TaskTranslator.cpp \
 transact/TaskTranslatorOutputOptimization.cpp \
+TransactionIterator.cpp \
 utils/CurlInterface.cpp \
 utils/GzipInterface.cpp \
 utils/Md5.cpp \
@@ -53,6 +55,8 @@ utils/TinyFileDownload.cpp
 
 libdeepsolver_la_HEADERS = \
 AbstractPackageBackEnd.h \
+AbstractOperationContinueRequest.h \
+AbstractFetchListener.h \
 AbstractPackageRecipient.h \
 ConfigCenter.h \
 ConfigData.h \
@@ -62,7 +66,7 @@ deepsolver.h \
 DeepsolverTypes.h \
 DefaultValues.h \
 IndexCore.h \
-IndexFetch.h \
+FilesFetch.h \
 InfoCore.h \
 io/PackageScopeContentBuilder.h \
 io/PackageScopeContentLoader.h \
@@ -73,6 +77,7 @@ os/File.h \
 os/system.h \
 PackageInfoProcessor.h \
 Pkg.h \
+PkgUrlsFile.h \
 PkgUtils.h \
 repo/InfoFileReader.h \
 repo/PkgSection.h \
@@ -99,6 +104,7 @@ transact/SatWriter.h \
 transact/TaskSolver.h \
 transact/TaskTranslator.h \
 transact/TaskTranslatorOutputOptimization.h \
+TransactionIterator.h \
 utils/CurlInterface.h \
 utils/DateTime.h \
 utils/doubling.h \

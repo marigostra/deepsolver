@@ -19,22 +19,10 @@
 #include"CliParser.h"
 #include"OperationCore.h"
 #include"Messages.h"
-#include"IndexFetchProgress.h"
+#include"FilesFetchProgress.h"
+#include"AlwaysTrueContinueRequest.h"
 
 static CliParser cliParser;
-
-class AlwaysTrueContinueRequest: public AbstractOperationContinueRequest
-{
-public:
-  AlwaysTrueContinueRequest() {}
-  virtual ~AlwaysTrueContinueRequest() {}
-
-public:
-  bool onContinueOperationRequest() const
-  {
-    return 1;
-  }
-}; //class AlwaysTrueContinueRequest; 
 
 void parseCmdLine(int argc, char* argv[])
 {
@@ -81,7 +69,7 @@ int main(int argc, char* argv[])
     if (!cliParser.wasKeyUsed("--log"))
       Messages(std::cout).introduceRepoSet(conf);
     OperationCore core(conf);
-    IndexFetchProgress progress(std::cout, cliParser.wasKeyUsed("--log"));
+    FilesFetchProgress progress(std::cout, cliParser.wasKeyUsed("--log"));
     core.fetchIndices(progress, alwaysTrueContinueRequest);
   }
   catch (const ConfigFileException& e)

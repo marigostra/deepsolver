@@ -20,10 +20,12 @@
 
 struct ConfDir
 {
-  ConfDir() {}
-  //FIXME:default values;
+  ConfDir()
+    : pkgData(CONF_DEFAULT_PKG_DATA),
+      pkgCache(CONF_DEFAULT_PKG_CACHE) {}
 
     std::string pkgData;
+  std::string pkgCache;
 }; //struct ConfDir;
 
 struct ConfOs
@@ -76,6 +78,12 @@ typedef std::list<ConfProvide> ConfProvideList;
 
 struct ConfRoot
 {
+  ConfRoot()
+    : pkgListColumns(0),
+      pkgListVersions(0) {}
+
+  bool pkgListColumns;
+  bool pkgListVersions;
   ConfDir dir;
   ConfOs os;
   ConfRepoVector repo;

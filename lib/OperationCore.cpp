@@ -19,7 +19,7 @@
 #include"OperationCore.h"
 #include"Repository.h"
 #include"PackageInfoProcessor.h"
-#include"IndexFetch.h"
+#include"FilesFetch.h"
 #include"AbstractPackageBackEnd.h"
 #include"transact/AbstractTaskSolver.h"
 #include"transact/AbstractSatSolver.h"
@@ -32,13 +32,13 @@
 static std::string urlToFileName(const std::string& url);
 static void buildTemporaryIndexFileNames(StringToStringMap& files, const std::string& tmpDirName);
 
-void OperationCore::fetchIndices(AbstractIndexFetchListener& listener,
+void OperationCore::fetchIndices(AbstractFetchListener& listener,
 				 const AbstractOperationContinueRequest& continueRequest) const
 {
   const ConfRoot& root = m_conf.root();
   const std::string tmpDir = Directory::mixNameComponents(root.dir.pkgData, PKG_DATA_FETCH_DIR);
   logMsg(LOG_DEBUG, "operation:package data updating begin: pkgdatadir=\'%s\', tmpdir=\'%s\'", root.dir.pkgData.c_str(), tmpDir.c_str());
-  listener.onInfoFilesFetch();
+  listener.onHeadersFetch();
   //FIXME:file lock;
   RepositoryVector repo;
   for(ConfRepoVector::size_type i = 0;i < root.repo.size();i++)
@@ -64,36 +64,39 @@ void OperationCore::fetchIndices(AbstractIndexFetchListener& listener,
   logMsg(LOG_DEBUG, "operation:list of index files to download consists of %zu entries:", files.size());
   for(StringToStringMap::const_iterator it = files.begin();it != files.end();it++)
     logMsg(LOG_DEBUG, "operation:download entry: \'%s\' -> \'%s\'", it->first.c_str(), it->second.c_str());
-  listener.onIndexFetchBegin();
+  listener.onFetchBegin();
   if (Directory::isExist(tmpDir))
-    logMsg(LOG_WARNING, "Directory \'%s\' already exists, probably unfinished previous transaction", tmpDir.c_str());
+    logMsg(LOG_WARNING, "operation:directory \'%s\' already exists, probably unfinished previous transaction", tmpDir.c_str());
   logMsg(LOG_DEBUG, "operation:preparing directory \'%s\', it must exist and be empty", tmpDir.c_str());
   Directory::ensureExistsAndEmpty(tmpDir, 1);//1 means erase any content;
   if (!files.empty())
     {
-      IndexFetch indexFetch(listener, continueRequest);
-      indexFetch.fetch(files);
+      FilesFetch fetch(listener, continueRequest);
+      fetch.fetch(files);
     }
-  listener.onIndexFilesReading();
+  listener.onFilesReading();
   PackageScopeContentBuilder scope;
+  PkgUrlsFile urlsFile(m_conf);
   PackageInfoProcessor infoProcessor;
+  urlsFile.open();
   for(RepositoryVector::size_type i = 0; i < repo.size();i++)
-    repo[i].loadPackageData(files, scope, infoProcessor);
+    repo[i].loadPackageData(files, scope, urlsFile, infoProcessor);
   logMsg(LOG_DEBUG, "operation:committing loaded packages data");
   scope.commit();
   const std::string outputFileName = Directory::mixNameComponents(root.dir.pkgData, PKG_DATA_FILE_NAME);
   logMsg(LOG_DEBUG, "operation:saving constructed package data to \'%s\'", outputFileName.c_str());
   scope.saveToFile(outputFileName);
+  urlsFile.close();
   //FIXME:The current code is working but it should create temporary file elsewhere and then replace with it already existing outputFileName;
   logMsg(LOG_DEBUG, "operation:clearing and removing \'%s\'", tmpDir.c_str());
   Directory::eraseContent(tmpDir);
   Directory::remove(tmpDir);
   logMsg(LOG_INFO, "Repository index updating finished!");
   //FIXME:remove file lock;
-  listener.onIndexFetchComplete();
+  listener.onFetchIsCompleted();
 }
 
-void OperationCore::transaction(AbstractTransactionListener& listener, const UserTask& userTask) const
+std::auto_ptr<TransactionIterator> OperationCore::transaction(AbstractTransactionListener& listener, const UserTask& userTask) const
 {
   const ConfRoot& root = m_conf.root();
   for(StringVector::size_type i = 0;i < root.os.transactReadAhead.size();i++)
@@ -128,7 +131,39 @@ void OperationCore::transaction(AbstractTransactionListener& listener, const Use
   solver->solve(userTask, toInstall, toRemove);
   VarIdToVarIdMap toUpgrade, toDowngrade;
   PkgUtils::fillUpgradeDowngrade(*backEnd.get(), scope, toInstall, toRemove, toUpgrade, toDowngrade);
-  PkgUtils::printSolution(scope, toInstall, toRemove, toUpgrade, toDowngrade);
+  PkgVector pkgInstall, pkgRemove, pkgUpgradeFrom, pkgUpgradeTo, pkgDowngradeFrom, pkgDowngradeTo;
+  for(VarIdVector::size_type i = 0;i < toInstall.size();i++)
+    {
+      Pkg pkg;
+      scope.fillPkgData(toInstall[i], pkg);
+      pkgInstall.push_back(pkg);
+    }
+  for(VarIdVector::size_type i = 0;i < toRemove.size();i++)
+    {
+      Pkg pkg;
+      scope.fillPkgData(toRemove[i], pkg);
+      pkgRemove.push_back(pkg);
+    }
+  for(VarIdToVarIdMap::const_iterator it = toUpgrade.begin();it != toUpgrade.end();it++)
+    {
+      Pkg pkg1, pkg2;
+      scope.fillPkgData(it->first, pkg1);
+      scope.fillPkgData(it->second, pkg2);
+      pkgUpgradeFrom.push_back(pkg1);
+      pkgUpgradeTo.push_back(pkg2);
+    }
+  for(VarIdToVarIdMap::const_iterator it = toDowngrade.begin();it != toDowngrade.end();it++)
+    {
+      Pkg pkg1, pkg2;
+      scope.fillPkgData(it->first, pkg1);
+      scope.fillPkgData(it->second, pkg2);
+      pkgDowngradeFrom.push_back(pkg1);
+      pkgDowngradeTo.push_back(pkg2);
+    }
+  return std::auto_ptr<TransactionIterator>(new TransactionIterator(m_conf, backEnd,
+								    pkgInstall, pkgRemove,
+								    pkgUpgradeFrom, pkgUpgradeTo,
+								    pkgDowngradeFrom, pkgDowngradeTo));
 }
 
 std::string OperationCore::generateSat(AbstractTransactionListener& listener, const UserTask& userTask) const

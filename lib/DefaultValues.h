@@ -21,16 +21,19 @@
 //Configuration parameters;
 #define DEFAULT_CONFIG_FILE_NAME "/etc/deepsolver/ds.conf"
 #define DEFAULT_CONFIG_DIR_NAME "/etc/deepsolver/conf.d"
+#define CONF_DEFAULT_PKG_DATA "/var/lib/deepsolver/pkg-data"
+#define CONF_DEFAULT_PKG_CACHE "/var/lib/deepsolver/pkg-cache"
+#define PKG_DATA_FILE_NAME "pkgs-data.bin"
+#define PKG_URLS_FILE_NAME "pkgs-urls.txt"
+#define PKG_DATA_FETCH_DIR "__tmp_pkg_data"
 
 //Data files and directories;
 #define COMPRESSION_SUFFIX_GZIP ".gz"
-#define PKG_DATA_FILE_NAME "deepsolver-pkgs.bin"
-#define PKG_DATA_FETCH_DIR "__tmp_pkg_data"
 
 //Repo structure;
 #define REPO_INDEX_DIR_PREFIX "base."
-#define REPO_PACKAGES_DIR_NAME "RPMS"
-#define REPO_SOURCES_DIR_NAME "SRPMS"
+#define REPO_PACKAGES_DIR_PREFIX "RPMS."
+#define REPO_SOURCES_DIR_PREFIX "SRPMS."
 
 //Repo index structure;
 #define REPO_INDEX_INFO_FILE "info"

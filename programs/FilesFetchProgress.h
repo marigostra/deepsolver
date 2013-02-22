@@ -15,27 +15,27 @@
    General Public License for more details.
 */
 
-#ifndef DEEPSOLVER_INDEX_FETCH_PROGRESS_H
-#define DEEPSOLVER_INDEX_FETCH_PROGRESS_H
+#ifndef DEEPSOLVER_FILES_FETCH_PROGRESS_H
+#define DEEPSOLVER_FILES_FETCH_PROGRESS_H
 
-#include"OperationCore.h"
+#include"AbstractFetchListener.h"
 
-class IndexFetchProgress: public AbstractIndexFetchListener
+class FilesFetchProgress: public AbstractFetchListener
 {
 public:
-  IndexFetchProgress(std::ostream& stream, bool suppressed)
+  FilesFetchProgress(std::ostream& stream, bool suppressed)
     : m_stream(stream), 
       m_prevStrLen(0),
       m_suppressed(suppressed) {}
 
-  virtual ~IndexFetchProgress() {}
+  virtual ~FilesFetchProgress() {}
 
 public:
-  void onInfoFilesFetch();
-  void onIndexFetchBegin();
-  void onIndexFilesReading();
-  void onIndexFetchComplete();
-  void onIndexFetchStatus(unsigned char currentPartPercents,
+  void onHeadersFetch();
+  void onFetchBegin();
+  void onFilesReading();
+  void onFetchIsCompleted();
+  void onFetchStatus(unsigned char currentPartPercents,
 			  unsigned char totalPercents,
 			  size_t partNumber,
 			  size_t partCount,
@@ -46,6 +46,6 @@ private:
   std::ostream& m_stream;
   std::string::size_type m_prevStrLen;
   bool m_suppressed;
-}; //class IndexFetchProgress;
+}; //class FilesFetchProgress;
 
-#endif //DEEPSOLVER_INDEX_FETCH_PROGRESS_H;
+#endif //DEEPSOLVER_FILES_FETCH_PROGRESS_H;

@@ -517,6 +517,18 @@ std::string PackageScope::getVersion(VarId varId) const
   return res.str();
 }
 
+void PackageScope::fillPkgData(VarId varId, Pkg& pkg) const
+{
+  const PkgInfoVector& pkgs = m_content.pkgInfoVector;
+  assert(varId < pkgs.size());
+  const PackageScopeContent::PkgInfo& p = pkgs[varId];
+  assert(p.ver != NULL || p.release != NULL);
+  pkg.name = packageIdToStr(p.pkgId);
+  pkg.epoch = p.epoch;
+  pkg.version = p.ver;
+  pkg.release = p.release;
+  pkg.buildTime = p.buildTime;
+}
 
 std::string PackageScope::constructPackageName(VarId varId) const
 {
@@ -531,6 +543,14 @@ std::string PackageScope::constructPackageName(VarId varId) const
   res += "-";
   res += pkg.release;
   return res;
+}
+
+std::string PackageScope::getPackageName(VarId varId) const
+{
+  const PkgInfoVector& pkgs = m_content.pkgInfoVector;
+  assert(varId < pkgs.size());
+  const PackageScopeContent::PkgInfo& pkg = pkgs[varId];
+return packageIdToStr(pkg.pkgId);
 }
 
 std::string PackageScope::constructPackageNameWithBuildTime(VarId varId) const

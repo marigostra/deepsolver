@@ -20,6 +20,9 @@
 #include"TransactionProgress.h"
 #include"Messages.h"
 #include"CliParser.h"
+#include"PackageListPrinting.h"
+#include"AlwaysTrueContinueRequest.h"
+#include"FilesFetchProgress.h"
 
 static CliParser cliParser;
 
@@ -77,7 +80,12 @@ int main(int argc, char* argv[])
       }
     if (!cliParser.wasKeyUsed("--sat"))
       {
-	core.transaction(transactionProgress, userTask);
+	std::auto_ptr<TransactionIterator> it = core.transaction(transactionProgress, userTask);
+	PackageListPrinting(conf).printSolution(*it.get());
+	std::cout << std::endl;
+	FilesFetchProgress progress(std::cout, cliParser.wasKeyUsed("--log"));
+	AlwaysTrueContinueRequest continueRequest;
+	it->fetchPackages(progress, continueRequest);
       } else
       {
 	const std::string res = core.generateSat(transactionProgress, userTask);

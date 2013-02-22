@@ -27,17 +27,23 @@ std::string File::baseName(const std::string& fileName)
   for(std::string::size_type i = 0;i < fileName.length();i++)
     {
       if (fileName[i] == '/')
-{
-if (s.empty())
-continue;
-last = s;
-s.erase();
-continue;
-}
-s += fileName[i];
+	{
+	  if (s.empty())
+	    continue;
+	  last = s;
+	  s.erase();
+	  continue;
+	}
+      s += fileName[i];
     }
   return s.empty()?last:s;
 }
+
+std::string File::baseNameFromUrl(const std::string& fileName)
+{
+  return baseName(fileName);
+}
+
 
 //Ensures block of required length is read completely or there is no more data (prevents from incomplete read() operation);
 static ssize_t readBlock(int fd, void* buf, size_t bufSize)

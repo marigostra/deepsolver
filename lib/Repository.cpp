@@ -151,8 +151,9 @@ m_srcDescrFileUrl = dir + REPO_INDEX_SOURCES_DESCR_FILE;
     files.insert(StringToStringMap::value_type(m_srcDescrFileUrl, ""));
 }
 
-void Repository::loadPackageData(const StringToStringMap& files, 
-		     AbstractPackageRecipient& transactData,
+void Repository::loadPackageData(const StringToStringMap& files,
+				 AbstractPackageRecipient& transactData,
+				 PkgUrlsFile& urlsFile,
 		     AbstractPackageRecipient& pkgInfoData)
 {
   StringToStringMap::const_iterator it = files.find(m_pkgFileUrl);
@@ -179,7 +180,7 @@ void Repository::loadPackageData(const StringToStringMap& files,
     }
   if (!md5File.verifyItem(i, pkgFileName))
     {
-      logMsg(LOG_ERR, "Packages data from \'%s\' has incorrect checksum from \'%s\'", m_pkgFileUrl.c_str(), m_checksumFileUrl.c_str());
+      logMsg(LOG_ERR, "repository:packages data from \'%s\' has incorrect checksum from \'%s\'", m_pkgFileUrl.c_str(), m_checksumFileUrl.c_str());
       throw OperationException(OperationException::BrokenIndexFile, m_pkgFileUrl);
     }
   size_t invalidLineNum;
@@ -194,11 +195,12 @@ void Repository::loadPackageData(const StringToStringMap& files,
       splitSectionLines(sect, lines);
       if (!PkgSection::parsePkgFileSection(lines, pkgFile, invalidLineNum, invalidLineValue))
 	{
-	  logMsg(LOG_ERR, "Broken index file \'%s\', invalid line %zu in section \'%s\': \'%s\'", m_pkgFileUrl.c_str(), invalidLineNum, pkgFile.fileName.c_str(), invalidLineValue.c_str());
+	  logMsg(LOG_ERR, "repository:broken index file \'%s\', invalid line %zu in section \'%s\': \'%s\'", m_pkgFileUrl.c_str(), invalidLineNum, pkgFile.fileName.c_str(), invalidLineValue.c_str());
 	  throw OperationException(OperationException::BrokenIndexFile);
 	}
       pkgFile.isSource = 0;
       transactData.onNewPkgFile(pkgFile);
+      urlsFile.addPkg(pkgFile, buildBinaryPackageUrl(pkgFile));
     }
   reader->close();
   logMsg(LOG_DEBUG, "repository:successfully read main packages data from \'%s\'", m_pkgFileUrl.c_str());
@@ -287,6 +289,20 @@ std::string Repository::buildChecksumFileUrl() const
   value += m_arch + "/";
   value += REPO_INDEX_DIR_PREFIX + m_component + "/";
   value += m_checksumFileName;
+  return value;
+}
+
+std::string Repository::buildBinaryPackageUrl(const PkgFile& pkgFile) const
+{
+  assert(!m_url.empty());
+  assert(!m_arch.empty());
+  assert(!m_component.empty());
+  std::string value = m_url;
+  if (value[value.size() - 1] != '/')
+    value += '/';
+  value += m_arch + "/";
+  value += REPO_PACKAGES_DIR_PREFIX + m_component + "/";
+  value += pkgFile.fileName;
   return value;
 }
 
