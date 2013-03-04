@@ -172,6 +172,34 @@ public:
    * \return Non-zero if provided file name is a valid source package name
    */
   virtual bool validSourcePkgFileName(const std::string& fileName) const = 0;
+
+  /**\brief Performs install/remove transaction with given packages
+   *
+   * This method gives a way to make desired changes in operating system
+   * state. Using it everybody can perform a transaction containing any
+   * installation, removing, upgrading and downgrading tasks. The main
+   * restriction is a requirement that all package dependencies and
+   * conflicts must be satisfied. The package to install must be provided
+   * with their file names, packages to remove by their names (without a
+   * version or any other additional information), packages to upgrade and
+   * downgrade must be specified by a string-to-string map from package
+   * names to file names.
+   *
+   * If a transaction fails this method returns zero. The state of OS after
+   * failed transaction is unspecified and package back-end dependent.
+   * \param [in] toInstall A file names vector with packages to install
+   * \param [in] toRemove A file names vector with packages to remove
+   * \param [in] toUpgrade A map from package names to file names with packages to upgrade
+   * \param [in] toDowngrade A map from package names to file names with packages to downgrade
+   *
+   * \return Non-zero if a transaction is completed successfully or zero otherwise
+   *
+   * \throws PackageBackEndException
+   */
+  virtual bool transaction(const StringVector& toInstall,
+			   const StringVector& toRemove,
+			   const StringToStringMap& toUpgrade,
+			   const StringToStringMap& toDowngrade) = 0; 
 }; //class AbstractPackageBackEnd;
 
 std::auto_ptr<AbstractPackageBackEnd> createRpmBackEnd();

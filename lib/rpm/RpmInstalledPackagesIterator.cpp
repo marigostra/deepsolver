@@ -21,8 +21,8 @@
 
 void RpmInstalledPackagesIterator::openEnum()
 {
-  if (rpmdbOpen( "", &m_db, O_RDONLY, 0644 ) != 0)
-    throw RpmException("Could not open rpmdb");
+  if (rpmdbOpen( "", &m_db, O_RDONLY, 0644 ) != 0)//FIXME:root directory;
+    throw PackageBackEndException("rpmdbOpen()");
   m_it = rpmdbInitIterator(m_db, RPMDBI_PACKAGES, NULL, 0);
 }
 

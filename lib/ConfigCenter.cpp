@@ -33,6 +33,7 @@ static unsigned int parseUintValue(const StringVector& path,
 void ConfigCenter::initValues()
 {
   addNonEmptyStringParam3("core", "dir", "pkg-data", m_root.dir.pkgData);
+  addNonEmptyStringParam3("core", "dir", "pkg-cache", m_root.dir.pkgCache);
   addStringListParam3("core", "os", "transact-read-ahead", m_root.os.transactReadAhead);
 }
 

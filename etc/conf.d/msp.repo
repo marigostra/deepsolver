@@ -1,0 +1,8 @@
+[repo "msp@devel"]
+enabled = yes
+url =file:///alt/ds 
+arch = x86_64; noarch
+components = classic
+take-descr = no
+take-file-list = no
+take-sources = no

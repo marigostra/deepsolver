@@ -115,10 +115,12 @@ void Messages::onCurlError(const CurlException& e)
   m_stream << std::endl;
 }
 
-void Messages::onRpmError(const RpmException& e)
+void Messages::onPackageBackEndError(const PackageBackEndException& e)
 {
   m_stream << std::endl;
-  m_stream << "RpmError:" << e.getMessage() << std::endl;
+  m_stream << "There is the problem in the package back-end layer. Description (very likely a failed function name) below:" << std::endl;
+  m_stream << std::endl;
+  m_stream << "ERROR:" << e.getMessage() << std::endl;
 }
 
 void Messages::onOperationError(const OperationException& e)
@@ -163,6 +165,10 @@ void Messages::onOperationError(const OperationException& e)
       m_stream << "system. This type of error may not be caused by corrupted external" << std::endl;
       m_stream << "data or an invalid user input. The only reason is incorrect execution" << std::endl;
       m_stream << "environment. Please, contact your system administrator." << std::endl;
+      break;
+    case OperationException::LimitExceeded:
+      m_stream << "One of the defined limits was exceeded during last operation. Please" << std::endl;
+      m_stream << "contact system administrator to resolve this situation." << std::endl;
       break;
     default:
       assert(0);
@@ -278,6 +284,7 @@ void Messages::dsInstallLogo() const
 
 void Messages::dsInstallInitCliParser(CliParser& cliParser) const
 {
+  cliParser.addKeyDoubleName("-n", "--nothing", "print a solution and do nothing");
   cliParser.addKeyDoubleName("-s", "--sat", "print SAT equation and do not touch any packages");
   cliParser.addKeyDoubleName("-h", "--help", "print this help screen and exit");
   cliParser.addKey("--log", "print log to console instead of user progress information");
@@ -304,6 +311,7 @@ void Messages::dsRemoveLogo() const
 
 void Messages::dsRemoveInitCliParser(CliParser& cliParser) const
 {
+  cliParser.addKeyDoubleName("-n", "--nothing", "print a solution and do nothing");
   cliParser.addKeyDoubleName("-s", "--sat", "print SAT equation and do not touch any packages");
   cliParser.addKeyDoubleName("-h", "--help", "print this help screen and exit");
   cliParser.addKey("--log", "print log to console instead of user progress information");
@@ -352,4 +360,16 @@ void Messages::dsRequireOnInvalidInput()
     m_stream << "ds-require foo = 1.0" << std::endl;
     m_stream << "ds-require foo >= 1.0" << std::endl;
     m_stream << "..." << std::endl;
+}
+
+bool Messages::confirmContinuing()
+{
+  m_stream << "Do you really agree to continue? (y/N): ";
+  std::string str;
+  std::getline(std::cin, str);
+  if (str == "y" || str == "Y")
+    return 1;
+  if (str == "yes" || str == "Yes" || str == "YES")
+    return 1;
+  return 0;
 }

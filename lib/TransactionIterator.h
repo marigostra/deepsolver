@@ -49,10 +49,17 @@ public:
   void fetchPackages(AbstractFetchListener& listener,
 		     const AbstractOperationContinueRequest& continueRequest);
 
+  void makeChanges();
+
   const AbstractPackageBackEnd& getBackEnd() const
   {
     assert(m_backEnd.get() != NULL);
     return *m_backEnd.get();
+  }
+
+  bool emptyTask() const
+  {
+    return m_install.empty() && m_remove.empty() && m_upgradeTo.empty() && m_downgradeTo.empty();
   }
 
   const PkgVector& getInstall() const
@@ -91,6 +98,8 @@ private:
   PkgVector m_install, m_remove;
   PkgVector m_upgradeFrom, m_upgradeTo;
   PkgVector m_downgradeFrom, m_downgradeTo;
+  StringVector m_filesInstall, m_namesRemove;
+  StringToStringMap m_filesUpgrade, m_filesDowngrade;
 }; //class TransactionIterator;
 
 #endif //DEEPSOLVER_TRANSACTION_ITERATOR_H;

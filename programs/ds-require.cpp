@@ -118,9 +118,9 @@ int main(int argc, char* argv[])
       Messages(std::cerr).onCurlError(e);
       return EXIT_FAILURE;
     }
-  catch(const RpmException& e)
+  catch(const PackageBackEndException& e)
     {
-      Messages(std::cerr).onRpmError(e);
+      Messages(std::cerr).onPackageBackEndError(e);
       return EXIT_FAILURE;
     }
   catch(const SystemException& e)

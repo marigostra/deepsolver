@@ -22,7 +22,7 @@ public:
   void onConfigSyntaxError(const ConfigFileException& e);
   void onConfigError(const ConfigException& e);
   void onCurlError(const CurlException& e);
-  void onRpmError(const RpmException& e);
+  void onPackageBackEndError(const PackageBackEndException& e);
   void onOperationError(const OperationException& e);
   void onTaskError(const TaskException& e);
 
@@ -54,6 +54,9 @@ public:
   void dsRequireInitCliParser(CliParser& cliParser) const;
   void dsRequireHelp(const CliParser& cliParser) const;
   void dsRequireOnInvalidInput();
+
+  //Dialogs;
+  bool confirmContinuing();
 
 
 private:

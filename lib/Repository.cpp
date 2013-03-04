@@ -32,7 +32,7 @@ void Repository::fetchInfoAndChecksum()
 {
   const std::string infoFileUrl = buildInfoFileUrl();
   logMsg(LOG_DEBUG, "Constructed info file URL is \'%s\'", infoFileUrl.c_str());
-  TinyFileDownload download;//FIXME:max file size limit;
+  TinyFileDownload download(m_tinyFileSizeLimit);
   download.fetch(infoFileUrl);
   const std::string infoFileContent = download.getContent();
   InfoFileReader reader;

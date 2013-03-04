@@ -18,6 +18,7 @@
 #include"deepsolver.h"
 #include"RpmBackEnd.h"
 #include"RpmFileHeaderReader.h"
+#include"RpmTransaction.h"
 
 static bool alreadyReadConfigFiles = 0;
 static int buildSenseFlags(const VersionCond& c);
@@ -113,4 +114,28 @@ int buildSenseFlags(const VersionCond& c)
 std::auto_ptr<AbstractPackageBackEnd> createRpmBackEnd()
 {
   return std::auto_ptr<AbstractPackageBackEnd>(new RpmBackEnd());
+}
+
+bool RpmBackEnd::transaction(const StringVector& toInstall,
+			     const StringVector& toRemove,
+			     const StringToStringMap& toUpgrade,
+			     const StringToStringMap& toDowngrade)
+{
+  if (!toDowngrade.empty())
+    throw NotImplementedException("Downgrading tasks in a transaction");
+  logMsg(LOG_DEBUG, "backend:starting transaction with %zu packages to install, %zu packages to remove, %zu packages to upgrade and %zu packages to downgrade", toInstall.size(), toRemove.size(), toUpgrade.size(), toDowngrade.size());
+  for(StringVector::size_type i = 0;i < toInstall.size();i++)
+    logMsg(LOG_DEBUG, "backend:%s to install", toInstall[i].c_str());
+  for(StringVector::size_type i = 0;i < toRemove.size();i++)
+    logMsg(LOG_DEBUG, "backend:%s to remove", toRemove[i].c_str());
+  for(StringToStringMap::const_iterator it = toUpgrade.begin();it != toUpgrade.end();it++)
+    logMsg(LOG_DEBUG, "backend:%s -> %s to upgrade", it->first.c_str(), it->second.c_str());
+  for(StringToStringMap::const_iterator it = toDowngrade.begin();it != toDowngrade.end();it++)
+    logMsg(LOG_DEBUG, "backend:%s -> %s to downgrade", it->first.c_str(), it->second.c_str());
+  RpmTransaction transact;
+  transact.init();
+  transact.process(toInstall, toRemove, toUpgrade, toDowngrade);
+  transact.close();
+  logMsg(LOG_DEBUG, "backend:transaction is completed");
+  return 1;
 }

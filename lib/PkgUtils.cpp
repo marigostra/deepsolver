@@ -18,8 +18,6 @@
 #include"deepsolver.h"
 #include"PkgUtils.h"
 
-static void printThreeColumns(const StringVector& items);
-
 void PkgUtils::fillWithhInstalledPackages(AbstractPackageBackEnd& backEnd, PackageScopeContent& content)
 {
   const clock_t fillingStart = clock();
@@ -49,7 +47,7 @@ void PkgUtils::fillWithhInstalledPackages(AbstractPackageBackEnd& backEnd, Packa
 	  //Extremely important place: the following line determines is installed package the same as one available from repository index;
 	  if (pkg.version == info.ver &&
 	      pkg.release == info.release &&
-	      pkg.buildTime == info.buildTime)
+					    pkg.buildTime == info.buildTime)
 	    {
 	      info.flags |= PkgFlagInstalled;
 	      found = 1;
@@ -122,11 +120,14 @@ void PkgUtils::fillUpgradeDowngrade(const AbstractPackageBackEnd& backEnd,
 	continue;
       const std::string versionToInstall = scope.getVersion(install[i]);
       const std::string versionToRemove = scope.getVersion(remove[j]);
-      assert(!backEnd.versionEqual(versionToInstall, versionToRemove));
+      if (!backEnd.versionEqual(versionToInstall, versionToRemove))//Packages may be  with equal versions but with different build times;
+    {
       if (backEnd.versionGreater(versionToInstall, versionToRemove))
 	upgrade.insert(VarIdToVarIdMap::value_type(remove[j], install[i])); else
 	downgrade.insert(VarIdToVarIdMap::value_type(remove[j], install[i]));
       install[i] = BAD_VAR_ID;
+    } else
+	logMsg(LOG_WARNING, "upgrade:trying to upgrade packages with same version but with different build time: %s and %s", scope.constructPackageNameWithBuildTime(install[i]).c_str(), scope.constructPackageNameWithBuildTime(remove[j]).c_str());
       remove[j] = BAD_VAR_ID;
     }
   for(VarIdVector::size_type i = 0;i < install.size();i++)

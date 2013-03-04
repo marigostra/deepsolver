@@ -148,9 +148,15 @@ int main(int argc, char* argv[])
 	std::auto_ptr<TransactionIterator> it = core.transaction(transactionProgress, cliParser.userTask);
 	PackageListPrinting(conf).printSolution(*it.get());
 	std::cout << std::endl;
+	if (it->emptyTask() || cliParser.wasKeyUsed("--nothing"))
+	  return EXIT_SUCCESS;
+	if (!Messages(std::cout).confirmContinuing())
+	  return 0;
+	std::cout << std::endl;
 	FilesFetchProgress progress(std::cout, cliParser.wasKeyUsed("--log"));
 	AlwaysTrueContinueRequest continueRequest;
 	it->fetchPackages(progress, continueRequest);
+	it->makeChanges();
       } else
       {
 	const std::string res = core.generateSat(transactionProgress, cliParser.userTask);
@@ -183,9 +189,9 @@ int main(int argc, char* argv[])
       Messages(std::cerr).onCurlError(e);
       return EXIT_FAILURE;
     }
-  catch(const RpmException& e)
+  catch(const PackageBackEndException& e)
     {
-      Messages(std::cerr).onRpmError(e);
+      Messages(std::cerr).onPackageBackEndError(e);
       return EXIT_FAILURE;
     }
   catch(const SystemException& e)

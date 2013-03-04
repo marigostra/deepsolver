@@ -54,6 +54,11 @@ public:
   void readPackageFile(const std::string& fileName, PkgFile& pkgFile) const;
   bool validPkgFileName(const std::string& fileName) const;
   bool validSourcePkgFileName(const std::string& fileName) const;
+
+  bool transaction(const StringVector& toInstall,
+		   const StringVector& toRemove,
+		   const StringToStringMap& toUpgrade,
+		   const StringToStringMap& toDowngrade); 
 }; //class RpmBackEnd;
 
 #endif //DEEPSOLVER_RPM_BACKEND_H;

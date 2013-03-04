@@ -31,7 +31,7 @@ void RpmFileHeaderReader::load(const std::string& fileName)
   assert(m_header == NULL);
   m_fd = Fopen(fileName.c_str(), "r");
   if (m_fd == NULL)
-    throw RpmException("Could not open rpm file \'" + fileName + "\' for header reading");
+    throw PackageBackEndException("Fopen(" + fileName + ")");
   const rpmRC rc = rpmReadPackageHeader(m_fd, &m_header, 0, NULL, NULL);
   if (rc != RPMRC_OK || m_header == NULL)
     {
@@ -40,7 +40,7 @@ void RpmFileHeaderReader::load(const std::string& fileName)
       Fclose(m_fd);
       m_fd = NULL;
       m_header = NULL;
-      throw RpmException("Could not read header from rpm file \'" + fileName + "\'");
+      throw PackageBackEndException("rpmReadPackageHeader()");
     }
   m_fileName = fileName;
 }

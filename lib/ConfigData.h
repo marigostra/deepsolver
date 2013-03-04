@@ -80,10 +80,13 @@ struct ConfRoot
 {
   ConfRoot()
     : pkgListColumns(0),
-      pkgListVersions(0) {}
+    pkgListVersions(0),
+    tinyFileSizeLimit(1048576) {} //FIXME:
 
-  bool pkgListColumns;
-  bool pkgListVersions;
+  bool pkgListColumns;//FIXME:inaccessible;
+  bool pkgListVersions;//FIXME:inaccessible;
+  //FIXME:Scren width;
+  size_t tinyFileSizeLimit;//FIXME:Inaccessible;
   ConfDir dir;
   ConfOs os;
   ConfRepoVector repo;

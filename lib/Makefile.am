@@ -20,6 +20,7 @@ logging.cpp \
 OperationCore.cpp \
 os/Directory.cpp \
 os/File.cpp \
+os/Process.cpp \
 Pkg.cpp \
 PkgUrlsFile.cpp \
 PkgUtils.cpp \
@@ -32,6 +33,7 @@ rpm/RpmBackEnd.cpp \
 rpm/RpmFileHeaderReader.cpp \
 rpm/rpmHeader.cpp \
 rpm/RpmInstalledPackagesIterator.cpp \
+rpm/RpmTransaction.cpp \
 transact/InstalledReferences.cpp \
 transact/LibMinisatSolver.cpp \
 transact/PackageScopeContent.cpp \
@@ -74,6 +76,7 @@ logging.h \
 OperationCore.h \
 os/Directory.h \
 os/File.h \
+os/Process.h \
 os/system.h \
 PackageInfoProcessor.h \
 Pkg.h \
@@ -88,6 +91,7 @@ rpm/RpmBackEnd.h \
 rpm/RpmFileHeaderReader.h \
 rpm/rpmHeader.h \
 rpm/RpmInstalledPackagesIterator.h \
+rpm/RpmTransaction.h \
 transact/AbstractPackageScope.h \
 transact/AbstractSatSolver.h \
 transact/AbstractTaskSolver.h \

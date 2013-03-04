@@ -1,6 +1,13 @@
 
   Deepsolver changes log
 
+0.3.0 (2013-03-04)
+
+General:
+- RPM transaction code is added;
+- package fetching is added;
+- command line interface is improve to reflect changes above.
+
 0.2.11 (2013-02-22)
 
 General:

@@ -26,10 +26,12 @@
 class Repository
 {
 public:
-  Repository(const ConfRepo& confRepo,
+  Repository(size_t tinyFileSizeLimit,
+	     const ConfRepo& confRepo,
 	     const std::string& arch,
 	     const std::string& component)
-    : m_name(confRepo.name),
+    : m_tinyFileSizeLimit(tinyFileSizeLimit),
+      m_name(confRepo.name),
       m_url(confRepo.url), 
       m_arch(arch),
       m_component(component),
@@ -67,6 +69,7 @@ private:
   std::string buildBinaryPackageUrl(const PkgFile& pkgFile) const;
 
 private:
+  size_t m_tinyFileSizeLimit;
   std::string m_name, m_url, m_arch, m_component;
   bool m_takeDescr, m_takeFileList, m_takeSources;
   std::string m_checksumFileUrl, m_checksums;

@@ -41,7 +41,7 @@
  * \sa NotImplementedException
  * \sa OperationException
  * \sa RegExpException
- * \sa RpmException
+ * \sa PackageBackEndException
  * \sa SystemException
  * \sa TaskException
  */
@@ -59,7 +59,7 @@ public:
    *
    * This method returns a short string with one or two words describing
    * the error type. For example, this method can return values like
-   * "system", "rpm" etc. A value returned by this method usually is used
+   * "system", "back-end" etc. A value returned by this method usually is used
    * for error message construction.
    *
    * \return A short string with error type description
@@ -305,16 +305,17 @@ private:
  * mismatch, invalid content of repo file and so on. Downloading problems
  * have their own exception class called CurlException.
  *
- * \sa OperationCore CurlException System Exception RpmException
+ * \sa OperationCore CurlException System Exception PackageBackEndException
  */
 class OperationException
 {
 public:
   enum {
-    InvalidInfoFile = 0,
-    InvalidChecksumData = 1,
-    BrokenIndexFile = 2,
-    InternalIOProblem = 3
+    InvalidInfoFile,
+    InvalidChecksumData,
+    BrokenIndexFile,
+    InternalIOProblem,
+    LimitExceeded
   };
 
 public:
@@ -393,10 +394,10 @@ private:
  * The instance of this exception is thrown on some index creation or
  * patching problems such as corrupted file, not empty target directory
  * etc. This exception created in addition to general exception classes
- * like SystemException, RpmException and so on which can be also thrown
+ * like SystemException, PackageBackEndException and so on which can be also thrown
  * during index operations.
  *
- * \sa IndexCore SystemException RpmException Md5FileException
+ * \sa IndexCore SystemException PackageBackEndException Md5FileException
  */
 class IndexCoreException: public DeepsolverException 
 {
@@ -1187,30 +1188,40 @@ private:
   const std::string m_line;
 }; //class Md5FileException;
 
-class RpmException: public DeepsolverException
+/**\brief Indicates an error inside of package back-end layer
+ *
+ * This class represents an exception in package back-end layer. There
+ * can be several package back-end implementation (rpm, dpkg, etc) but
+ * all of them should use this type of exceptions to unify errors
+ * handling in command line tools and other libdeepsolver clients. The
+ * preferable argument for this class instance is a failed function name.
+ */
+class PackageBackEndException: public DeepsolverException
 {
 public:
-  RpmException() {}
-  RpmException(const std::string& message)
-    : m_message(message
-) {}
+  /**\brief The constructor
+   *
+   * \param [in] fnName A name of a failed function
+   */
+  PackageBackEndException(const std::string& fnName)
+    : m_fnName(fnName) {}
 
-      virtual ~RpmException() {}
+  virtual ~PackageBackEndException() {}
 
 public:
   std::string getType() const
   {
-    return "rpm";
+    return "back-end";
   }
 
   std::string getMessage() const
   {
-    return m_message;
+    return m_fnName;
   }
 
 private:
-  std::string m_message;
-}; //class RpmException;
+  std::string m_fnName;
+}; //class PackageBackEndException;
 
 class NotImplementedException: public DeepsolverException
 {

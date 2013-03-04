@@ -32,12 +32,12 @@ void TaskSolver::solve(const UserTask& task,
   if (m_sat.empty())
     return;
   std::auto_ptr<AbstractSatSolver> satSolver = createLibMinisatSolver();
-  AbstractSatSolver::VarIdToBoolMap res, assumptions;
+  AbstractSatSolver::VarIdToBoolMap res;
   for(Sat::size_type i = 0;i < m_sat.size();i++)
       satSolver->addClause(m_sat[i]);
   VarIdVector solutionConflicts;
   logMsg(LOG_DEBUG, "solver:launching minisat with %zu clauses", m_sat.size());
-  if (!satSolver->solve(assumptions, res, solutionConflicts))
+  if (!satSolver->solve(res, solutionConflicts))
     {
       logMsg(LOG_DEBUG, "solver:minisat fails with %zu conflicts:", solutionConflicts.size());
       for(VarIdVector::size_type i = 0;i < solutionConflicts.size();i++)

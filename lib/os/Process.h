@@ -15,19 +15,15 @@
    General Public License for more details.
 */
 
-#ifndef DEEPSOLVER_H
-#define DEEPSOLVER_H
+#ifndef DEEPSOLVER_PROCESS_H
+#define DEEPSOLVER_PROCESS_H
 
-#include"os/system.h"
-#include"DefaultValues.h"
-#include"logging.h"
-#include"DeepsolverExceptions.h"
-#include"os/File.h"
-#include"os/Directory.h"
-#include"os/Process.h"
-#include"utils/StringUtils.h"
-#include"DeepsolverTypes.h"
-#include"Pkg.h"
-#include"utils/doubling.h"
+#include"deepsolver.h"
 
-#endif //DEEPSOLVER_H
+class Process
+{
+public:
+  static int runSync(const std::string& bin, const StringVector& args);
+}; //class Process;
+
+#endif //DEEPSOLVER_PROCESS_H;

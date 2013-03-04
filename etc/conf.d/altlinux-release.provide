@@ -1,0 +1,2 @@
+[provide "altlinux-release"]
+providers = altlinux-release-sisyphus

@@ -23,7 +23,9 @@
 class TinyFileDownload: private AbstractCurlDataRecipient, private AbstractCurlProgressListener
 {
 public:
-  TinyFileDownload() {}
+  TinyFileDownload(size_t dataSizeLimit) 
+    : m_dataSizeLimit(dataSizeLimit) {}
+
   virtual ~TinyFileDownload() {}
 
 public:
@@ -42,6 +44,7 @@ private://AbstractCurlProgressListener;
 
 private:
   std::string m_content;
+  const size_t m_dataSizeLimit;
 }; //class TinyFileDownload;
 
 #endif //DEEPSOLVER_TINY_FILE_DOWNLOAD_H;

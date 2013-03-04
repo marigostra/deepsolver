@@ -22,8 +22,8 @@ static void printThreeColumns(const StringVector& items);
 
 void PackageListPrinting::printSolution(const TransactionIterator& it) const
 {
-  const ConfRoot& root = m_conf.root();
-  const AbstractPackageBackEnd& backEnd = it.getBackEnd();
+  //  const ConfRoot& root = m_conf.root();
+  //  const AbstractPackageBackEnd& backEnd = it.getBackEnd();
   StringVector install, remove, upgrade, downgrade;
   for(PkgVector::size_type i = 0;i < it.getInstall().size();i++)
     install.push_back(it.getInstall()[i].name);

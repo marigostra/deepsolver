@@ -45,13 +45,20 @@ void OperationCore::fetchIndices(AbstractFetchListener& listener,
     {
       if (!root.repo[i].enabled)
 	continue;
+      if (root.repo[i].takeSources)//FIXME:
+	throw NotImplementedException("Source packages support");
+      if (root.repo[i].takeDescr)//FIXME:
+	throw NotImplementedException("Package descriptions support");
+      if (root.repo[i].takeFileList)//FIXME:
+	throw NotImplementedException("Package file lists support");
+
       for(StringVector::size_type k = 0;k < root.repo[i].arch.size();k++)
 	for(StringVector::size_type j = 0;j < root.repo[i].components.size();j++)
 	  {
 	    const std::string& arch = root.repo[i].arch[k];
 	    const std::string& component = root.repo[i].components[j];
 	    logMsg(LOG_DEBUG, "operation:registering repo \'%s\' for index update (\'%s\', %s, %s)", root.repo[i].name.c_str(), root.repo[i].url.c_str(), arch.c_str(), component.c_str());
-	    repo.push_back(Repository(root.repo[i], arch, component));
+	    repo.push_back(Repository(root.tinyFileSizeLimit, root.repo[i], arch, component));
 	  }
     }
   StringToStringMap files;

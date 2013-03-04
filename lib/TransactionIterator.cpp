@@ -80,7 +80,7 @@ void TransactionIterator::fetchPackages(AbstractFetchListener& listener,
 	}
     }
   logMsg(LOG_DEBUG, "transaction:preparing directory \'%s\'", dir.c_str());
-  Directory::ensureExists(dir);
+  Directory::ensureExistsAndEmpty(dir, 1);//1 means erase any content;
   FilesFetch fetch(listener, continueRequest);
   StringToStringMap fetchMap;
   assert(installUrls.size() == installFileNames.size());
@@ -93,4 +93,20 @@ void TransactionIterator::fetchPackages(AbstractFetchListener& listener,
   logMsg(LOG_DEBUG, "transaction:starting fetching, fetch map contains %zu items", fetchMap.size());
   fetch.fetch(fetchMap);
   listener.onFetchIsCompleted();
+  assert(m_install.size() == installFileNames.size());
+  assert(m_upgradeTo.size() == upgradeFileNames.size());
+  assert(m_downgradeTo.size() == downgradeFileNames.size());
+  for(StringVector::size_type i = 0;i < installFileNames.size();i++)
+    m_filesInstall.push_back(Directory::mixNameComponents(dir, installFileNames[i]));
+  for(PkgVector::size_type i = 0;i < m_remove.size();i++)
+    m_namesRemove.push_back(m_remove[i].name);
+  for(StringVector::size_type i = 0;i < upgradeFileNames.size();i++)
+    m_filesUpgrade.insert(StringToStringMap::value_type(m_upgradeTo[i].name, Directory::mixNameComponents(dir, upgradeFileNames[i])));
+  for(StringVector::size_type i = 0;i < downgradeFileNames.size();i++)
+    m_filesDowngrade.insert(StringToStringMap::value_type(m_downgradeTo[i].name, Directory::mixNameComponents(dir, downgradeFileNames[i])));
+}
+
+void TransactionIterator::makeChanges()
+{
+  m_backEnd->transaction(m_filesInstall, m_namesRemove, m_filesUpgrade, m_filesDowngrade);
 }
