@@ -1,6 +1,13 @@
 
   Deepsolver changes log
 
+0.3.1 (2013-03-22)
+
+Minor fixes:
+- repo index directory is changed from base.component to base/ds.component;
+- default repository in config files is changed to ALT Linux Sisyphus;
+- --nothing command line key is changed to --dry-run.
+
 0.3.0 (2013-03-04)
 
 General:

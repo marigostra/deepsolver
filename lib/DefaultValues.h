@@ -31,7 +31,7 @@
 #define COMPRESSION_SUFFIX_GZIP ".gz"
 
 //Repo structure;
-#define REPO_INDEX_DIR_PREFIX "base."
+#define REPO_INDEX_DIR "base"
 #define REPO_PACKAGES_DIR_PREFIX "RPMS."
 #define REPO_SOURCES_DIR_PREFIX "SRPMS."
 

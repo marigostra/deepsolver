@@ -284,7 +284,7 @@ void Messages::dsInstallLogo() const
 
 void Messages::dsInstallInitCliParser(CliParser& cliParser) const
 {
-  cliParser.addKeyDoubleName("-n", "--nothing", "print a solution and do nothing");
+  cliParser.addKeyDoubleName("-n", "--dry-run", "print a solution and do nothing");
   cliParser.addKeyDoubleName("-s", "--sat", "print SAT equation and do not touch any packages");
   cliParser.addKeyDoubleName("-h", "--help", "print this help screen and exit");
   cliParser.addKey("--log", "print log to console instead of user progress information");
@@ -311,7 +311,7 @@ void Messages::dsRemoveLogo() const
 
 void Messages::dsRemoveInitCliParser(CliParser& cliParser) const
 {
-  cliParser.addKeyDoubleName("-n", "--nothing", "print a solution and do nothing");
+  cliParser.addKeyDoubleName("-n", "--dry-run", "print a solution and do nothing");
   cliParser.addKeyDoubleName("-s", "--sat", "print SAT equation and do not touch any packages");
   cliParser.addKeyDoubleName("-h", "--help", "print this help screen and exit");
   cliParser.addKey("--log", "print log to console instead of user progress information");

@@ -125,7 +125,7 @@ void Repository::addIndexFilesForFetch(StringToStringMap& files)
   if (dir[dir.size() - 1] != '/')
     dir += '/';
   dir += m_arch + "/";
-  dir += REPO_INDEX_DIR_PREFIX + m_component + "/";
+  dir += std::string(REPO_INDEX_DIR) + "/ds." + m_component + "/";
   logMsg(LOG_DEBUG, "repository:constructing list of files to download, basic URL is \'%s\'", dir.c_str());
   m_pkgFileUrl = dir + REPO_INDEX_PACKAGES_FILE;
   m_pkgDescrFileUrl = dir + REPO_INDEX_PACKAGES_DESCR_FILE;
@@ -273,7 +273,7 @@ std::string Repository::buildInfoFileUrl() const
   if (value[value.size() - 1] != '/')
     value += '/';
   value += m_arch + "/";
-  value += REPO_INDEX_DIR_PREFIX + m_component + "/";
+  value += std::string(REPO_INDEX_DIR) + "/ds." + m_component + "/";
   value += REPO_INDEX_INFO_FILE;
   return value;
 }
@@ -287,7 +287,7 @@ std::string Repository::buildChecksumFileUrl() const
   if (value[value.size() - 1] != '/')
     value += '/';
   value += m_arch + "/";
-  value += REPO_INDEX_DIR_PREFIX + m_component + "/";
+  value += std::string(REPO_INDEX_DIR) + "/ds." + m_component + "/";
   value += m_checksumFileName;
   return value;
 }

@@ -1,0 +1,9 @@
+
+[repo "sisyphus@ftp.alt"]
+enabled = yes
+url = ftp://ftp.altlinux.org/pub/distributions/ALTLinux/Sisyphus/
+arch = i586; noarch
+components = classic
+take-descr = no
+take-file-list = no
+take-sources = no

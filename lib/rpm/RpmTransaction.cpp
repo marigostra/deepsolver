@@ -87,15 +87,9 @@ void RpmTransaction::process(const StringVector& install,
       //	if (probs->numProblems > 0)
       //	  rpmpsPrint(stderr, probs);
     } else 
-    {
-      if (rc < 0)
-	std::cerr << "warning:some errors occurred while running transaction" << std::endl; 
-    }
-  std::cout << "Done." << std::endl;
-
-
+    if (rc < 0)
+      std::cerr << "warning:some errors occurred while running transaction" << std::endl; 
   //  rpmpsFree(probs);
-
 }
 
 void RpmTransaction::addToTransactionInstall(const StringVector& files)
