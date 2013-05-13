@@ -79,6 +79,7 @@ private:
 void initCliParser()
 {
   cliParser.addKeyDoubleName("-s", "--ref-sources", "LIST", "take additional requires/conflicts for provides filtering in listed directories (list should be colon-delimited)");
+  cliParser.addKeyDoubleName("-ep", "--external-provides", "FILENAME", "read from FILENAME list of provides not to exclude from index, must be used in conjunction with  \'-r\'");
   cliParser.addKeyDoubleName("-h", "--help", "print this help screen and exit");
   cliParser.addKey("--log", "print log to console instead of user progress information");
   cliParser.addKey("--debug", "relax filtering level for log output");
@@ -172,6 +173,24 @@ int main(int argc, char* argv[])
     if (!cliParser.wasKeyUsed("--log"))
       printLogo();
     params.readInfoFile(Directory::mixNameComponents(params.indexPath, REPO_INDEX_INFO_FILE));
+
+    std::string arg;
+    if (cliParser.wasKeyUsed("--external-provides", arg))
+      {
+	File f;
+	f.openReadOnly(arg);
+	StringVector lines;
+	f.readTextFile(lines);
+	for(StringVector::size_type i = 0;i < lines.size();i++)
+	  {
+	    const std::string line = trim(lines[i]);
+	    if (line.empty())
+	      continue;
+	    params.providesRefs.push_back(line);
+	  }
+      }
+
+
     IndexReconstructionListener listener(cliParser.wasKeyUsed("--log"));
     IndexCore indexCore(listener);
     indexCore.refilterProvides(params);

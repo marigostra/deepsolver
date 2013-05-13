@@ -156,6 +156,7 @@ void initCliParser()
   cliParser.addKeyDoubleName("-r", "--references", "write only provides with known corresponding requires/conflicts");
   cliParser.addKeyDoubleName("-s", "--ref-sources", "LIST", "take additional requires/conflicts for provides filtering in listed directories (list should be colon-delimited)");
   cliParser.addKeyDoubleName("-d", "--dirs", "LIST", "write only file provides  from listed directories (list should be colon-delimited)");
+  cliParser.addKeyDoubleName("-ep", "--external-provides", "FILENAME", "read from FILENAME list of provides not to exclude from index, must be used in conjunction with  \'-r\'");
   cliParser.addKeyDoubleName("-nr", "--no-requires", "FILENAME", "skip requires listed by regexp in FILENAME");
   cliParser.addKeyDoubleName("-h", "--help", "print this help screen and exit");
   cliParser.addKey("--log", "print log to console instead of user progress information");
@@ -244,7 +245,10 @@ void parseCmdLine(int argc, char* argv[])
   if (params.pkgSources.empty())
     params.pkgSources.push_back(".");
   if (!params.filterProvidesByRefs)
-    params.providesRefsSources.clear();
+    {
+      params.providesRefsSources.clear();
+      params.providesRefs.clear();
+    }
 }
 
 int main(int argc, char* argv[])
@@ -269,6 +273,20 @@ int main(int argc, char* argv[])
 	    if (line.empty())
 	      continue;
 	    params.excludeRequiresRegExp.push_back(line);
+	  }
+      }
+    if (cliParser.wasKeyUsed("--external-provides", arg))
+      {
+	File f;
+	f.openReadOnly(arg);
+	StringVector lines;
+	f.readTextFile(lines);
+	for(StringVector::size_type i = 0;i < lines.size();i++)
+	  {
+	    const std::string line = trim(lines[i]);
+	    if (line.empty())
+	      continue;
+	    params.providesRefs.push_back(line);
 	  }
       }
     IndexConstructionListener listener(cliParser.wasKeyUsed("--log"));

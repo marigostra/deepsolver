@@ -56,6 +56,7 @@ public:
   //Values not mapped into repo information file;
   std::string indexPath;
   StringVector pkgSources;
+  StringVector providesRefs;
   StringVector providesRefsSources;
 
 public:

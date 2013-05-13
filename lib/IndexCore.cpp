@@ -152,9 +152,6 @@ static std::auto_ptr<AbstractTextFormatSectionReader> createRebuildReader(const 
 static std::auto_ptr<AbstractTextFormatSectionReader> createRebuildReaderNoCompression(const std::string& fileName);
 static std::auto_ptr<UnifiedOutput> createRebuildWriter(const std::string& fileName, const RepoParams& params);
 
-
-
-
 void IndexCore::buildIndex(const RepoParams& params)
 {
   assert(!params.indexPath.empty());
@@ -167,6 +164,9 @@ void IndexCore::buildIndex(const RepoParams& params)
   regExps.fill(params.excludeRequiresRegExp);
   params.writeInfoFile(Directory::mixNameComponents(params.indexPath, REPO_INDEX_INFO_FILE));
   StringSet internalProvidesRefs, externalProvidesRefs;
+  logMsg(LOG_DEBUG, "index:Has %zu provide references given with repository params, adding them to external references set", params.providesRefs.size());
+    for(StringVector::size_type i = 0;i < params.providesRefs.size();i++)
+      externalProvidesRefs.insert(params.providesRefs[i]);
   if (params.filterProvidesByRefs)
     {
       logMsg(LOG_DEBUG, "Provides filtering by references is enabled, has %zu sources of external references", params.providesRefsSources.size());
@@ -644,6 +644,12 @@ void IndexCore::refilterProvides(const RepoParams& params)
   if (params.filterProvidesByRefs)
     {
       logMsg(LOG_DEBUG, "Provides filtering by references is enabled, we have %zu external references sources", params.providesRefsSources.size());
+      if (!params.providesRefs.empty())
+	{
+	  logMsg(LOG_DEBUG, "In addition %zu provides references were given explicitly, adding them to external references ", params.providesRefs.size());
+	  for(StringVector::size_type i = 0;i < params.providesRefs.size();i++)
+	    externalReferences.insert(params.providesRefs[i]);
+	}
       for(StringVector::size_type i = 0;i < params.providesRefsSources.size();i++)
 	{
 	  logMsg(LOG_DEBUG, "Collecting external references in \'%s\'", params.providesRefsSources[i].c_str());
@@ -716,9 +722,18 @@ void IndexCore::collectRefs(const std::string& dirName, StringSet& res)
     RepoParams repoParams;
     repoParams.readInfoFile(Directory::mixNameComponents(dirName, REPO_INDEX_INFO_FILE));
     const std::string pkgFileName = Directory::mixNameComponents(dirName, REPO_INDEX_PACKAGES_FILE) + compressionExtension(repoParams.compressionType);
+    const std::string srcFileName = Directory::mixNameComponents(dirName, REPO_INDEX_SOURCES_FILE) + compressionExtension(repoParams.compressionType);
     std::auto_ptr<AbstractTextFormatSectionReader> reader = createRebuildReader(pkgFileName, repoParams);
-    logMsg(LOG_DEBUG, "Creating section reader for reading file \'%s\'", pkgFileName.c_str());
+    logMsg(LOG_DEBUG, "Created section reader for reading file \'%s\'", pkgFileName.c_str());
     std::string sect;
+    reader->init();
+    while(reader->readNext(sect))
+      PkgSection::extractProvidesReferences(sect, res);
+    reader->close();
+    logMsg(LOG_DEBUG, "Main packages file read successfully, now do the same for sources file \'%s\'", srcFileName.c_str());
+    reader = createRebuildReader(srcFileName, repoParams);
+    logMsg(LOG_DEBUG, "Created section reader for reading file \'%s\'", srcFileName.c_str());
+    sect.erase();
     reader->init();
     while(reader->readNext(sect))
       PkgSection::extractProvidesReferences(sect, res);

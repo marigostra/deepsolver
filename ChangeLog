@@ -1,6 +1,13 @@
 
   Deepsolver changes log
 
+	0.3.2 (2013-05-13)
+
+Repository index building fixes:
+- External provides references can be specified explicitly 
+  (key "--external-provides" for ds-repo and ds-provides);
+- Sources packages file is now also read during external provides references collecting.
+
 0.3.1 (2013-03-22)
 
 Minor fixes:
