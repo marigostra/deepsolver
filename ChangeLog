@@ -1,7 +1,15 @@
 
   Deepsolver changes log
 
-	0.3.2 (2013-05-13)
+0.3.3 (2013-05-15)
+
+Minor fixes:
+- ds-repo, ds-patch and ds-provides utilities now have --quiet(-q) command line option 
+  suppressing any output except of warnings and errors;
+- ds-patch utility gets provides filtering feature 
+  (can be enabled with --provides(-p) command line key).
+
+0.3.2 (2013-05-13)
 
 Repository index building fixes:
 - External provides references can be specified explicitly 

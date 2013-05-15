@@ -25,14 +25,27 @@ class IndexReconstructionListener: public AbstractIndexConstructionListener
 {
 public:
   IndexReconstructionListener(bool suppress)
-  : m_suppress(suppress) {}
+    : m_suppress(suppress), 
+    m_providesFilteringMode(0) {}
 
   virtual ~IndexReconstructionListener() {}
 
 public:
-  void onReferenceCollecting(const std::string& path) {}
+  void onReferenceCollecting(const std::string& path) 
+  {
+    if (m_suppress)
+      return;
+    std::cout << "Reading references in " << path << std::endl;
+  }
+
   void onPackageCollecting(const std::string& path) {}
-  void onProvidesCleaning() {}
+
+  void onProvidesCleaning() 
+  {
+    if (m_suppress)
+      return;
+    std::cout << "Performing provides filtering" << std::endl;
+  }
 
   void onChecksumWriting()
   {
@@ -52,7 +65,9 @@ public:
   {
     if (m_suppress)
       return;
-    std::cout << "Patching file " << fileName << std::endl;
+    if (m_providesFilteringMode)
+      std::cout << "Fixing references in  " << fileName << std::endl; else
+      std::cout << "Patching file " << fileName << std::endl;
   }
 
   void onNoTwiceAdding(const std::string& fileName)
@@ -62,8 +77,14 @@ public:
     std::cerr << "WARNING! File \'" << fileName << "\' already included in index, no second adding" << std::endl;
   }
 
+  void setProvidesFilteringMode(bool value)
+  {
+    m_providesFilteringMode = value;
+  }
+
 private:
   bool m_suppress;
+  bool m_providesFilteringMode;
 }; //class IndexReconstructionListener;
 
 class DsPatchCliParser: public CliParser
@@ -192,6 +213,9 @@ static DsPatchCliParser cliParser;
 
 void initCliParser()
 {
+  cliParser.addKeyDoubleName("-p", "--provides", "Perform provides filtering  after patching");
+  cliParser.addKeyDoubleName("-s", "--ref-sources", "LIST", "take additional requires/conflicts for provides filtering in listed directories (list should be colon-delimited)");
+  cliParser.addKeyDoubleName("-ep", "--external-provides", "FILENAME", "read from FILENAME list of provides not to exclude from index, must be used in conjunction with  \'-r\'");
   cliParser.addKeyDoubleName("-h", "--help", "print this help screen and exit");
   cliParser.addKey("--log", "print log to console instead of user progress information");
   cliParser.addKey("--debug", "relax filtering level for log output");
@@ -219,6 +243,25 @@ void printHelp()
   cliParser.printHelp(std::cout);
   std::cout << std::endl;
   std::cout << "NOTE: New packages are added to index without any provides filtering, use ds-references utility for consequent provides filtering." << std::endl;
+}
+
+void splitColonDelimitedList(const std::string& str, StringVector& res)
+{
+  std::string s;
+  for(std::string::size_type i = 0;i < str.length();i++)
+    {
+      if (str[i] == ':')
+	{
+	  if (s.empty())
+	    continue;
+	  res.push_back(s);
+	  s.erase();
+	  continue;
+	}
+      s += str[i];
+    } //for();
+  if (!s.empty())
+    res.push_back(s);
 }
 
 void parseCmdLine(int argc, char* argv[])
@@ -264,6 +307,9 @@ void parseCmdLine(int argc, char* argv[])
       std::cout << PREFIX << "Nothing to add and nothing to remove!" << std::endl;
       exit(EXIT_SUCCESS);
     }
+  std::string arg;
+  if (cliParser.wasKeyUsed("--ref-sources", arg))
+    splitColonDelimitedList(arg, params.providesRefsSources);
 }
 
 int main(int argc, char* argv[])
@@ -279,6 +325,27 @@ int main(int argc, char* argv[])
     IndexReconstructionListener listener(cliParser.wasKeyUsed("--log") || cliParser.wasKeyUsed("--quiet"));
     IndexCore indexCore(listener);
     indexCore.rebuildIndex(params, cliParser.filesToAdd, cliParser.filesToRemove);
+
+    if (cliParser.wasKeyUsed("--provides"))
+      {
+	listener.setProvidesFilteringMode(1);
+	std::string arg;
+	if (cliParser.wasKeyUsed("--external-provides", arg))
+	  {
+	    File f;
+	    f.openReadOnly(arg);
+	    StringVector lines;
+	    f.readTextFile(lines);
+	    for(StringVector::size_type i = 0;i < lines.size();i++)
+	      {
+		const std::string line = trim(lines[i]);
+		if (line.empty())
+		  continue;
+		params.providesRefs.push_back(line);
+	      }
+	  }
+	indexCore.refilterProvides(params);
+      }
   }
   catch(const DeepsolverException& e)
     {

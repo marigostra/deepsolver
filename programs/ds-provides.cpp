@@ -67,7 +67,7 @@ public:
   {
     if (m_suppress)
       return;
-    std::cout << "Fixing references in  " << fileName << std::endl;
+    std::cout << "Fixing provides in  " << fileName << std::endl;
   }
 
   void onNoTwiceAdding(const std::string& fileName) {}
