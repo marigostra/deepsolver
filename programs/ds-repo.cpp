@@ -161,6 +161,7 @@ void initCliParser()
   cliParser.addKeyDoubleName("-h", "--help", "print this help screen and exit");
   cliParser.addKey("--log", "print log to console instead of user progress information");
   cliParser.addKey("--debug", "relax filtering level for log output");
+  cliParser.addKeyDoubleName("-q", "--quiet", "suppress any output except of warning and error messages (cancels --log option)");
 }
 
 void printLogo()
@@ -256,9 +257,9 @@ int main(int argc, char* argv[])
   setlocale(LC_ALL, "");
   initCliParser();
   parseCmdLine(argc, argv);
-  initLogging(cliParser.wasKeyUsed("--debug")?LOG_DEBUG:LOG_INFO, cliParser.wasKeyUsed("--log"));
+  initLogging(cliParser.wasKeyUsed("--debug")?LOG_DEBUG:LOG_INFO, cliParser.wasKeyUsed("--log") && !cliParser.wasKeyUsed("--quiet"));
   try {
-    if (!cliParser.wasKeyUsed("--log"))
+    if (!cliParser.wasKeyUsed("--log") && !cliParser.wasKeyUsed("--quiet"))
       printLogo();
     std::string arg;
     if (cliParser.wasKeyUsed("--no-requires", arg))
@@ -289,7 +290,7 @@ int main(int argc, char* argv[])
 	    params.providesRefs.push_back(line);
 	  }
       }
-    IndexConstructionListener listener(cliParser.wasKeyUsed("--log"));
+    IndexConstructionListener listener(cliParser.wasKeyUsed("--log") || cliParser.wasKeyUsed("--quiet"));
     IndexCore indexCore(listener);
     indexCore.buildIndex(params);
   }

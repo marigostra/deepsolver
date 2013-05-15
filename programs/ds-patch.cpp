@@ -195,6 +195,7 @@ void initCliParser()
   cliParser.addKeyDoubleName("-h", "--help", "print this help screen and exit");
   cliParser.addKey("--log", "print log to console instead of user progress information");
   cliParser.addKey("--debug", "relax filtering level for log output");
+  cliParser.addKeyDoubleName("-q", "--quiet", "suppress any output except of warning and error messages (cancels --log option)");
 }
 
 void printLogo()
@@ -270,12 +271,12 @@ int main(int argc, char* argv[])
   setlocale(LC_ALL, "");
   initCliParser();
   parseCmdLine(argc, argv);
-  initLogging(cliParser.wasKeyUsed("--debug")?LOG_DEBUG:LOG_INFO, cliParser.wasKeyUsed("--log"));
+  initLogging(cliParser.wasKeyUsed("--debug")?LOG_DEBUG:LOG_INFO, cliParser.wasKeyUsed("--log") && !cliParser.wasKeyUsed("--quiet"));
   try {
-    if (!cliParser.wasKeyUsed("--log"))
+    if (!cliParser.wasKeyUsed("--log") && !cliParser.wasKeyUsed("--quiet"))
       printLogo();
     params.readInfoFile(Directory::mixNameComponents(params.indexPath, REPO_INDEX_INFO_FILE));
-    IndexReconstructionListener listener(cliParser.wasKeyUsed("--log"));
+    IndexReconstructionListener listener(cliParser.wasKeyUsed("--log") || cliParser.wasKeyUsed("--quiet"));
     IndexCore indexCore(listener);
     indexCore.rebuildIndex(params, cliParser.filesToAdd, cliParser.filesToRemove);
   }
