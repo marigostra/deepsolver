@@ -32,6 +32,7 @@ AC_SUBST(DEEPSOLVER_INCLUDES, '-I$(top_srcdir)/lib')
 AC_CONFIG_FILES([
   Makefile
   lib/Makefile
+lib/deepsolver/Makefile
   programs/Makefile
 ])
 

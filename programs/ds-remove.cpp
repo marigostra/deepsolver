@@ -15,14 +15,16 @@
    General Public License for more details.
 */
 
-#include"deepsolver.h"
-#include"OperationCore.h"
+#include"deepsolver/deepsolver.h"
+#include"deepsolver/OperationCore.h"
 #include"TransactionProgress.h"
 #include"Messages.h"
 #include"CliParser.h"
 #include"PackageListPrinting.h"
 #include"AlwaysTrueContinueRequest.h"
 #include"FilesFetchProgress.h"
+
+using namespace Deepsolver;
 
 static CliParser cliParser;
 

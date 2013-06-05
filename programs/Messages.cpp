@@ -3,8 +3,10 @@
  * generally multilingual support implies.
  */
 
-#include"deepsolver.h"
+#include"deepsolver/deepsolver.h"
 #include"Messages.h"
+
+DEEPSOLVER_BEGIN_NAMESPACE
 
 std::string messagesProgramName;
 
@@ -15,18 +17,18 @@ struct ConfigSyntaxErrorMessage
 };
 
 const ConfigSyntaxErrorMessage configSyntaxErrorMessages[] = {
-  {ConfigErrorSectionInvalidType, "section header may have only the first level name used with argument"},
-  {ConfigErrorSectionWaitingOpenBracket, "expecting open bracket"},
-  {ConfigErrorSectionWaitingName, "expecting section name"},
-  {ConfigErrorSectionInvalidNameChar, "invalid character in section name or unexpected end"},
-  {ConfigErrorSectionWaitingCloseBracketOrArg, "expecting close bracket or section argument"},
-  {ConfigErrorSectionUnexpectedArgEnd, "unexpected section argument end"},
-  {ConfigErrorSectionWaitingCloseBracket, "expecting close bracket"},
-  {ConfigErrorValueWaitingName, "expecting parameter name"},
-  {ConfigErrorValueInvalidNameChar, "invalid parameter name character or unexpected end"},
-  {ConfigErrorValueWaitingAssignOrNewName, "expecting assignment or new level name"},
-  {ConfigErrorValueWaitingNewName, "expecting new level name"},
-  {ConfigErrorValueUnexpectedValueEnd, "unexpected value end"},
+  {ConfigFileException::SectionInvalidType, "section header may have only the first level name used with argument"},
+  {ConfigFileException::SectionWaitingOpenBracket, "expecting open bracket"},
+  {ConfigFileException::SectionWaitingName, "expecting section name"},
+  {ConfigFileException::SectionInvalidNameChar, "invalid character in section name or unexpected end"},
+  {ConfigFileException::SectionWaitingCloseBracketOrArg, "expecting close bracket or section argument"},
+  {ConfigFileException::SectionUnexpectedArgEnd, "unexpected section argument end"},
+  {ConfigFileException::SectionWaitingCloseBracket, "expecting close bracket"},
+  {ConfigFileException::ValueWaitingName, "expecting parameter name"},
+  {ConfigFileException::ValueInvalidNameChar, "invalid parameter name character or unexpected end"},
+  {ConfigFileException::ValueWaitingAssignOrNewName, "expecting assignment or new level name"},
+  {ConfigFileException::ValueWaitingNewName, "expecting new level name"},
+  {ConfigFileException::ValueUnexpectedValueEnd, "unexpected value end"},
   {-1, NULL}
 };
 
@@ -373,3 +375,5 @@ bool Messages::confirmContinuing()
     return 1;
   return 0;
 }
+
+DEEPSOLVER_END_NAMESPACE

@@ -15,9 +15,10 @@
    General Public License for more details.
 */
 
-
-#include"deepsolver.h"
+#include"deepsolver/deepsolver.h"
 #include"CliParser.h"
+
+DEEPSOLVER_BEGIN_NAMESPACE
 
 void CliParser::init(int argc, char* argv[])
 {
@@ -230,3 +231,5 @@ void CliParser::stopMissedArgument(const std::string& keyName) const
 {
   throw CliParserException(CliParserException::MissedArgument, keyName);
 }
+
+DEEPSOLVER_END_NAMESPACE

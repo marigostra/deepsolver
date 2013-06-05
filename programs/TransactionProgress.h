@@ -18,25 +18,28 @@
 #ifndef DEEPSOLVER_TRANSACTION_PROGRESS_H
 #define DEEPSOLVER_TRANSACTION_PROGRESS_H
 
-#include"OperationCore.h"
+#include"deepsolver/OperationCore.h"
 
-class TransactionProgress: public AbstractTransactionListener
+namespace Deepsolver
 {
-public:
-  TransactionProgress(std::ostream& stream, bool suppress)
-    : m_stream(stream),
-      m_suppress(suppress) {}
+  class TransactionProgress: public AbstractTransactionListener
+  {
+  public:
+    TransactionProgress(std::ostream& stream, bool suppress)
+      : m_stream(stream),
+	m_suppress(suppress) {}
 
-  virtual ~TransactionProgress() {}
+    virtual ~TransactionProgress() {}
 
-public:
-  void onAvailablePkgListProcessing();
-  void onInstalledPkgListProcessing();
-  void onInstallRemovePkgListProcessing();
+  public:
+    void onAvailablePkgListProcessing();
+    void onInstalledPkgListProcessing();
+    void onInstallRemovePkgListProcessing();
 
-private:
-  std::ostream& m_stream;
-  const bool m_suppress;
-}; //class abstractTransactionListener;
+  private:
+    std::ostream& m_stream;
+    const bool m_suppress;
+  }; //class abstractTransactionListener;
+} //namespace Deepsolver;
 
 #endif //DEEPSOLVER_TRANSACTION_PROGRESS_H;

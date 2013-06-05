@@ -13,7 +13,7 @@
 
 #created by automake;
 /bin/rm -f install-sh missing depcomp config.guess config.sub
-find ./ -name Makefile.in -exec /bin/rm '{}' \;
+find ./ -name Makefile.in -delete
 
 #Note that clean mode leaves the code tree at its origin state only after 'make distclean';
 [ "$1" == 'clean' ] && exit 0

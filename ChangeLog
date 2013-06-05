@@ -1,6 +1,21 @@
 
   Deepsolver changes log
 
+Deep code refactoring with following main changes:
+- All code is inside of Deepsolver namespace now;
+- No more subdirectories for libdeepsolver.so sources;
+- No more PackageScopeContent component with all its auxiliary classes (builder and loader);
+- PkgSnapshot structure is implemented instead of PackageScopeContent;
+- New approach to memory leaks prevention (AutoReleaseStrings class is added);
+- Old ConfiggCenter class is divided onto new ConfigCenter class and ConfigAdapter class.
+
+Minor changes:
+- DeepsolverException.h is moved to exceptions.h;
+- DeepsolverTypes.h is moved to types.h;
+- DefaultValues.h is moved to config.h;
+- PkgId type is now more preferable than obsolete PackageId;
+- BAD_PACKAGE_ID and BAD_VAR_ID constants are renamed to BadPkgId and BadVarId.
+
 0.3.3 (2013-05-15)
 
 Minor fixes:

@@ -15,9 +15,11 @@
    General Public License for more details.
 */
 
-#include"deepsolver.h"
-#include"OperationCore.h"
+#include"deepsolver/deepsolver.h"
+#include"deepsolver/OperationCore.h"
 #include"Messages.h"
+
+using namespace Deepsolver;
 
 int main(int argc, char* argv[])
 {

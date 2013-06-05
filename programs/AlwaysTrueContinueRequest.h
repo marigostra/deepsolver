@@ -18,19 +18,22 @@
 #ifndef DEEPSOLVER_ALWAYS_TRUE_CONTINUE_REQUEST_H
 #define DEEPSOLVER_ALWAYS_TRUE_CONTINUE_REQUEST_H
 
-#include"AbstractOperationContinueRequest.h"
+#include"deepsolver/AbstractOperationContinueRequest.h"
 
-class AlwaysTrueContinueRequest: public AbstractOperationContinueRequest
+namespace Deepsolver
 {
-public:
-  AlwaysTrueContinueRequest() {}
-  virtual ~AlwaysTrueContinueRequest() {}
-
-public:
-  bool onContinueOperationRequest() const
+  class AlwaysTrueContinueRequest: public AbstractOperationContinueRequest
   {
-    return 1;
-  }
-}; //class AlwaysTrueContinueRequest; 
+  public:
+    AlwaysTrueContinueRequest() {}
+    virtual ~AlwaysTrueContinueRequest() {}
+
+  public:
+    bool onContinueOperationRequest() const
+    {
+      return 1;
+    }
+  }; //class AlwaysTrueContinueRequest; 
+} //namespace Deepsolver;
 
 #endif //DEEPSOLVER_ALWAYS_TRUE_CONTINUE_REQUEST_H;

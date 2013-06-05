@@ -18,34 +18,37 @@
 #ifndef DEEPSOLVER_FILES_FETCH_PROGRESS_H
 #define DEEPSOLVER_FILES_FETCH_PROGRESS_H
 
-#include"AbstractFetchListener.h"
+#include"deepsolver/AbstractFetchListener.h"
 
-class FilesFetchProgress: public AbstractFetchListener
+namespace Deepsolver
 {
-public:
-  FilesFetchProgress(std::ostream& stream, bool suppressed)
-    : m_stream(stream), 
-      m_prevStrLen(0),
-      m_suppressed(suppressed) {}
+  class FilesFetchProgress: public AbstractFetchListener
+  {
+  public:
+    FilesFetchProgress(std::ostream& stream, bool suppressed)
+      : m_stream(stream), 
+	m_prevStrLen(0),
+	m_suppressed(suppressed) {}
 
-  virtual ~FilesFetchProgress() {}
+    virtual ~FilesFetchProgress() {}
 
-public:
-  void onHeadersFetch();
-  void onFetchBegin();
-  void onFilesReading();
-  void onFetchIsCompleted();
-  void onFetchStatus(unsigned char currentPartPercents,
-			  unsigned char totalPercents,
-			  size_t partNumber,
-			  size_t partCount,
-			  size_t currentPartSize,
-			  const std::string& currentPartName);
+  public:
+    void onHeadersFetch();
+    void onFetchBegin();
+    void onFilesReading();
+    void onFetchIsCompleted();
+    void onFetchStatus(unsigned char currentPartPercents,
+		       unsigned char totalPercents,
+		       size_t partNumber,
+		       size_t partCount,
+		       size_t currentPartSize,
+		       const std::string& currentPartName);
 
-private:
-  std::ostream& m_stream;
-  std::string::size_type m_prevStrLen;
-  bool m_suppressed;
-}; //class FilesFetchProgress;
+  private:
+    std::ostream& m_stream;
+    std::string::size_type m_prevStrLen;
+    bool m_suppressed;
+  }; //class FilesFetchProgress;
+} //namespace Deepsolver;
 
 #endif //DEEPSOLVER_FILES_FETCH_PROGRESS_H;

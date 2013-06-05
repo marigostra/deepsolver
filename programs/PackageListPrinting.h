@@ -18,28 +18,30 @@
 #ifndef DEEPSOLVEr_PACKAGE_LIST_PRINTING_H
 #define PAcKAGE_LIST_PRINTING_H
 
-#include"OperationCore.h"
-#include"ConfigCenter.h"
+#include"deepsolver/OperationCore.h"
 
-class PackageListPrinting
+namespace Deepsolver
 {
-public:
-  PackageListPrinting(const ConfigCenter& conf)
-    : m_conf(conf) {}
+  class PackageListPrinting
+  {
+  public:
+    PackageListPrinting(const ConfigCenter& conf)
+      : m_conf(conf) {}
 
-  virtual ~PackageListPrinting() {}
+    virtual ~PackageListPrinting() {}
 
-public:
-  void printSolution(const TransactionIterator& it) const;
+  public:
+    void printSolution(const TransactionIterator& it) const;
 
-private:
-  void columnsView(const StringVector& install,
-		   const StringVector& remove,
-		   const StringVector& upgrade,
-		   const StringVector& downgrade) const;
+  private:
+    void columnsView(const StringVector& install,
+		     const StringVector& remove,
+		     const StringVector& upgrade,
+		     const StringVector& downgrade) const;
 
-private:
-  const ConfigCenter& m_conf;
-}; //class PackageListPrinting;
+  private:
+    const ConfigCenter& m_conf;
+  }; //class PackageListPrinting;
+} //namespace Deepsolver;
 
 #endif //PAcKAGE_LIST_PRINTING_H;

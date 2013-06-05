@@ -15,11 +15,13 @@
    General Public License for more details.
 */
 
-#include"deepsolver.h"
-#include"IndexCore.h"
+#include"deepsolver/deepsolver.h"
+#include"deepsolver/IndexCore.h"
 #include"CliParser.h"
 
 #define PREFIX "ds-patch:"
+
+using namespace Deepsolver;
 
 class IndexReconstructionListener: public AbstractIndexConstructionListener
 {

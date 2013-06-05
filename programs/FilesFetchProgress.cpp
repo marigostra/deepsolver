@@ -15,8 +15,10 @@
    General Public License for more details.
 */
 
-#include"deepsolver.h"
+#include"deepsolver/deepsolver.h"
 #include"FilesFetchProgress.h"
+
+DEEPSOLVER_BEGIN_NAMESPACE
 
 void FilesFetchProgress::onHeadersFetch()
 {
@@ -71,3 +73,5 @@ void FilesFetchProgress::onFetchStatus(unsigned char currentPartPercents,
   m_stream << ss.str();
   m_prevStrLen = ss.str().length();
 }
+
+DEEPSOLVER_END_NAMESPACE

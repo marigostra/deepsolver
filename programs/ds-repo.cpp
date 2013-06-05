@@ -15,11 +15,13 @@
    General Public License for more details.
 */
 
-#include"deepsolver.h"
-#include"IndexCore.h"
+#include"deepsolver/deepsolver.h"
+#include"deepsolver/IndexCore.h"
 #include"CliParser.h"
 
 #define PREFIX "ds-repo:"
+
+using namespace Deepsolver;
 
 static RepoParams params;
 static CliParser cliParser;

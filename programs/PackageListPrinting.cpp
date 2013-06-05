@@ -15,8 +15,10 @@
    General Public License for more details.
 */
 
-#include"deepsolver.h"
+#include"deepsolver/deepsolver.h"
 #include"PackageListPrinting.h"
+
+DEEPSOLVER_BEGIN_NAMESPACE
 
 static void printThreeColumns(const StringVector& items);
 
@@ -118,3 +120,5 @@ void printThreeColumns(const StringVector& items)
       std::cout << std::endl;
     }
 }
+
+DEEPSOLVER_END_NAMESPACE

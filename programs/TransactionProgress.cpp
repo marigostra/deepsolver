@@ -15,8 +15,10 @@
    General Public License for more details.
 */
 
-#include"deepsolver.h"
+#include"deepsolver/deepsolver.h"
 #include"TransactionProgress.h"
+
+DEEPSOLVER_BEGIN_NAMESPACE
 
 void TransactionProgress::onAvailablePkgListProcessing()
 {
@@ -38,3 +40,5 @@ void TransactionProgress::onInstallRemovePkgListProcessing()
     return;
   m_stream << "Calculating package lists for installation and removing" << std::endl;
 }
+
+DEEPSOLVER_END_NAMESPACE
