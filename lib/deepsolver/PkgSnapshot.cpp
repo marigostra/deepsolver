@@ -125,8 +125,13 @@ void processRelations(Snapshot& snapshot,
 	  strcpy(newEntry.ver, rel.ver.c_str());
 	  strings.push_back(newEntry.ver);
 	  newEntry.aux = strings.size() - 1;
-	} else 
-	snapshot.relations.push_back(newEntry);
+	} else
+	{
+	  newEntry.verDir = VerNone;
+	  newEntry.ver = NULL;
+	  newEntry.aux = (size_t)-1;
+	}
+      snapshot.relations.push_back(newEntry);
     }
 }
 
@@ -158,6 +163,8 @@ void enhance(Snapshot& snapshot,
 	     int flags,
 	     ConstCharVector& strings)
 {
+  logMsg(LOG_DEBUG, "enhancing:starting enhancing procedure with %zu new packages", enhanceWith.size());
+  const clock_t started = clock();
   if (enhanceWith.empty())
     return;
   //First of all we should collect new package names;
@@ -195,13 +202,13 @@ void enhance(Snapshot& snapshot,
       versionStringBufSize += pkg.version.length() + 1;
       versionStringBufSize += pkg.release.length() + 1;
       for(NamedPkgRelVector::size_type k = 0;k < pkg.requires.size();k++)
-	versionStringBufSize += (pkg.requires[k].type == VerNone?0:pkg.requires[k].ver.size()) + 1;
+	versionStringBufSize += (pkg.requires[k].type == VerNone?0:pkg.requires[k].ver.length() + 1);
       for(NamedPkgRelVector::size_type k = 0;k < pkg.provides.size();k++)
-	versionStringBufSize += (pkg.provides[k].type == VerNone?0:pkg.provides[k].ver.size()) + 1;
+	versionStringBufSize += (pkg.provides[k].type == VerNone?0:pkg.provides[k].ver.length() + 1);
       for(NamedPkgRelVector::size_type k = 0;k < pkg.conflicts.size();k++)
-	versionStringBufSize += (pkg.conflicts[k].type == VerNone?0:pkg.conflicts[k].ver.size()) + 1;
+	versionStringBufSize += (pkg.conflicts[k].type == VerNone?0:pkg.conflicts[k].ver.length() + 1);
       for(NamedPkgRelVector::size_type k = 0;k < pkg.obsoletes.size();k++)
-	versionStringBufSize += (pkg.obsoletes[k].type == VerNone?0:pkg.obsoletes[k].ver.size()) + 1;
+	versionStringBufSize += (pkg.obsoletes[k].type == VerNone?0:pkg.obsoletes[k].ver.length() + 1);
     }
   logMsg(LOG_DEBUG, "snapshot:string buffer for new versions and releases must have length of %zu bytes", versionStringBufSize);
   assert(versionStringBufSize > 0);
@@ -226,8 +233,13 @@ void enhance(Snapshot& snapshot,
       addRelationsForEnhancing(snapshot, pkg.obsoletes, newEntry.obsoletesPos, newEntry.obsoletesCount, versionStringBuf, offset);
       snapshot.pkgs.push_back(newEntry);
     }
+
+  logMsg(LOG_DEBUG, "%zu %zu", offset, versionStringBufSize);
+
   assert(offset == versionStringBufSize);
   std::sort(snapshot.pkgs.begin(), snapshot.pkgs.end());
+  const double duration = ((double)clock() - started) / CLOCKS_PER_SEC;
+  logMsg(LOG_DEBUG, "snapshot:enhancing is completed in %f sec", duration);
 }
 
 void addRelationsForEnhancing(Snapshot& snapshot,
@@ -255,13 +267,13 @@ void addRelationsForEnhancing(Snapshot& snapshot,
       newEntry.pkgId = strToPkgId(snapshot, relation.pkgName);
       if (relation.type != VerNone)
 	{
+	  assert(!relation.ver.empty());
 	  newEntry.verDir = relation.type;
 	  newEntry.ver = putStringInBuffer(snapshot, stringBuf, stringBufOffset, relation.ver);
 	} else
 	{
-	  newEntry.verDir = VerNone;
 	  assert(relation.ver.empty());
-	  putStringInBuffer(snapshot, stringBuf, stringBufOffset, "");//FIXME:Should be removed;
+	  newEntry.verDir = VerNone;
 	  newEntry.ver = NULL;
 	}
       snapshot.relations.push_back(newEntry);
@@ -288,13 +300,14 @@ void addProvidesForEnhancing(Snapshot& snapshot,
       newEntry.pkgId = strToPkgId(snapshot, relation.pkgName);
       if (relation.type != VerNone)
 	{
+	  assert(!relation.ver.empty());
 	  newEntry.verDir = relation.type;
 	  newEntry.ver = putStringInBuffer(snapshot, stringBuf, stringBufOffset, relation.ver);
 	} else
 	{
-	  newEntry.verDir = VerNone;
 	  assert(relation.ver.empty());
-	  putStringInBuffer(snapshot, stringBuf, stringBufOffset, "");//FIXME:Shouldn't be here;
+	  newEntry.verDir = VerNone;
+	  newEntry.ver = NULL;
 	}
       snapshot.relations.push_back(newEntry);
       count++;
@@ -306,7 +319,7 @@ void addProvidesForEnhancing(Snapshot& snapshot,
        * Quite tricky place: we are registering as provides only file names
        * already known in snapshot. If an enhancing is performed only once this
        * idea is absolutely safe, but if there will be more enhance procedures
-       * (that never happens now) we can expect problems leading to package
+       * (that actually never happens now) we can expect problems leading to package
        * unmets during solver work.
        */
       if (value.empty() || !checkName(snapshot, value))
@@ -330,7 +343,7 @@ char* putStringInBuffer(Snapshot& snapshot,
   assert(buf);
   char* origPlace = &buf[offset];
   strcpy(&buf[offset], value.c_str());
-  offset += value.length() + 1;
+  offset += (value.length() + 1);
   return origPlace;
 }
 
@@ -362,6 +375,7 @@ std::string pkgIdToStr(const Snapshot& snapshot, PkgId pkgId)
 
 void rearrangeNames(Snapshot& snapshot)
 {
+  const clock_t start = clock();
   if (snapshot.pkgNames.size() < 2)
     return;
   StringVector newNames(snapshot.pkgNames);
@@ -390,6 +404,8 @@ void rearrangeNames(Snapshot& snapshot)
     }
   snapshot.pkgNames = newNames;
   std::sort(snapshot.pkgs.begin(), snapshot.pkgs.end());
+  const double duration = ((double)clock() - start) / CLOCKS_PER_SEC;
+  logMsg(LOG_DEBUG, "snapshot:names rearranging is done in %f sec", duration);
 }
 
 void loadFromFile(Snapshot& snapshot,
@@ -417,7 +433,7 @@ void loadFromFile(Snapshot& snapshot,
   snapshot.pkgs.resize(readSizeValue(s));
   logMsg(LOG_DEBUG, "snapshot:%zu packages", snapshot.pkgs.size());
   snapshot.relations.resize(readSizeValue(s));
-  logMsg(LOG_DEBUG, "%snapshot:zu package relations", snapshot.relations.size());
+  logMsg(LOG_DEBUG, "snapshot:%zu package relations", snapshot.relations.size());
   const size_t controlValueHave = readSizeValue(s);
   const size_t controlValueShouldBe = stringBufSize + nameCount + namesBufSize + snapshot.pkgs.size() + snapshot.relations.size();
   if (controlValueShouldBe != controlValueHave)
@@ -539,7 +555,7 @@ void saveToFile(const Snapshot& snapshot,
 		ConstCharVector& strings)
 {
   assert(!fileName.empty());
-  logMsg(LOG_DEBUG, "snapshot:starting saving prepared package snapshot to binary file \'%s\'", fileName.c_str());
+  logMsg(LOG_DEBUG, "snapshot:starting saving package snapshot to binary file \'%s\'", fileName.c_str());
   SizeVector stringOffsets;
   stringOffsets.resize(strings.size());
   size_t k = 0;
@@ -566,9 +582,9 @@ void saveToFile(const Snapshot& snapshot,
   controlValue += snapshot.pkgNames.size();
   size_t totalNamesLen = 0;
   for(StringVector::size_type i = 0;i < snapshot.pkgNames.size();i++)
-    totalNamesLen += (snapshot.pkgNames[i].length() + 1);
+    totalNamesLen += snapshot.pkgNames[i].length() + 1;
   writeSizeValue(s, totalNamesLen);
-  logMsg(LOG_DEBUG, "%snapshot:zu bytes in all package names with trailing zeroes", totalNamesLen);
+  logMsg(LOG_DEBUG, "snapshot:%zu bytes in all package names with trailing zeroes", totalNamesLen);
   controlValue += totalNamesLen;
   writeSizeValue(s, snapshot.pkgs.size());
   logMsg(LOG_DEBUG, "snapshot:%zu packages", snapshot.pkgs.size());
@@ -621,6 +637,32 @@ void saveToFile(const Snapshot& snapshot,
 	writeSizeValue(s, (size_t)-1);
     }
   s.flush();
+}
+
+size_t getScore(const Snapshot& snapshot)
+{
+  size_t value = 0;
+  for(StringVector::size_type i = 0;i < snapshot.pkgNames.size();i++)
+    value += snapshot.pkgNames[i].length();
+  for(PkgSnapshot::PkgVector::size_type i = 0;i < snapshot.pkgs.size();i++)
+    {
+      const PkgSnapshot::Pkg& pkg = snapshot.pkgs[i];
+      value += pkg.pkgId % 32;
+      assert(pkg.ver != NULL && pkg.release != NULL);
+      value += strlen(pkg.ver);
+      value += strlen(pkg.release);
+    }
+  for(PkgSnapshot::RelationVector::size_type i = 0;i < snapshot.relations.size();i++)
+    {
+      const PkgSnapshot::Relation& r = snapshot.relations[i];
+      value += (r.pkgId % 32) + 1;
+      assert(r.verDir == VerNone || r.ver != NULL);
+      assert(r.verDir != VerNone || r.ver == NULL);
+      if (r.verDir == VerNone)
+	value--; else
+	value += strlen(r.ver);
+    }
+  return value;
 }
 
 DEEPSOLVER_END_PKG_SNAPSHOT_NAMESPACE

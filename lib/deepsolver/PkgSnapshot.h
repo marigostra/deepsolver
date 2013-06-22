@@ -169,6 +169,8 @@ namespace Deepsolver
 		    const std::string& fileName,
 		    ConstCharVector& strings);
 
+    size_t getScore(const Snapshot& snapshot);
+
     class PkgRecipientAdapter: public AbstractPackageRecipient
     {
     public:

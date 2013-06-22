@@ -20,25 +20,18 @@
 
 DEEPSOLVER_BEGIN_NAMESPACE
 
-void TransactionProgress::onAvailablePkgListProcessing()
+void TransactionProgress::onPkgListProcessingBegin()
 {
   if (m_suppress)
     return;
-  m_stream << "Processing package lists from all repositories" << std::endl;
+  m_stream << "Loading list of available packages...";
 }
 
-void TransactionProgress::onInstalledPkgListProcessing()
+void TransactionProgress::onPkgListProcessingEnd()
 {
   if (m_suppress)
     return;
-  m_stream << "Processing installed package list" << std::endl;
-}
-
-void TransactionProgress::onInstallRemovePkgListProcessing()
-{
-  if (m_suppress)
-    return;
-  m_stream << "Calculating package lists for installation and removing" << std::endl;
+  m_stream << " Done." << std::endl;
 }
 
 DEEPSOLVER_END_NAMESPACE

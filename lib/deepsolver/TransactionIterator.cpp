@@ -29,7 +29,6 @@ void TransactionIterator::fetchPackages(AbstractFetchListener& listener,
   const std::string dir = root.dir.pkgCache;
   assert(!dir.empty());
   logMsg(LOG_DEBUG, "transaction:need to fetch %zu packages to \'%s\'", m_install.size() + m_upgradeTo.size() + m_downgradeTo.size(), dir.c_str());
-  listener.onFetchBegin();
   StringVector installUrls, upgradeUrls, downgradeUrls;
   PkgUrlsFile urlsFile(m_conf);
   urlsFile.readUrls(m_install, installUrls);
@@ -87,25 +86,50 @@ void TransactionIterator::fetchPackages(AbstractFetchListener& listener,
   StringToStringMap fetchMap;
   assert(installUrls.size() == installFileNames.size());
   for(StringVector::size_type i = 0;i < installUrls.size();i++)
-    fetchMap.insert(StringToStringMap::value_type(installUrls[i], Directory::mixNameComponents(dir, installFileNames[i])));
+    if (!FilesFetch::isLocalFileUrl(installUrls[i]))
+      fetchMap.insert(StringToStringMap::value_type(installUrls[i], Directory::mixNameComponents(dir, installFileNames[i])));
+  assert(upgradeUrls.size() == upgradeFileNames.size());
   for(StringVector::size_type i = 0;i < upgradeUrls.size();i++)
-    fetchMap.insert(StringToStringMap::value_type(upgradeUrls[i], Directory::mixNameComponents(dir, upgradeFileNames[i])));
+    if (!FilesFetch::isLocalFileUrl(upgradeUrls[i]))
+      fetchMap.insert(StringToStringMap::value_type(upgradeUrls[i], Directory::mixNameComponents(dir, upgradeFileNames[i])));
+  assert(downgradeUrls.size() == downgradeFileNames.size());
   for(StringVector::size_type i = 0;i < downgradeUrls.size();i++)
-    fetchMap.insert(StringToStringMap::value_type(downgradeUrls[i], Directory::mixNameComponents(dir, downgradeFileNames[i])));
-  logMsg(LOG_DEBUG, "transaction:starting fetching, fetch map contains %zu items", fetchMap.size());
-  fetch.fetch(fetchMap);
-  listener.onFetchIsCompleted();
+    if (!FilesFetch::isLocalFileUrl(downgradeUrls[i]))
+      fetchMap.insert(StringToStringMap::value_type(downgradeUrls[i], Directory::mixNameComponents(dir, downgradeFileNames[i])));
+  if (!fetchMap.empty())
+    {
+      logMsg(LOG_DEBUG, "transaction:starting fetching, fetch map contains %zu items", fetchMap.size());
+      listener.onFetchBegin();
+      fetch.fetch(fetchMap);
+      listener.onFetchIsCompleted();
+    } else
+    logMsg(LOG_DEBUG, "transaction:actually there is nothing to fetch");
   assert(m_install.size() == installFileNames.size());
   assert(m_upgradeTo.size() == upgradeFileNames.size());
   assert(m_downgradeTo.size() == downgradeFileNames.size());
   for(StringVector::size_type i = 0;i < installFileNames.size();i++)
-    m_filesInstall.push_back(Directory::mixNameComponents(dir, installFileNames[i]));
+    {
+      std::string localFileName;
+      if (!FilesFetch::isLocalFileUrl(installUrls[i], localFileName))
+	m_filesInstall.push_back(Directory::mixNameComponents(dir, installFileNames[i])); else
+	m_filesInstall.push_back(localFileName);
+    }
   for(PkgVector::size_type i = 0;i < m_remove.size();i++)
     m_namesRemove.push_back(m_remove[i].name);
   for(StringVector::size_type i = 0;i < upgradeFileNames.size();i++)
-    m_filesUpgrade.insert(StringToStringMap::value_type(m_upgradeTo[i].name, Directory::mixNameComponents(dir, upgradeFileNames[i])));
+    {
+      std::string localFileName;
+      if (FilesFetch::isLocalFileUrl(upgradeUrls[i], localFileName))
+	m_filesUpgrade.insert(StringToStringMap::value_type(m_upgradeTo[i].name, Directory::mixNameComponents(dir, upgradeFileNames[i]))); else
+	m_filesUpgrade.insert(StringToStringMap::value_type(m_upgradeTo[i].name, localFileName));
+    }
   for(StringVector::size_type i = 0;i < downgradeFileNames.size();i++)
-    m_filesDowngrade.insert(StringToStringMap::value_type(m_downgradeTo[i].name, Directory::mixNameComponents(dir, downgradeFileNames[i])));
+    {
+      std::string localFileName;
+      if (FilesFetch::isLocalFileUrl(downgradeFileNames[i], localFileName))
+	m_filesDowngrade.insert(StringToStringMap::value_type(m_downgradeTo[i].name, Directory::mixNameComponents(dir, downgradeFileNames[i]))); else
+	m_filesDowngrade.insert(StringToStringMap::value_type(m_downgradeTo[i].name, localFileName));
+    }
 }
 
 void TransactionIterator::makeChanges()

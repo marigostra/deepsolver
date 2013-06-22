@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
 	std::auto_ptr<TransactionIterator> it = core.transaction(transactionProgress, userTask);
 	PackageListPrinting(conf).printSolution(*it.get());
 	std::cout << std::endl;
-	if (it->emptyTask() || cliParser.wasKeyUsed("--nothing"))
+	if (it->emptyTask() || cliParser.wasKeyUsed("--dry-run"))
 	  return EXIT_SUCCESS;
 	if (!Messages(std::cout).confirmContinuing())
 	  return 0;

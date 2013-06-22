@@ -32,9 +32,8 @@ namespace Deepsolver
     virtual ~TransactionProgress() {}
 
   public:
-    void onAvailablePkgListProcessing();
-    void onInstalledPkgListProcessing();
-    void onInstallRemovePkgListProcessing();
+    void onPkgListProcessingBegin();
+    void onPkgListProcessingEnd();
 
   private:
     std::ostream& m_stream;

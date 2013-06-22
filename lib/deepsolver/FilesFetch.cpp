@@ -80,4 +80,24 @@ bool FilesFetch::onCurlProgress(size_t now, size_t total)
   return m_continueRequest.onContinueOperationRequest();
 }
 
+bool FilesFetch::isLocalFileUrl(const std::string& url, std::string& localFileName)
+{
+  std::string s = trim(url);
+  if (s.find("file:/") != 0)
+    return 0;
+  s = s.substr(6);
+  std::string::size_type pos = 0;
+  while(pos < s.length() && s[pos] == '/')
+    pos++;
+  localFileName = "/";
+  localFileName += s.substr(pos);
+  return 1;
+}
+
+bool FilesFetch::isLocalFileUrl(const std::string& url)
+{
+  std::string s = trim(url);
+  return s.find("file:/") == 0;
+}
+
 DEEPSOLVER_END_NAMESPACE

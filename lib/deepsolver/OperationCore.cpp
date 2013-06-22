@@ -72,15 +72,24 @@ void OperationCore::fetchIndices(AbstractFetchListener& listener,
   logMsg(LOG_DEBUG, "operation:list of index files to download consists of %zu entries:", files.size());
   for(StringToStringMap::const_iterator it = files.begin();it != files.end();it++)
     logMsg(LOG_DEBUG, "operation:download entry: \'%s\' -> \'%s\'", it->first.c_str(), it->second.c_str());
-  listener.onFetchBegin();
   if (Directory::isExist(tmpDir))
     logMsg(LOG_WARNING, "operation:directory \'%s\' already exists, probably unfinished previous transaction", tmpDir.c_str());
-  logMsg(LOG_DEBUG, "operation:preparing directory \'%s\', it must exist and be empty", tmpDir.c_str());
-  Directory::ensureExistsAndEmpty(tmpDir, 1);//1 means erase any content;
-  if (!files.empty())
+  StringToStringMap remoteFiles;
+  for(StringToStringMap::iterator it = files.begin();it != files.end();it++)
     {
+      std::string localFileName;
+      if (!FilesFetch::isLocalFileUrl(it->first, localFileName))
+	remoteFiles.insert(StringToStringMap::value_type(it->first, it->second)); else
+	it->second = localFileName;
+    }
+  Directory::ensureExistsAndEmpty(tmpDir, 1);//1 means erase any content;
+  if (!remoteFiles.empty())
+    {
+      logMsg(LOG_DEBUG, "operation:need to fetch %zu remote files", remoteFiles.size());
+  listener.onFetchBegin();
       FilesFetch fetch(listener, continueRequest);
-      fetch.fetch(files);
+      fetch.fetch(remoteFiles);
+      listener.onFetchIsCompleted();
     }
   listener.onFilesReading();
   PkgSnapshot::Snapshot snapshot;
@@ -95,7 +104,7 @@ void OperationCore::fetchIndices(AbstractFetchListener& listener,
   PkgSnapshot::rearrangeNames(snapshot);
   std::sort(snapshot.pkgs.begin(), snapshot.pkgs.end());
   const std::string outputFileName = Directory::mixNameComponents(root.dir.pkgData, PKG_DATA_FILE_NAME);
-  logMsg(LOG_DEBUG, "operation:saving constructed data to \'%s\'", outputFileName.c_str());
+  logMsg(LOG_DEBUG, "operation:saving constructed data to \'%s\', score is %zu", outputFileName.c_str(), PkgSnapshot::getScore(snapshot));
   PkgSnapshot::saveToFile(snapshot, outputFileName, m_autoReleaseStrings);
   urlsFile.close();
   freeAutoReleaseStrings();
@@ -105,7 +114,6 @@ void OperationCore::fetchIndices(AbstractFetchListener& listener,
   Directory::remove(tmpDir);
   logMsg(LOG_INFO, "Repository index updating finished!");
   //FIXME:remove file lock;
-  listener.onFetchIsCompleted();
 }
 
 std::auto_ptr<TransactionIterator> OperationCore::transaction(AbstractTransactionListener& listener, const UserTask& userTask)
@@ -119,13 +127,14 @@ std::auto_ptr<TransactionIterator> OperationCore::transaction(AbstractTransactio
   PkgSnapshot::Snapshot snapshot;
   ProvideMap provideMap;
   InstalledReferences requiresReferences, conflictsReferences;
-  listener.onAvailablePkgListProcessing();
+  listener.onPkgListProcessingBegin();
   PkgSnapshot::loadFromFile(snapshot, Directory::mixNameComponents(m_conf.root().dir.pkgData, PKG_DATA_FILE_NAME), m_autoReleaseStrings);
+  logMsg(LOG_DEBUG, "operation:the score of the snapshot just loaded is %zu", PkgSnapshot::getScore(snapshot));
   if (snapshot.pkgs.empty())//FIXME:
     throw NotImplementedException("Empty set of attached repositories");
   PkgUtils::fillWithhInstalledPackages(*backEnd.get(), snapshot, m_autoReleaseStrings);
   PkgUtils::prepareReversedMaps(snapshot, provideMap, requiresReferences, conflictsReferences);
-  listener.onInstallRemovePkgListProcessing();
+  listener.onPkgListProcessingEnd();
   PkgScope scope(*backEnd.get(), snapshot, provideMap, requiresReferences, conflictsReferences);
   TaskSolverData taskSolverData(*backEnd.get(), scope);
   for(ConfProvideVector::size_type i = 0;i < root.provide.size();i++)
@@ -188,13 +197,14 @@ std::string OperationCore::generateSat(AbstractTransactionListener& listener, co
   PkgSnapshot::Snapshot snapshot;
   ProvideMap provideMap;
   InstalledReferences requiresReferences, conflictsReferences;
-  listener.onAvailablePkgListProcessing();
+  listener.onPkgListProcessingBegin();
   PkgSnapshot::loadFromFile(snapshot, Directory::mixNameComponents(m_conf.root().dir.pkgData, PKG_DATA_FILE_NAME), m_autoReleaseStrings);
+  logMsg(LOG_DEBUG, "operation:the score of the snapshot just loaded is %zu", PkgSnapshot::getScore(snapshot));
   if (snapshot.pkgs.empty())//FIXME:
     throw NotImplementedException("Empty set of attached repositories");
   PkgUtils::fillWithhInstalledPackages(*backEnd.get(), snapshot, m_autoReleaseStrings);
   PkgUtils::prepareReversedMaps(snapshot, provideMap, requiresReferences, conflictsReferences);
-  listener.onInstallRemovePkgListProcessing();
+  listener.onPkgListProcessingEnd();
   PkgScope scope(*backEnd.get(), snapshot, provideMap, requiresReferences, conflictsReferences);
   TaskSolverData taskSolverData(*backEnd.get(), scope);
   for(ConfProvideVector::size_type i = 0;i < root.provide.size();i++)
@@ -223,6 +233,7 @@ void OperationCore::printPackagesByRequire(const NamedPkgRel& rel, std::ostream&
   ProvideMap provideMap;
   InstalledReferences requiresReferences, conflictsReferences;
   PkgSnapshot::loadFromFile(snapshot, Directory::mixNameComponents(m_conf.root().dir.pkgData, PKG_DATA_FILE_NAME), m_autoReleaseStrings);
+  logMsg(LOG_DEBUG, "operation:the score of the snapshot just loaded is %zu", PkgSnapshot::getScore(snapshot));
   if (snapshot.pkgs.empty())//FIXME:
     throw NotImplementedException("Empty set of attached repositories");
   PkgUtils::fillWithhInstalledPackages(*backEnd.get(), snapshot, m_autoReleaseStrings);

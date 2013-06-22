@@ -58,6 +58,10 @@ namespace Deepsolver
      */
     void fetch(const StringToStringMap& files);
 
+  public:
+    static bool isLocalFileUrl(const std::string& url);
+    static bool isLocalFileUrl(const std::string& url, std::string& localFileName);
+
   private:
     void processFile(const std::string& url, const std::string localFile);
 

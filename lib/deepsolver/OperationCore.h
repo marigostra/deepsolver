@@ -36,8 +36,8 @@ namespace Deepsolver
     virtual ~AbstractTransactionListener() {}
 
   public:
-    virtual void onAvailablePkgListProcessing() = 0;
-    virtual void onInstallRemovePkgListProcessing() = 0;
+    virtual void onPkgListProcessingBegin() = 0;
+    virtual void onPkgListProcessingEnd() = 0;
 }; //class abstractTransactionListener;
 
   /**\brief The main class for package managing
