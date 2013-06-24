@@ -170,6 +170,7 @@ namespace Deepsolver
 		    ConstCharVector& strings);
 
     size_t getScore(const Snapshot& snapshot);
+    bool theSameVersion(const Deepsolver::Pkg& p1, const Deepsolver::PkgSnapshot::Pkg& p2);
 
     class PkgRecipientAdapter: public AbstractPackageRecipient
     {

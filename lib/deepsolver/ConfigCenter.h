@@ -131,6 +131,10 @@ namespace Deepsolver
 				     const std::string& path3,
 				     StringVector& value);
 
+    void addBooleanParam2(const std::string& path1,
+			  const std::string& path2,
+			  bool& value);
+
   private://AbstractConfigFileHandler;
     void onConfigFileValue(const StringVector& path, 
 			   const std::string& sectArg,

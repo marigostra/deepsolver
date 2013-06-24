@@ -184,6 +184,28 @@ namespace Deepsolver
       return 1;
     }
 
+    std::string designation() const
+    {
+      std::ostringstream ss;
+      ss << name << "-";
+      if (epoch > 0)
+	ss << epoch << ":";
+      if (!version.empty())
+	ss << version << "-"; else
+	ss << "NO_VERSION";
+      if (!release.empty())
+	ss << release; else
+	ss << "NO_RELEASE";
+    }
+
+    bool theSameAs(const PkgBase& p) const
+    {
+      return (name == p.name &&
+	      version == p.version &&
+	      release == p.release &&
+	      buildTime == p.buildTime);
+    }
+
   public:
     Epoch epoch;
     std::string name;
@@ -298,8 +320,8 @@ namespace Deepsolver
   typedef std::vector<PkgFile> PkgFileVector;
   typedef std::list<PkgFile> PkgFileList;
 
-  std::ostream& operator <<(std::ostream& s, const PkgBase& );
-  std::ostream& operator <<(std::ostream& s, const NamedPkgRel& r);
+  //  std::ostream& operator <<(std::ostream& s, const PkgBase& );
+  //  std::ostream& operator <<(std::ostream& s, const NamedPkgRel& r);
 
   enum {
   PkgFlagAvailableByRepo = 1,

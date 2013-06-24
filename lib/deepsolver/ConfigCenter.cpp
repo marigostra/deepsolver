@@ -26,6 +26,11 @@ static std::string buildConfigParamTitle(const StringVector& path, const std::st
 
 void ConfigCenter::initValues()
 {
+
+  addBooleanParam2("core", "stop-invalid-installed-pkg", m_root.stopOnInvalidInstalledPkg);
+  addBooleanParam2("core", "stop-invalid-repo-pkg", m_root.stopOnInvalidRepoPkg);
+
+
   addNonEmptyStringParam3("core", "dir", "pkg-data", m_root.dir.pkgData);
   addNonEmptyStringParam3("core", "dir", "pkg-cache", m_root.dir.pkgCache);
   addStringListParam3("core", "os", "transact-read-ahead", m_root.os.transactReadAhead);
@@ -292,6 +297,18 @@ void ConfigCenter::addNonEmptyStringListParam3(const std::string& path1,
   stringListValue.path.push_back(path3);
   m_stringListValues.push_back(stringListValue);
 }
+
+void ConfigCenter::addBooleanParam2(const std::string& path1,
+				    const std::string& path2,
+				    bool& value)
+{
+  assert(!path1.empty() && !path2.empty());
+  BooleanValue boolValue(value);
+  boolValue.path.push_back(path1);
+  boolValue.path.push_back(path2);
+  m_booleanValues.push_back(boolValue);
+}
+
 
 //Static functions;
 

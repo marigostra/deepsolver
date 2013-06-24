@@ -665,5 +665,12 @@ size_t getScore(const Snapshot& snapshot)
   return value;
 }
 
+bool theSameVersion(const Deepsolver::Pkg& p1, const Deepsolver::PkgSnapshot::Pkg& p2)
+{
+  return (p1.version == p2.ver &&
+	  p1.release == p2.release &&
+	  p1.buildTime == p2.buildTime);
+}
+
 DEEPSOLVER_END_PKG_SNAPSHOT_NAMESPACE
 DEEPSOLVER_END_NAMESPACE

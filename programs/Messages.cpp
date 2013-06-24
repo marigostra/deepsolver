@@ -171,7 +171,18 @@ void Messages::onOperationError(const OperationException& e)
     case OperationException::LimitExceeded:
       m_stream << "One of the defined limits was exceeded during last operation. Please" << std::endl;
       m_stream << "contact system administrator to resolve this situation." << std::endl;
-      break;
+    case OperationException::InvalidInstalledPkg:
+      m_stream << "Your system has one or more invalid packages. The work is now stopped" << std::endl;
+m_stream << "since it can cause potentially harmful situation. If you are sure that" << std::endl;
+m_stream << "it is not a real problem you can disable this check with" << std::endl;
+m_stream << "\'core.stop-invalid-installed-pkg\' option in your configuration file." << std::endl;
+ break;
+    case OperationException::InvalidRepoPkg:
+      m_stream << "The repositories you have attached in your configuration contain one or more invalid packages. The work is now stopped" << std::endl;
+m_stream << "since it can cause potentially harmful situation. If you are sure that" << std::endl;
+m_stream << "it is not a real problem you can disable this check with" << std::endl;
+m_stream << "\'core.stop-invalid-repo-pkg\' option in your configuration file." << std::endl;
+ break;
     default:
       assert(0);
     } //switch(e.getCode());

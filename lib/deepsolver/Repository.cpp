@@ -201,6 +201,8 @@ void Repository::loadPackageData(const StringToStringMap& files,
 	  throw OperationException(OperationException::BrokenIndexFile);
 	}
       pkgFile.isSource = 0;
+      if (m_stopOnInvalidRepoPkg && !pkgFile.valid())
+	throw OperationException(OperationException::InvalidRepoPkg);
       transactData.onNewPkgFile(pkgFile);
       urlsFile.addPkg(pkgFile, buildBinaryPackageUrl(pkgFile));
     }

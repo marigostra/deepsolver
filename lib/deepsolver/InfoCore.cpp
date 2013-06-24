@@ -48,7 +48,7 @@ void InfoCore::listKnownPackages(PkgVector& pkgs, bool noInstalled, bool noRepoA
       File::readAhead("/var/lib/rpm/Packages");//FIXME:take the value from configuration;
       std::auto_ptr<AbstractPackageBackEnd> backend = createRpmBackEnd();
       logMsg(LOG_DEBUG, "Adding information about installed packages");
-      PkgUtils::fillWithhInstalledPackages(*backend.get(), snapshot, m_autoReleaseStrings);
+      PkgUtils::fillWithhInstalledPackages(*backend.get(), snapshot, m_autoReleaseStrings, m_conf.root().stopOnInvalidInstalledPkg);
     }
   const PkgSnapshot::PkgVector& p = snapshot.pkgs;
   pkgs.resize(p.size());

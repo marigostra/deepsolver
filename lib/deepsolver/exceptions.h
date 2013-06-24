@@ -301,7 +301,9 @@ namespace Deepsolver
       InvalidChecksumData,
       BrokenIndexFile,
       InternalIOProblem,
-      LimitExceeded
+      LimitExceeded,
+      InvalidInstalledPkg,
+      InvalidRepoPkg
     };
 
   public:

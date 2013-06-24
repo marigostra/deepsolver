@@ -59,7 +59,7 @@ void OperationCore::fetchIndices(AbstractFetchListener& listener,
 	    const std::string& arch = root.repo[i].arch[k];
 	    const std::string& component = root.repo[i].components[j];
 	    logMsg(LOG_DEBUG, "operation:registering repo \'%s\' for index update (\'%s\', %s, %s)", root.repo[i].name.c_str(), root.repo[i].url.c_str(), arch.c_str(), component.c_str());
-	    repo.push_back(Repository(root.tinyFileSizeLimit, root.repo[i], arch, component));
+	    repo.push_back(Repository(root.stopOnInvalidRepoPkg, root.tinyFileSizeLimit, root.repo[i], arch, component));
 	  }
     }
   StringToStringMap files;
@@ -100,7 +100,6 @@ void OperationCore::fetchIndices(AbstractFetchListener& listener,
   urlsFile.open();
   for(RepositoryVector::size_type i = 0; i < repo.size();i++)
     repo[i].loadPackageData(files, snapshotAdapter, urlsFile, infoProcessor);
-  logMsg(LOG_DEBUG, "operation:committing loaded packages data");
   PkgSnapshot::rearrangeNames(snapshot);
   std::sort(snapshot.pkgs.begin(), snapshot.pkgs.end());
   const std::string outputFileName = Directory::mixNameComponents(root.dir.pkgData, PKG_DATA_FILE_NAME);
@@ -132,7 +131,7 @@ std::auto_ptr<TransactionIterator> OperationCore::transaction(AbstractTransactio
   logMsg(LOG_DEBUG, "operation:the score of the snapshot just loaded is %zu", PkgSnapshot::getScore(snapshot));
   if (snapshot.pkgs.empty())//FIXME:
     throw NotImplementedException("Empty set of attached repositories");
-  PkgUtils::fillWithhInstalledPackages(*backEnd.get(), snapshot, m_autoReleaseStrings);
+  PkgUtils::fillWithhInstalledPackages(*backEnd.get(), snapshot, m_autoReleaseStrings, root.stopOnInvalidInstalledPkg);
   PkgUtils::prepareReversedMaps(snapshot, provideMap, requiresReferences, conflictsReferences);
   listener.onPkgListProcessingEnd();
   PkgScope scope(*backEnd.get(), snapshot, provideMap, requiresReferences, conflictsReferences);
@@ -202,7 +201,7 @@ std::string OperationCore::generateSat(AbstractTransactionListener& listener, co
   logMsg(LOG_DEBUG, "operation:the score of the snapshot just loaded is %zu", PkgSnapshot::getScore(snapshot));
   if (snapshot.pkgs.empty())//FIXME:
     throw NotImplementedException("Empty set of attached repositories");
-  PkgUtils::fillWithhInstalledPackages(*backEnd.get(), snapshot, m_autoReleaseStrings);
+  PkgUtils::fillWithhInstalledPackages(*backEnd.get(), snapshot, m_autoReleaseStrings, root.stopOnInvalidInstalledPkg);
   PkgUtils::prepareReversedMaps(snapshot, provideMap, requiresReferences, conflictsReferences);
   listener.onPkgListProcessingEnd();
   PkgScope scope(*backEnd.get(), snapshot, provideMap, requiresReferences, conflictsReferences);
@@ -236,7 +235,7 @@ void OperationCore::printPackagesByRequire(const NamedPkgRel& rel, std::ostream&
   logMsg(LOG_DEBUG, "operation:the score of the snapshot just loaded is %zu", PkgSnapshot::getScore(snapshot));
   if (snapshot.pkgs.empty())//FIXME:
     throw NotImplementedException("Empty set of attached repositories");
-  PkgUtils::fillWithhInstalledPackages(*backEnd.get(), snapshot, m_autoReleaseStrings);
+  PkgUtils::fillWithhInstalledPackages(*backEnd.get(), snapshot, m_autoReleaseStrings, root.stopOnInvalidInstalledPkg);
   PkgUtils::prepareReversedMaps(snapshot, provideMap, requiresReferences, conflictsReferences);
   PkgScope scope(*backEnd.get(), snapshot, provideMap, requiresReferences, conflictsReferences);
   if (!scope.checkName(rel.pkgName))

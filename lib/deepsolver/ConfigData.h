@@ -83,11 +83,15 @@ namespace Deepsolver
     ConfRoot()
       : pkgListColumns(0),
 	pkgListVersions(0),
-	tinyFileSizeLimit(1048576) {} //FIXME:
+	stopOnInvalidInstalledPkg(1),
+	stopOnInvalidRepoPkg(1),
+	tinyFileSizeLimit(104857) {} //FIXME:
 
     bool pkgListColumns;//FIXME:inaccessible;
     bool pkgListVersions;//FIXME:inaccessible;
-    //FIXME:Scren width;
+    bool stopOnInvalidInstalledPkg;
+    bool stopOnInvalidRepoPkg;
+    //FIXME:Screen width;
     size_t tinyFileSizeLimit;//FIXME:Inaccessible;
     ConfDir dir;
     ConfOs os;

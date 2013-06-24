@@ -28,11 +28,13 @@ namespace Deepsolver
   class Repository
   {
   public:
-    Repository(size_t tinyFileSizeLimit,
+    Repository(bool stopOnInvalidRepoPkg,
+	       size_t tinyFileSizeLimit,
 	       const ConfRepo& confRepo,
 	       const std::string& arch,
 	       const std::string& component)
-      : m_tinyFileSizeLimit(tinyFileSizeLimit),
+      : m_stopOnInvalidRepoPkg(stopOnInvalidRepoPkg),
+	m_tinyFileSizeLimit(tinyFileSizeLimit),
 	m_name(confRepo.name),
 	m_url(confRepo.url), 
 	m_arch(arch),
@@ -72,6 +74,7 @@ namespace Deepsolver
     std::string buildBinaryPackageUrl(const PkgFile& pkgFile) const;
 
   private:
+    bool m_stopOnInvalidRepoPkg;
     size_t m_tinyFileSizeLimit;
     std::string m_name, m_url, m_arch, m_component;
     bool m_takeDescr, m_takeFileList, m_takeSources;

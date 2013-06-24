@@ -22,9 +22,9 @@ DEEPSOLVER_BEGIN_NAMESPACE
 
 void PkgUtils::fillWithhInstalledPackages(AbstractPackageBackEnd& backEnd,
 					  PkgSnapshot::Snapshot& snapshot,
-					  ConstCharVector& strings)
+					  ConstCharVector& strings,
+					  bool stopOnInvalidPkg)
 {
-  const clock_t fillingStart = clock();
   PkgSnapshot::PkgVector& pkgs = snapshot.pkgs;
   std::auto_ptr<AbstractInstalledPackagesIterator> it = backEnd.enumInstalledPackages();
   size_t installedCount = 0;
@@ -32,39 +32,39 @@ void PkgUtils::fillWithhInstalledPackages(AbstractPackageBackEnd& backEnd,
   Pkg pkg;
   while(it->moveNext(pkg))
     {
+      if (!pkg.valid())
+	{
+	  if (stopOnInvalidPkg)
+	    throw OperationException(OperationException::InvalidInstalledPkg); else //FIXME:Add package designation here;
+	    logMsg(LOG_WARNING, "OS has an invalid package: %s", pkg.designation().c_str());
+	}
       installedCount++;
-      if (!PkgSnapshot::checkName(snapshot, pkg.name))
+      const PkgId pkgId = PkgSnapshot::strToPkgId(snapshot, pkg.name);//FIXME:must be got with checkName();
+      if (pkgId == BadPkgId)
 	{
 	  toInhanceWith.push_back(pkg);
 	  continue;
 	}
-      const PkgId pkgId = PkgSnapshot::strToPkgId(snapshot, pkg.name);//FIXME:must be got with checkName();
       VarId fromVarId, toVarId;
       PkgSnapshot::locateRange(snapshot, pkgId, fromVarId, toVarId);
-      //Here fromVarId can be equal to toVarId, it means name of installed package was met in relations in attached repo but them do not have such exact package;
+      //Here fromVarId can be equal to toVarId. That means name of installed package is met in relations of attached repositories;
       bool found = 0;
       for(VarId varId = fromVarId;varId < toVarId;varId++)
 	{
 	  assert(varId < pkgs.size());
-	  PkgSnapshot::Pkg& info = pkgs[varId];
-	  assert(info.pkgId == pkgId);
-	  //Extremely important place: the following line determines is installed package the same as one available from repository index;
-	  if (pkg.version == info.ver &&
-	      pkg.release == info.release &&
-					    pkg.buildTime == info.buildTime)
+	  PkgSnapshot::Pkg& oldPkg = pkgs[varId];
+	  assert(oldPkg.pkgId == pkgId);
+	  if (PkgSnapshot::theSameVersion(pkg, oldPkg))
 	    {
-	      info.flags |= PkgFlagInstalled;
+	      oldPkg.flags |= PkgFlagInstalled;
 	      found = 1;
 	    }
 	}
-      if (found)
-	continue;
-      toInhanceWith.push_back(pkg);
+      if (!found)
+	toInhanceWith.push_back(pkg);
     } //while(installed packages);
-  logMsg(LOG_DEBUG, "installed:the system has %zu installed packages, %zu of them should be added to database since there are absent in attached repositories", installedCount, toInhanceWith.size());
+  logMsg(LOG_DEBUG, "utils:the system has %zu installed packages, %zu of them should be added to the existing snapshot", installedCount, toInhanceWith.size());
   PkgSnapshot::enhance(snapshot, toInhanceWith, PkgFlagInstalled, strings);
-  const double fillingDuration = ((double)clock() - fillingStart) / CLOCKS_PER_SEC;
-  logMsg(LOG_DEBUG, "pkg-utils:installed packages adding takes %f sec", fillingDuration);
 }
 
 void PkgUtils::prepareReversedMaps(const PkgSnapshot::Snapshot& snapshot,

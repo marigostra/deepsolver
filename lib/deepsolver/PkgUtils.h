@@ -32,7 +32,8 @@ namespace Deepsolver
   public:
     static void fillWithhInstalledPackages(AbstractPackageBackEnd& backEnd,
 					   PkgSnapshot::Snapshot& snapshot,
-					   ConstCharVector& strings);
+					   ConstCharVector& strings,
+					   bool stopOnInvalidPkg);
 
     static void prepareReversedMaps(const PkgSnapshot::Snapshot& snapshot,
 				    ProvideMap& provideMap,
