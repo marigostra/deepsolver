@@ -1,6 +1,12 @@
 
   Deepsolver changes log
 
+ConfigAdapter changes:
+- Integer value type support is added;
+- New approach to configuration files errors indication;
+- More information about errors (always option path is included, almost always has file location);
+- Support for custom checks is added (URLs and so on).
+
 Deep code refactoring with following main changes:
 - All code is inside of Deepsolver namespace now;
 - No more subdirectories for libdeepsolver.so sources;

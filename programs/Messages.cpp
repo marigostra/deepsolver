@@ -75,24 +75,29 @@ void Messages::onConfigError(const ConfigException& e)
   m_stream << "system administrator for problem resolving. Details listed below:" << std::endl;
   m_stream << std::endl;
   if (e.getLineNumber() > 0)
-    m_stream << e.getFileName() << ":" << e.getLineNumber() << ":";
+    m_stream << e.getLocationDesignation() << ":" << e.getLine() << std::endl;
+  m_stream << e.getOptionDesignation() << ":";
   switch(e.getCode())
     {
-    case ConfigException::UnknownParam:
-      m_stream << "unknown parameter: " << e.getArg() << std::endl;
+    case ConfigException::UnknownOption:
+      m_stream << "An unknown  option" << std::endl;
   break;
     case ConfigException::ValueCannotBeEmpty:
-      m_stream << "value of parameter \'" << e.getArg() << "\' cannot be empty" << std::endl;
+      m_stream << "A value cannot be empty" << std::endl;
   break;
     case ConfigException::AddingNotPermitted:
-      m_stream << "adding not permitted" << std::endl;
+      m_stream << "Adding not permitted" << std::endl;
   break;
     case ConfigException::InvalidBooleanValue:
-      m_stream << "invalid boolean value" << std::endl;
+      m_stream << "An invalid boolean value" << std::endl;
   break;
-    case ConfigException::InvalidUintValue:
-      m_stream << "invalid unsigned integer value" << std::endl;
+    case ConfigException::InvalidUIntValue:
+      m_stream << "An invalid unsigned integer value" << std::endl;
   break;
+    case ConfigException::InvalidIntValue:
+      m_stream << "An invalid integer value" << std::endl;
+  break;
+
     default:
       assert(0);
       return;

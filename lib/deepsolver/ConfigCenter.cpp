@@ -128,7 +128,7 @@ void ConfigCenter::commit()
       for(StringVector::size_type k = 0;k < repo.components.size();k++)
 	repo.components[k] = trim(repo.components[k]);
     }
-  ConfigAdapter::commit();
+  ConfigAdapter::checkValues();
 }
 
 void ConfigCenter::printConfigData(std::ostream& s) const
@@ -150,7 +150,7 @@ void ConfigCenter::printConfigData(std::ostream& s) const
     }
   for(BooleanValueVector::size_type i = 0;i < m_booleanValues.size();i++)
     v.push_back(m_booleanValues[i].pathToString() + " = " + ((*m_booleanValues[i].value)?"yes":"no"));
-  for(UintValueVector::size_type i = 0;i < m_uintValues.size();i++)
+  for(UIntValueVector::size_type i = 0;i < m_uintValues.size();i++)
     {
       std::ostringstream ss;
       ss << m_uintValues[i].pathToString() << " = " << (*m_uintValues[i].value);

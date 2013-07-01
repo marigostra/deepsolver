@@ -20,133 +20,175 @@
 
 DEEPSOLVER_BEGIN_NAMESPACE
 
-static std::string buildConfigParamTitle(const StringVector& path, const std::string& sectArg);
 static bool parseBooleanValue(const StringVector& path,
-		       const std::string& sectArg,
-		       const std::string& str,
-		       const ConfigFilePosInfo& pos);
-static unsigned int parseUintValue(const StringVector& path,
-		       const std::string& sectArg,
-		       const std::string& str,
+			      const std::string& sectArg,
+			      const std::string& str,
+			      const ConfigFilePosInfo& pos);
+
+static unsigned int parseUIntValue(const StringVector& path,
+				   const std::string& sectArg,
+				   const std::string& str,
 				   const ConfigFilePosInfo& pos);
 
-void ConfigAdapter::commit()
+static int parseIntValue(const StringVector& path,
+			 const std::string& sectArg,
+			 const std::string& str,
+			 const ConfigFilePosInfo& pos);
+
+void ConfigAdapter::checkValues()
 {
   for(StringValueVector::size_type i = 0;i < m_stringValues.size();i++)
     if (!m_stringValues[i].canBeEmpty && trim(*m_stringValues[i].value).empty())
-      throw ConfigException(ConfigException::ValueCannotBeEmpty, m_stringValues[i].pathToString());
+      throwConfigException(ConfigException::ValueCannotBeEmpty, m_stringValues[i]);
   for(StringListValueVector::size_type i = 0;i < m_stringListValues.size();i++)
     if (!m_stringListValues[i].canBeEmpty && (*m_stringListValues[i].value).empty())
-      throw ConfigException(ConfigException::ValueCannotBeEmpty, m_stringListValues[i].pathToString());
+      throwConfigException(ConfigException::ValueCannotBeEmpty, m_stringListValues[i]);
 }
 
 void ConfigAdapter::onValue(const StringVector& path, 
-		       const std::string& sectArg,
-		       const std::string& value,
-				     bool adding,
-				     const ConfigFilePosInfo& pos)
+			    const std::string& sectArg,
+			    const std::string& value,
+			    bool adding,
+			    const ConfigFilePosInfo& pos)
 {
   assert(!path.empty());
-  const int paramType = getParamType(path, sectArg, pos);
-  if (paramType == ValueTypeString)
+  const int paramType = getType(path, sectArg, pos);
+  switch(paramType)
     {
+    case ValueTypeString:
       processStringValue(path, sectArg, value, adding, pos);
-      return;
-    }
-  if (paramType == ValueTypeStringList)
-    {
+      break;
+    case ValueTypeStringList:
       processStringListValue(path, sectArg, value, adding, pos);
-      return;
-    }
-  if (paramType == ValueTypeBoolean)
-    {
+      break;
+    case ValueTypeBoolean:
       processBooleanValue(path, sectArg, value, adding, pos);
-      return;
+      break;
+    case ValueTypeUInt:
+      processUIntValue(path, sectArg, value, adding, pos);
+      break;
+    case ValueTypeInt:
+      processIntValue(path, sectArg, value, adding, pos);
+      break;
+    default:
+      assert(0);
     }
-  if (paramType == ValueTypeUint)
-    {
-      processUintValue(path, sectArg, value, adding, pos);
-      return;
-    }
-  assert(0);
 }
 
 void ConfigAdapter::processStringValue(const StringVector& path, 
-				      const std::string& sectArg,
-				      const std::string& value,
-				      bool adding,
-				      const ConfigFilePosInfo& pos)
+				       const std::string& sectArg,
+				       const std::string& value,
+				       bool adding,
+				       const ConfigFilePosInfo& pos)
 {
-  StringValue stringValue;
-  findStringValue(path, sectArg, stringValue);
-  assert(stringValue.value != NULL);
+  const StringValueVector::size_type index =   findStringValue(path, sectArg);
+  assert(index < m_stringValues.size());
+  StringValue& v = m_stringValues[index];
+  assert(v.value);
   if (!adding)
-    (*stringValue.value) = value; else
-    (*stringValue.value) += value;
+    (*v.value) = value; else
+    (*v.value) += value;
+  v.line = pos.line;
+  v.fileName = pos.fileName;
+  v.lineNumber = pos.lineNumber;
 }
 
 void ConfigAdapter::processStringListValue(const StringVector& path, 
-				      const std::string& sectArg,
-				      const std::string& value,
-				      bool adding,
-				      const ConfigFilePosInfo& pos)
+					   const std::string& sectArg,
+					   const std::string& value,
+					   bool adding,
+					   const ConfigFilePosInfo& pos)
 {
-  StringListValue stringListValue;
-  findStringListValue(path, sectArg, stringListValue);
-  assert(stringListValue.value != NULL);
-  StringVector& v = *(stringListValue.value);
-  if (adding)
-    v.clear();
+  const StringListValueVector::size_type index = findStringListValue(path, sectArg);
+  assert(index < m_stringListValues.size());
+  StringListValue& v = m_stringListValues[index];
+  assert(v.value);
+  StringVector& l = *(v.value);
+  if (!adding)
+    l.clear();
   std::string item;
   for(std::string::size_type i = 0;i < value.size();i++)
     {
       std::string::size_type p = 0;
-      while(p < stringListValue.delimiters.size() && value[i] != stringListValue.delimiters[p])
+      while(p < v.delimiters.size() && value[i] != v.delimiters[p])
 	p++;
-      if (p >= stringListValue.delimiters.size())
+      if (p >= v.delimiters.size())
 	{
 	  item += value[i];
 	  continue;
 	}
-      if (!stringListValue.canContainEmptyItem && trim(item).empty())
-	throw ConfigException(ConfigException::ValueCannotBeEmpty, buildConfigParamTitle(path, sectArg), pos.fileName, pos.lineNumber, pos.line);
-      v.push_back(item);
+      if (!v.canContainEmptyItem && item.empty())
+	throw ConfigException(ConfigException::ValueCannotBeEmpty, path, sectArg, pos.line, pos.fileName, pos.lineNumber);
+      l.push_back(item);
       item.erase();
     }
-  if (!stringListValue.canContainEmptyItem && trim(item).empty())
-    throw ConfigException(ConfigException::ValueCannotBeEmpty, buildConfigParamTitle(path, sectArg), pos.fileName, pos.lineNumber, pos.line);
-  v.push_back(item);
+  if (!v.canContainEmptyItem && item.empty())
+    throw ConfigException(ConfigException::ValueCannotBeEmpty, path, sectArg, pos.line, pos.fileName, pos.lineNumber);
+  l.push_back(item);
+  v.line = pos.line;
+  v.fileName = pos.fileName;
+  v.lineNumber = pos.lineNumber;
 }
 
 void ConfigAdapter::processBooleanValue(const StringVector& path, 
-				      const std::string& sectArg,
-				      const std::string& value,
-				      bool adding,
-				      const ConfigFilePosInfo& pos)
+					const std::string& sectArg,
+					const std::string& value,
+					bool adding,
+					const ConfigFilePosInfo& pos)
 {
-  BooleanValue booleanValue;
-  findBooleanValue(path, sectArg, booleanValue);
-  assert(booleanValue.value != NULL);
-  bool& v = *(booleanValue.value);
+  const BooleanValueVector::size_type index = findBooleanValue(path, sectArg);
+  assert(index < m_booleanValues.size());
+  BooleanValue& v =m_booleanValues[index]; 
+  assert(v.value);
+  bool& b = *(v.value);
   if (adding)
-    throw ConfigException(ConfigException::AddingNotPermitted, buildConfigParamTitle(path, sectArg), pos.fileName, pos.lineNumber, pos.line);
-  v = parseBooleanValue(path, sectArg, trim(value), pos);
+    throw ConfigException(ConfigException::AddingNotPermitted, path, sectArg, pos.line, pos.fileName, pos.lineNumber);
+  b = parseBooleanValue(path, sectArg, trim(value), pos);
+  v.line = pos.line;
+  v.fileName = pos.fileName;
+  v.lineNumber = pos.lineNumber;
 }
 
-void ConfigAdapter::processUintValue(const StringVector& path, 
-				      const std::string& sectArg,
-				      const std::string& value,
-				      bool adding,
-				      const ConfigFilePosInfo& pos)
+void ConfigAdapter::processUIntValue(const StringVector& path, 
+				     const std::string& sectArg,
+				     const std::string& value,
+				     bool adding,
+				     const ConfigFilePosInfo& pos)
 {
-  UintValue uintValue;
-  findUintValue(path, sectArg, uintValue);
-  assert(uintValue.value != NULL);
-  unsigned int& v = *(uintValue.value);
-  v = parseUintValue(path, sectArg, value, pos);
+  const UIntValueVector::size_type index = findUIntValue(path, sectArg);
+  assert(index < m_uintValues.size());
+  UIntValue& v = m_uintValues[index];
+  assert(v.value);
+  unsigned int& i = *(v.value);
+  if (adding)
+    throw ConfigException(ConfigException::AddingNotPermitted, path, sectArg, pos.line, pos.fileName, pos.lineNumber);
+  i = parseUIntValue(path, sectArg, value, pos);
+  v.line = pos.line;
+  v.fileName = pos.fileName;
+  v.lineNumber = pos.lineNumber;
 }
 
-int ConfigAdapter::getParamType(const StringVector& path, const std::string& sectArg, const ConfigFilePosInfo& pos) const
+void ConfigAdapter::processIntValue(const StringVector& path, 
+				     const std::string& sectArg,
+				     const std::string& value,
+				     bool adding,
+				     const ConfigFilePosInfo& pos)
+{
+  const IntValueVector::size_type index = findIntValue(path, sectArg);
+  assert(index < m_intValues.size());
+  IntValue& v = m_intValues[index];
+  assert(v.value);
+  int& i = *(v.value);
+  if (adding)
+    throw ConfigException(ConfigException::AddingNotPermitted, path, sectArg, pos.line, pos.fileName, pos.lineNumber);
+  i = parseIntValue(path, sectArg, value, pos);
+  v.line = pos.line;
+  v.fileName = pos.fileName;
+  v.lineNumber = pos.lineNumber;
+}
+
+
+int ConfigAdapter::getType(const StringVector& path, const std::string& sectArg, const ConfigFilePosInfo& pos) const
 {
   //String;
   for(StringValueVector::size_type i = 0;i < m_stringValues.size();i++)
@@ -161,76 +203,63 @@ int ConfigAdapter::getParamType(const StringVector& path, const std::string& sec
     if (m_booleanValues[i].pathMatches(path, sectArg))
       return ValueTypeBoolean;
   //Unsigned integer;
-  for(UintValueVector::size_type i = 0;i < m_uintValues.size();i++)
+  for(UIntValueVector::size_type i = 0;i < m_uintValues.size();i++)
     if (m_uintValues[i].pathMatches(path, sectArg))
-      return ValueTypeUint;
-  throw ConfigException(ConfigException::UnknownParam, buildConfigParamTitle(path, sectArg), pos.fileName, pos.lineNumber, pos.line);
+      return ValueTypeUInt;
+  throw ConfigException(ConfigException::UnknownOption, path, sectArg, pos.line, pos.fileName, pos.lineNumber);
 }
 
-void ConfigAdapter::findStringValue(const StringVector& path, 
-				   const std::string& sectArg,
-				   StringValue& stringValue)
+ConfigAdapter::StringValueVector::size_type ConfigAdapter::findStringValue(const StringVector& path, const std::string& sectArg) const
 {
   for(StringValueVector::size_type i = 0;i < m_stringValues.size();i++)
     if (m_stringValues[i].pathMatches(path, sectArg))
-      {
-	stringValue = m_stringValues[i];
-	return;
-      }
+      return i;
   assert(0);
+  return -1;
 }
 
-void ConfigAdapter::findStringListValue(const StringVector& path, 
-				   const std::string& sectArg,
-				   StringListValue& stringListValue)
+ConfigAdapter::StringListValueVector::size_type ConfigAdapter::findStringListValue(const StringVector& path, const std::string& sectArg) const
 {
   for(StringListValueVector::size_type i = 0;i < m_stringListValues.size();i++)
     if (m_stringListValues[i].pathMatches(path, sectArg))
-      {
-	stringListValue = m_stringListValues[i];
-	return;
-      }
+      return i;
   assert(0);
+  return -1;
 }
 
-void ConfigAdapter::findBooleanValue(const StringVector& path, 
-				   const std::string& sectArg,
-				   BooleanValue& booleanValue)
+ConfigAdapter::BooleanValueVector::size_type ConfigAdapter::findBooleanValue(const StringVector& path, const std::string& sectArg) const
 {
   for(BooleanValueVector::size_type i = 0;i < m_booleanValues.size();i++)
     if (m_booleanValues[i].pathMatches(path, sectArg))
-      {
-	booleanValue = m_booleanValues[i];
-	return;
-      }
+      return i;
   assert(0);
+  return -1;
 }
 
-void ConfigAdapter::findUintValue(const StringVector& path, 
-				   const std::string& sectArg,
-				   UintValue& uintValue)
+ConfigAdapter::UIntValueVector::size_type ConfigAdapter::findUIntValue(const StringVector& path, const std::string& sectArg) const
 {
-  for(BooleanValueVector::size_type i = 0;i < m_uintValues.size();i++)
+  for(UIntValueVector::size_type i = 0;i < m_uintValues.size();i++)
     if (m_uintValues[i].pathMatches(path, sectArg))
-      {
-	uintValue = m_uintValues[i];
-	return;
-      }
+      return i;
   assert(0);
+  return -1;
+}
+
+ConfigAdapter::UIntValueVector::size_type ConfigAdapter::findIntValue(const StringVector& path, const std::string& sectArg) const
+{
+  for(IntValueVector::size_type i = 0;i < m_intValues.size();i++)
+    if (m_intValues[i].pathMatches(path, sectArg))
+      return i;
+  assert(0);
+  return -1;
+}
+
+void ConfigAdapter::throwConfigException(int code, const Value& value) const
+{
+  throw ConfigException(code, value.path, value.sectArg, value.line, value.fileName, value.lineNumber);
 }
 
 //Static functions;
-
-std::string buildConfigParamTitle(const StringVector& path, const std::string& sectArg)
-{
-  assert(!path.empty());
-  std::string value = path[0];
-  if (!sectArg.empty())
-    value += " \"" + sectArg + "\"";
-  for(StringVector::size_type i = 1;i < path.size();i++)
-    value += "." + path[i];
-  return value;
-}
 
 bool parseBooleanValue(const StringVector& path,
 		       const std::string& sectArg,
@@ -249,20 +278,34 @@ bool parseBooleanValue(const StringVector& path,
     return 0;
   if (str == "0")
     return 0;
-  throw ConfigException(ConfigException::InvalidBooleanValue, buildConfigParamTitle(path, sectArg), pos.fileName, pos.lineNumber, pos.line);
+  throw ConfigException(ConfigException::InvalidBooleanValue, path, sectArg, pos.line, pos.fileName, pos.lineNumber);
 }
 
-unsigned int parseUintValue(const StringVector& path,
+unsigned int parseUIntValue(const StringVector& path,
 		       const std::string& sectArg,
 		       const std::string& str,
 		       const ConfigFilePosInfo& pos)
 {
   if (trim(str).empty())
-    throw ConfigException(ConfigException::InvalidUintValue, buildConfigParamTitle(path, sectArg), pos.fileName, pos.lineNumber, pos.line);
+    throw ConfigException(ConfigException::InvalidUIntValue, path, sectArg, pos.line, pos.fileName, pos.lineNumber);
   std::istringstream ss(trim(str));
   unsigned int k;
   if (!(ss >> k))
-    throw ConfigException(ConfigException::InvalidUintValue, buildConfigParamTitle(path, sectArg), pos.fileName, pos.lineNumber, pos.line);
+    throw ConfigException(ConfigException::InvalidUIntValue, path, sectArg, pos.line, pos.fileName, pos.lineNumber);
+  return k;
+}
+
+int parseIntValue(const StringVector& path,
+		       const std::string& sectArg,
+		       const std::string& str,
+		       const ConfigFilePosInfo& pos)
+{
+  if (trim(str).empty())
+    throw ConfigException(ConfigException::InvalidIntValue, path, sectArg, pos.line, pos.fileName, pos.lineNumber);
+  std::istringstream ss(trim(str));
+  int k;
+  if (!(ss >> k))
+    throw ConfigException(ConfigException::InvalidIntValue, path, sectArg, pos.line, pos.fileName, pos.lineNumber);
   return k;
 }
 

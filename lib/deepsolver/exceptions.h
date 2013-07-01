@@ -639,124 +639,158 @@ namespace Deepsolver
     const std::string m_line;
   }; //class ConfigFileException;
 
-  /**\brief Indicates the error in configuration data
+  /**\brief Indicates an error in configuration data
    *
    * This class instance indicates any problem in Deepsolver configuration
-   * structures. Be careful, it must not be confused with
+   * structures. Be careful, it must be not confused with
    * ConfigFileException used to notify about configuration file syntax
    * errors.
    *
-   * The objects of ConfigException provide the error code, optional string
-   * argument which meaning depends on error code and error location in
-   * configuration files if there is any. Some kind of problems are actual
-   * without any reference to configuration file. For example, if some
-   * parameter is not set at all but its value is required.
+   * The objects of ConfigException provide the error code, option path and section argument if needed
+   * and error location in configuration files if there is any. 
+   * Some kind of problems are actual without any reference to location in a configuration file.
    *
-   * \sa ConfigFileException ConfigCenter
+   * \sa ConfigFileException ConfigCenter ConfigAdapter
    */
   class ConfigException: public DeepsolverException
   {
   public:
     enum {
-      UnknownParam = 0,
-      ValueCannotBeEmpty = 1,
-      AddingNotPermitted = 2,
-      InvalidBooleanValue = 3,
-      InvalidUintValue = 4
+      UnknownOption,
+      ValueCannotBeEmpty,
+      AddingNotPermitted,
+      InvalidBooleanValue,
+      InvalidIntValue,
+      InvalidUIntValue,
+      InvalidUrl
     };
 
   public:
     /**\brief The constructor
      *
-     * \param [in] code The error code
-     * \param [in] arg Optional string error argument with meaning dependent on error code
-     * \param [in] fileName The name of the config file with the invalid line
-     * \param [in] lineNumber The number of the invalid line
-     * \param [in] line The invalid line value
+     * \param [in] code A error code
+     * \param [in path A value path
+     * \param [in] sectArg An  argument for first-level section
+     * \param [in] line An invalid line value
+     * \param [in] fileName The name of A config file with the invalid line
+     * \param [in] lineNumber A number of the invalid line
      */
     ConfigException(int code,
-		    const std::string& arg,
+		    const StringVector& path,
+		    const std::string& sectArg,
+		    const std::string& line,
 		    const std::string& fileName,
-		    size_t lineNumber,
-		    const std::string& line)
+		    size_t lineNumber)
       : m_code(code),
-	m_arg(arg),
+	m_path(path),
+	m_sectArg(sectArg),
+	m_line(line),
 	m_fileName(fileName),
-	m_lineNumber(lineNumber),
-	m_line(line) {}
+	m_lineNumber(lineNumber) {}
 
-    /**\brief The constructor with no configuration file line info
-     *
-     * \param [in] code The error code
-     * \param [in] arg Optional argument with meaning dependent on error code
-     */
-    ConfigException(int code, const std::string& arg)
-      : m_code(code),
-	m_arg(arg),
-	m_lineNumber(0) {}
+    /**\brief The destructor*/
+    virtual ~ConfigException() {}
 
   public:
-    /**\brief Returns the error code
+    /**\brief Returns ta error code
      *
-     * Use this method to get the error code
+     * Use this method to get a error code
      *
-     * \return The error code
+     * \return A error code
      */
     int getCode() const
     {
       return m_code;
     }
 
-    /**\brief Returns the optional string argument of the error
+    /**\brief Returns a configuration options path
      *
-     * Use this method to get string argument of the error. The meaning of
-     * this argument depends on error code and can be empty.
+     * use this method to get a configuration option path.
      *
-     * \return The optional string argument of the error
+     * \return A configuration option path
      */
-    std::string getArg() const
+    const StringVector& getPath() const
     {
-      return m_arg;
+      return m_path;
     }
 
-    /**\brief Returns the name of the file associated with error position
+    /**\brief Returns a first-level section argument
      *
-     * Use this method to get name of the file with invalid line. string
-     * returned by this method can be empty because not all of the possible
-     * errors have associated place in configuration files. Before using the
-     * value returned by this method check the line number is greater than
-     * zero since in case of error without associated place the line number
-     * is always zero.
+     * Use this method to get a first-level section argument.
      *
-     * \return The file name with the invalid line
+     * \return A first-level section argument
+     */
+    std::string getSectArg() const
+    {
+      return m_sectArg;
+    }
+
+    /**\brief Returns an invalid line value
+     *
+     * Use this method to get an invalid line value.
+     *
+     * \return An invalid line value
+     */
+    std::string getLine() const
+    {
+      return m_line;
+    }
+
+    /**\brief Returns a file name with an invalid line
+     *
+     * Use this method to get a name of the file with invalid line.
+     *
+     * \return TA file name with the invalid line
      */
     std::string getFileName() const
     {
       return m_fileName;
     }
 
-    /**\brief Returns number of the invalid line
+    /**\brief Returns number of a invalid line
      *
-     * Use this method to get 1-based number of the line caused the
-     * configuration problem. If this method returns zero it means there is
-     * no line associated with the problem.
+     * Use this method to get 1-based number of an invalid line. If this method 
+     * returns 0 that means an exception instance has no information about invalid line location.
      *
-     * \return The number of the line caused the problem or zero if there is no any
+     * \return A number of the line caused the problem or zero if there is no any
      */
     size_t getLineNumber() const
     {
       return m_lineNumber;
     }
 
-    /**\brief Returns the line caused the configuration problem
+    /**\brief Returns a string designation of a configuration option with an invalid value
      *
-     * Use this method to get content of the line caused the configuration problem.
+     * This method constructs global configuration option designation using its path and optional section argument.
      *
-     * \return The line caused configuration problem
+     * \return A gloabl configuration option designation
      */
-    std::string getLine() const
+    std::string getOptionDesignation() const
     {
-      return m_line;
+      if (m_path.empty())
+	return "";
+      std::string res = m_path[0];
+      if (!m_sectArg.empty())
+	res += " \"" + m_sectArg + "\"";
+      for(StringVector::size_type i = 1;i < m_path.size();i++)
+	res += "." + m_path[i];
+      return res;
+    }
+
+    /**\brief Returns full designation of configuration problem location
+     *
+     * This method constructs string with global designation of a place causing 
+     * configuration problem. This information usually includes file name and line number.
+     *
+     * \return A string designation of a configuration problem location
+     */
+    std::string getLocationDesignation() const
+    {
+      if (m_lineNumber == 0 || m_fileName.empty())
+	return "";
+      std::ostringstream ss;
+      ss << m_fileName << "(" << m_lineNumber << ")";
+      return ss.str();
     }
 
     std::string getType() const
@@ -766,15 +800,50 @@ namespace Deepsolver
 
     std::string getMessage() const
     {
-      return "FIXME";
+      std::string msg;
+      switch(m_code)
+	{
+	case UnknownOption:
+	  msg = "An unknown configuration option";
+	  break;
+	case ValueCannotBeEmpty:
+	  msg = "Value cannot be empty";
+	  break;
+	case AddingNotPermitted:
+	  msg = "Adding not permitted";
+	  break;
+	case InvalidBooleanValue:
+	  msg = "An invalid boolean value";
+	  break;
+	case InvalidIntValue:
+	  msg = "An invalid integer value";
+	  break;
+	case InvalidUIntValue:
+	  msg = "An invalid unsigned integer value";
+	  break;
+	case InvalidUrl:
+	  msg = "An invalid URL value";
+	  break;
+	default:
+	  assert(0);
+	  return "";
+	}
+      const std::string location = getLocationDesignation();
+      if (!location.empty())
+	return location + ":" + msg;
+      const std::string path = getOptionDesignation();
+      if (!path.empty())
+	return path + ":" + msg;
+      return msg;
     }
 
   private:
     const int m_code;
-    const std::string m_arg;
+    const StringVector m_path;
+    const std::string m_sectArg;
+    const std::string m_line;
     const std::string m_fileName;
     const size_t m_lineNumber;
-    const std::string m_line;
   }; //class DeepsolverException;
 
   /**\brief The general info file error

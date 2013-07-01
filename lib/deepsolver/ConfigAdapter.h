@@ -32,7 +32,7 @@ namespace Deepsolver
     virtual ~ConfigAdapter() {}
 
   public:
-    void commit();
+    void checkValues();
 
   protected:
     void onValue(const StringVector& path, 
@@ -42,19 +42,12 @@ namespace Deepsolver
 			   const ConfigFilePosInfo& pos);
 
   protected:
-    enum {
-      ValueTypeString = 1,
-      ValueTypeStringList = 2,
-      ValueTypeBoolean = 3,
-      ValueTypeUint = 4
-    };
+    enum {ValueTypeString, ValueTypeStringList, ValueTypeBoolean, ValueTypeInt, ValueTypeUInt};
 
     class Value
     {
     public:
-    public:
-      Value() {}
-      virtual ~Value() {}
+      Value() : lineNumber(0) {}
 
     public:
       bool pathMatches(const StringVector& p, const std::string& a) const 
@@ -71,18 +64,22 @@ namespace Deepsolver
 
       std::string pathToString() const
       {
-	assert(!path.empty());
-	std::string value = path[0];
+	if (path.empty())
+	  return "";
+	std::string res = path[0];
 	if (!sectArg.empty())
-	  value += " \"" + sectArg + "\"";
+	  res += " \"" + sectArg + "\"";
 	for(StringVector::size_type i = 1;i < path.size();i++)
-	  value += "." + path[i];
-	return value;
+	  res += "." + path[i];
+	return res;
       }
 
     public:
       StringVector path;
       std::string sectArg;
+      std::string line;
+      std::string fileName;
+      size_t lineNumber;
     }; //class Value;
 
     class StringValue: public Value 
@@ -95,8 +92,6 @@ namespace Deepsolver
       StringValue(std::string& v)
 	: canBeEmpty(0),
 	  value(&v) {}
-
-      virtual ~StringValue() {}
 
     public:
       bool canBeEmpty;
@@ -116,8 +111,6 @@ namespace Deepsolver
 	  canBeEmpty(0),
 	  value(&v) {}
 
-      virtual ~StringListValue() {}
-
     public:
       bool canContainEmptyItem;
       bool canBeEmpty;
@@ -125,38 +118,38 @@ namespace Deepsolver
       StringVector* value;
     }; //class StringListValue;
 
-    class BooleanValue: public Value
+    template<typename T>
+    class ScalarValue: public Value
     {
     public:
-      BooleanValue()
+      ScalarValue()
 	: value(NULL) {}
 
-      BooleanValue(bool& v)
+      ScalarValue(T& v)
 	: value(&v) {}
 
-      virtual ~BooleanValue() {}
-
     public:
-      bool* value;
-    }; //class BooleanValue;
-
-    class UintValue: public Value
-    {
-    public:
-      UintValue()
-	: value(NULL) {}
-
-      UintValue(unsigned int& v)
-	: value(&v) {}
-
-      virtual ~UintValue() {}
-
-    public:
-      unsigned int* value;
-    }; //class UintValue;
+      T* value;
+    }; //class ScalarValue;
 
   protected:
-    int getParamType(const StringVector& path, const std::string& sectArg, const ConfigFilePosInfo& pos) const;
+    typedef ScalarValue<bool> BooleanValue;
+    typedef ScalarValue<unsigned int> UIntValue;
+    typedef ScalarValue<int> IntValue;
+
+  protected:
+    typedef std::vector<StringValue> StringValueVector;
+    typedef std::vector<StringListValue> StringListValueVector;
+    typedef std::vector<BooleanValue> BooleanValueVector;
+    typedef std::vector<UIntValue> UIntValueVector;
+    typedef std::vector<IntValue> IntValueVector;
+
+  protected:
+    void throwConfigException(int code, const Value& value) const;
+
+    int getType(const StringVector& path,
+		const std::string& sectArg,
+		const ConfigFilePosInfo& pos) const;
 
     void processStringValue(const StringVector& path, 
 			    const std::string& sectArg,
@@ -164,19 +157,11 @@ namespace Deepsolver
 			    bool adding,
 			    const ConfigFilePosInfo& pos);
 
-    void findStringValue(const StringVector& path, 
-			 const std::string& sectArg,
-			 StringValue& stringValue);
-
     void processStringListValue(const StringVector& path, 
 				const std::string& sectArg,
 				const std::string& value,
 				bool adding,
 				const ConfigFilePosInfo& pos);
-
-    void findStringListValue(const StringVector& path, 
-			     const std::string& sectArg,
-			     StringListValue& stringListValue);
 
     void processBooleanValue(const StringVector& path, 
 			     const std::string& sectArg,
@@ -184,31 +169,30 @@ namespace Deepsolver
 			     bool adding,
 			     const ConfigFilePosInfo& pos);
 
-    void findBooleanValue(const StringVector& path, 
-			  const std::string& sectArg,
-			  BooleanValue& booleanValue);
-
-    void processUintValue(const StringVector& path, 
+    void processUIntValue(const StringVector& path, 
 			  const std::string& sectArg,
 			  const std::string& value,
 			  bool adding,
 			  const ConfigFilePosInfo& pos);
 
-    void findUintValue(const StringVector& path, 
-		       const std::string& sectArg,
-		       UintValue& uintValue);
+    void processIntValue(const StringVector& path, 
+			  const std::string& sectArg,
+			  const std::string& value,
+			  bool adding,
+			  const ConfigFilePosInfo& pos);
 
-protected:
-    typedef std::vector<StringValue> StringValueVector;
-    typedef std::vector<StringListValue> StringListValueVector;
-    typedef std::vector<BooleanValue> BooleanValueVector;
-    typedef std::vector<UintValue> UintValueVector;
+    StringValueVector::size_type findStringValue(const StringVector& path, const std::string& sectArg) const;
+    StringListValueVector::size_type findStringListValue(const StringVector& path, const std::string& sectArg) const;
+    BooleanValueVector::size_type findBooleanValue(const StringVector& path, const std::string& sectArg) const;
+    UIntValueVector::size_type findUIntValue(const StringVector& path, const std::string& sectArg) const;
+    IntValueVector::size_type findIntValue(const StringVector& path, const std::string& sectArg) const;
 
 protected:
     StringValueVector m_stringValues;
     StringListValueVector m_stringListValues;
     BooleanValueVector m_booleanValues;
-    UintValueVector m_uintValues;
+    UIntValueVector m_uintValues;
+    IntValueVector m_intValues;
   }; //class ConfigAdapter;
 } //namespace Deepsolver;
 
