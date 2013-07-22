@@ -24,6 +24,10 @@ DEEPSOLVER_BEGIN_NAMESPACE
 
 static std::string buildConfigParamTitle(const StringVector& path, const std::string& sectArg);
 
+static bool checkUrl(const std::string& url);
+
+
+
 void ConfigCenter::initValues()
 {
 
@@ -129,6 +133,12 @@ void ConfigCenter::commit()
 	repo.components[k] = trim(repo.components[k]);
     }
   ConfigAdapter::checkValues();
+  for(StringValueVector::size_type i = 0;i < m_stringValues.size();i++)
+    if (m_stringValues[i].path.size() == 2 &&
+	m_stringValues[i].path[0] == "repo" &&
+	m_stringValues[i].path[1] == "url" &&
+	!checkUrl(*m_stringValues[i].value))
+      throwConfigException(ConfigException::InvalidUrl, m_stringValues[i]);
 }
 
 void ConfigCenter::printConfigData(std::ostream& s) const
@@ -233,6 +243,8 @@ void ConfigCenter::loadFromDir(const std::string& path)
       const std::string fileName = it->fullPath();
       if (File::isDir(fileName) || (!File::isRegFile(fileName) && !File::isSymLink(path)))//FIXME:Check exact symlink behaviour;
 	continue;
+      if (fileName.length() < 5 || fileName.substr(fileName.length() - 5) != ".conf")
+	continue;
       files.push_back(fileName);
     }
   std::sort(files.begin(), files.end());
@@ -321,6 +333,15 @@ std::string buildConfigParamTitle(const StringVector& path, const std::string& s
   for(StringVector::size_type i = 1;i < path.size();i++)
     value += "." + path[i];
   return value;
+}
+
+bool checkUrl(const std::string& url)
+{
+  if (url.find("file:/") == 0)
+    return url.length() > 6;
+  if (url.find("://") == std::string::npos)
+    return 0;
+  return url.length() >= 4;
 }
 
 DEEPSOLVER_END_NAMESPACE

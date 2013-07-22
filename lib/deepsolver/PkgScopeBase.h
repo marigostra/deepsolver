@@ -54,6 +54,7 @@ namespace Deepsolver
 
   public:
     PackageId packageIdOfVarId(VarId varId) const;
+    std::string getDesignation(const IdPkgRel& r) const;
     std::string getVersion(VarId varId) const;
     void fillPkgData(VarId varId, Pkg& pkg) const;
     std::string constructPackageName(VarId varId) const;

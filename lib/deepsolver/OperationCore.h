@@ -87,6 +87,7 @@ namespace Deepsolver
     std::auto_ptr<TransactionIterator> transaction(AbstractTransactionListener& listener, const UserTask& task);
     std::string generateSat(AbstractTransactionListener& listener, const UserTask& task);
     void printPackagesByRequire(const NamedPkgRel& rel, std::ostream& s);
+    void printSnapshot(bool withInstalled, std::ostream& s);
 
   private:
     const ConfigCenter& m_conf;

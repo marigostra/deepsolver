@@ -112,14 +112,12 @@ void PkgScope::selectMatchingVarsWithProvides(const IdPkgRel& rel, VarIdVector& 
 
 void PkgScope::selectMatchingVarsWithProvides(PackageId pkgId, VarIdVector& vars) const
 {
-  //Package names and all their provides must be considered;
   vars.clear();
   selectVarsToTry(pkgId, vars, 1);//1 means include packageId itself;
 }
 
 void PkgScope::selectMatchingVarsWithProvides(PackageId packageId, const VersionCond& ver, VarIdVector& vars) const
 {
-  //Considering all package and provide names only with version information;
   vars.clear();
   VarIdVector toTry;
   selectVarsToTry(packageId, toTry, 1);//1 means include packageId itself;

@@ -324,9 +324,7 @@ namespace Deepsolver
   //  std::ostream& operator <<(std::ostream& s, const NamedPkgRel& r);
 
   enum {
-  PkgFlagAvailableByRepo = 1,
-  PkgFlagAvailableByUrl = 2,
-  PkgFlagInstalled = 4
+    PkgFlagInstalled = 1
   };
 } //namespace Deepsolver;
 

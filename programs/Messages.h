@@ -57,6 +57,11 @@ namespace Deepsolver
     void dsRequireHelp(const CliParser& cliParser) const;
     void dsRequireOnInvalidInput();
 
+    //ds-snapshot;
+    void dsSnapshotLogo() const;
+    void dsSnapshotInitCliParser(CliParser& cliParser) const;
+    void dsSnapshotHelp(const CliParser& cliParser) const;
+
     //Dialogs;
     bool confirmContinuing();
 

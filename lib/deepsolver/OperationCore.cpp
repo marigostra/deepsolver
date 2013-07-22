@@ -128,7 +128,6 @@ std::auto_ptr<TransactionIterator> OperationCore::transaction(AbstractTransactio
   InstalledReferences requiresReferences, conflictsReferences;
   listener.onPkgListProcessingBegin();
   PkgSnapshot::loadFromFile(snapshot, Directory::mixNameComponents(m_conf.root().dir.pkgData, PKG_DATA_FILE_NAME), m_autoReleaseStrings);
-  logMsg(LOG_DEBUG, "operation:the score of the snapshot just loaded is %zu", PkgSnapshot::getScore(snapshot));
   if (snapshot.pkgs.empty())//FIXME:
     throw NotImplementedException("Empty set of attached repositories");
   PkgUtils::fillWithhInstalledPackages(*backEnd.get(), snapshot, m_autoReleaseStrings, root.stopOnInvalidInstalledPkg);
@@ -178,11 +177,11 @@ std::auto_ptr<TransactionIterator> OperationCore::transaction(AbstractTransactio
       pkgDowngradeFrom.push_back(pkg1);
       pkgDowngradeTo.push_back(pkg2);
     }
+  freeAutoReleaseStrings();
   return std::auto_ptr<TransactionIterator>(new TransactionIterator(m_conf, backEnd,
 								    pkgInstall, pkgRemove,
 								    pkgUpgradeFrom, pkgUpgradeTo,
 								    pkgDowngradeFrom, pkgDowngradeTo));
-  freeAutoReleaseStrings();
 }
 
 std::string OperationCore::generateSat(AbstractTransactionListener& listener, const UserTask& userTask)
@@ -257,6 +256,28 @@ void OperationCore::printPackagesByRequire(const NamedPkgRel& rel, std::ostream&
 	s << " (installed)";
       s << std::endl;
       }
+  freeAutoReleaseStrings();
+}
+
+void OperationCore::printSnapshot(bool withInstalled, std::ostream& s)
+{
+  if (withInstalled)
+    logMsg(LOG_DEBUG, "operation:printing snapshot with installed packages"); else
+    logMsg(LOG_DEBUG, "operation:printing snapshot without installed packages");
+  const ConfRoot& root = m_conf.root();
+  freeAutoReleaseStrings();
+  if (withInstalled)
+    {
+      for(StringVector::size_type i = 0;i < root.os.transactReadAhead.size();i++)
+	File::readAhead(root.os.transactReadAhead[i]);
+    }
+  std::auto_ptr<AbstractPackageBackEnd> backEnd = CREATE_PACKAGE_BACKEND;
+  backEnd->initialize();
+  PkgSnapshot::Snapshot snapshot;
+  PkgSnapshot::loadFromFile(snapshot, Directory::mixNameComponents(m_conf.root().dir.pkgData, PKG_DATA_FILE_NAME), m_autoReleaseStrings);
+  if (withInstalled)
+    PkgUtils::fillWithhInstalledPackages(*backEnd.get(), snapshot, m_autoReleaseStrings, root.stopOnInvalidInstalledPkg);
+  PkgSnapshot::printContent(snapshot, s);
   freeAutoReleaseStrings();
 }
 

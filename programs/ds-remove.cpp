@@ -28,6 +28,89 @@ using namespace Deepsolver;
 
 static CliParser cliParser;
 
+void printUrls(const TransactionIterator& it)
+{
+  StringVector install, upgrade, downgrade;
+  const PkgVector& remove = it.getRemove();
+  it.getUrls(install, upgrade, downgrade);
+  std::cout << std::endl;
+  if (!install.empty())
+    {
+      std::cout << "The following package(s) must be installed:" << std::endl << std::endl;
+      for(StringVector::size_type i = 0;i < install.size();i++)
+	std::cout << install[i] << std::endl;
+      std::cout << std::endl;
+    }
+  if (!upgrade.empty())
+    {
+      std::cout << "The following package(s) must be upgraded:" << std::endl << std::endl;
+      for(StringVector::size_type i = 0;i < upgrade.size();i++)
+	std::cout << upgrade[i] << std::endl;
+      std::cout << std::endl;
+    }
+  if (!downgrade.empty())
+    {
+      std::cout << "The following package(s) must be downgraded:" << std::endl << std::endl;
+      for(StringVector::size_type i = 0;i < downgrade.size();i++)
+	std::cout << downgrade[i] << std::endl;
+      std::cout << std::endl;
+    }
+  if (!remove.empty())
+    {
+      std::cout << "The following package(s) must be removed:" << std::endl;
+      std::cout << "#" << std::endl;
+      for(StringVector::size_type i = 0;i < remove.size();i++)
+	std::cout << "# " << remove[i].name << std::endl;
+      std::cout << std::endl;
+    }
+  std::cout << "#" << install.size() << " package(s) to install, " << 
+    upgrade.size() << " package(s) to upgrade, " <<
+    downgrade.size() << " package(s) to downgrade," << 
+    remove.size() << " package(s) to remove" << std::endl;
+}
+
+void printFiles(const TransactionIterator& it)
+{
+  const StringVector& install = it.getFilesInstall();
+  const PkgVector& remove = it.getRemove();
+  const StringToStringMap& upgrade = it.getFilesUpgrade();
+  const StringToStringMap& downgrade = it.getFilesDowngrade();
+  std::cout << std::endl;
+  if (!install.empty())
+    {
+      std::cout << "The following package(s) must be installed:" << std::endl << std::endl;
+      for(StringVector::size_type i = 0;i < install.size();i++)
+	std::cout << install[i] << std::endl;
+      std::cout << std::endl;
+    }
+  if (!upgrade.empty())
+    {
+      std::cout << "The following package(s) must be upgraded:" << std::endl << std::endl;
+      for(StringToStringMap::const_iterator i = upgrade.begin();i != upgrade.end();i++)
+	std::cout << i->second << std::endl;
+      std::cout << std::endl;
+    }
+  if (!downgrade.empty())
+    {
+      std::cout << "The following package(s) must be downgraded:" << std::endl << std::endl;
+      for(StringToStringMap::const_iterator i = downgrade.begin();i != downgrade.end();i++)
+	std::cout << i->second << std::endl;
+      std::cout << std::endl;
+    }
+  if (!remove.empty())
+    {
+      std::cout << "The following package(s) must be removed:" << std::endl;
+      std::cout << "#" << std::endl;
+      for(StringVector::size_type i = 0;i < remove.size();i++)
+	std::cout << "# " << remove[i].name << std::endl;
+      std::cout << std::endl;
+    }
+  std::cout << "#" << install.size() << " package(s) to install, " << 
+    upgrade.size() << " package(s) to upgrade, " <<
+    downgrade.size() << " package(s) to downgrade," << 
+    remove.size() << " package(s) to remove" << std::endl;
+}
+
 void parseCmdLine(int argc, char* argv[])
 {
   Messages(std::cout).dsRemoveInitCliParser(cliParser);
@@ -83,16 +166,30 @@ int main(int argc, char* argv[])
     if (!cliParser.wasKeyUsed("--sat"))
       {
 	std::auto_ptr<TransactionIterator> it = core.transaction(transactionProgress, userTask);
-	PackageListPrinting(conf).printSolution(*it.get());
-	std::cout << std::endl;
+	if (cliParser.wasKeyUsed("--urls"))
+	  {
+	    printUrls(*it.get());
+	    return EXIT_SUCCESS;
+	  }
+	if (!cliParser.wasKeyUsed("--files"))
+	  {
+	    PackageListPrinting(conf).printSolution(*it.get());
+	    std::cout << std::endl;
+	  }
 	if (it->emptyTask() || cliParser.wasKeyUsed("--dry-run"))
 	  return EXIT_SUCCESS;
-	if (!Messages(std::cout).confirmContinuing())
-	  return 0;
+	if (!cliParser.wasKeyUsed("--files"))
+	  if (!Messages(std::cout).confirmContinuing())
+	    return 0;
 	std::cout << std::endl;
 	FilesFetchProgress progress(std::cout, cliParser.wasKeyUsed("--log"));
 	AlwaysTrueContinueRequest continueRequest;
 	it->fetchPackages(progress, continueRequest);
+	if (cliParser.wasKeyUsed("--files"))
+	  {
+	    printFiles(*it.get());
+	    return EXIT_SUCCESS;
+	  }
 	it->makeChanges();
       } else
       {

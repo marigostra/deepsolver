@@ -1,6 +1,37 @@
 
   Deepsolver changes log
 
+Critical bug fix in PkgSnapshot::rearrangeNames():
+-      Deepsolver::PkgSnapshot::Relation r = snapshot.relations[i];
++      Deepsolver::PkgSnapshot::Relation& r = snapshot.relations[i];
+
+New utilities features:
+- ds-install and ds-remove get '--files' and '--urls' options to view packages lists.
+
+New utilities:
+- ds-snapshot utility is added for package database viewing;
+- OperationCore::printSnapshot() method is added.
+
+New PkgSnapshot functions:
+- removeEqualPkgs() function is added;
+- printContent() function is added;
+- Minor bug fixes.
+
+AbstractPackageScope interface change:
+- getDesignation() for IdPkgRel method is added.
+
+New configuration options:
+- core.stop-invalid-installed-pkg;
+- core.stop-invalid-repo-pkg.
+
+Other changes:
+- config fragments are read only if they have '.conf' suffix;
+- Console output clean up;
+- URLs checking on config parsing is added;
+- ConfigException::InvalidUrl type is added;
+- New methods of TransactionIterator are added for access to internal information;
+- Minor bug fixes with memory management.
+
 ConfigAdapter changes:
 - Integer value type support is added;
 - New approach to configuration files errors indication;

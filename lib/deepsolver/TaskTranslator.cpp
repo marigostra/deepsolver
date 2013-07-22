@@ -24,7 +24,9 @@ void TaskTranslator::translate(const UserTask& task)
 {
   m_pending.clear();
   m_processed.clear();
+  logMsg(LOG_DEBUG, "translator:to process user task ");
   translateUserTask(task);
+  logMsg(LOG_DEBUG, "translator:to process pending packages");
   processPendings();
 }
 
@@ -75,6 +77,7 @@ void TaskTranslator::handleChangeToTrue(VarId varId)
 {
   assert(varId != BadVarId);
   assert(!m_scope.isInstalled(varId));
+  logMsg(LOG_DEBUG, "translator:to handle change to true of \'%s\'", m_scope.constructPackageName(varId).c_str());
   //Blocking other versions of this package;
   //FIXME:Not every package requires this;
   VarIdVector otherVersions;
@@ -98,7 +101,9 @@ void TaskTranslator::handleChangeToTrue(VarId varId)
       if (dub < i)
 	continue;
       VarIdVector alternatives;
+  logMsg(LOG_DEBUG, "translator:to process a require \'%s\'", m_scope.getDesignation(requires[i]).c_str());
       m_scope.selectMatchingVarsWithProvides(requires[i], alternatives);
+      assert(!alternatives.empty());
       rmDub(alternatives);
       VarIdVector installed;
       bool haveOneBeInstalledAnyway = 0;
@@ -111,12 +116,13 @@ void TaskTranslator::handleChangeToTrue(VarId varId)
 	}
       /*
        * We may forget about this require at all since at least one alternative
-       * will be installed anyway. 
+       * is to be installed anyway. 
        */
       if (haveOneBeInstalledAnyway)
 	continue;
       if (installed.empty())
 	{
+	  assert(!alternatives.empty());
 	  m_output.requiredOneAnyForPackage(varId, alternatives);
 	  for(VarIdVector::size_type k = 0;k < alternatives.size();k++)
 	    m_pending.push_back(alternatives[k]);

@@ -37,7 +37,7 @@ static PkgId registerName(Snapshot& snapshot,
 			  const std::string& name,
 			  StringToPkgIdMap& stringToPkgIdMap);
 
-//For snapshot enhancing;
+//For enhancing;
 
 static void addRelationsForEnhancing(Snapshot& snapshot,
 				     const NamedPkgRelVector& relations,
@@ -59,7 +59,7 @@ static char* putStringInBuffer(Snapshot& snapshot,
 			       size_t& offset,
 			       const std::string& value);
 
-//For snapshot loading;
+//For loading;
 
 static void readNames(Snapshot& snapshot,
 		      std::ifstream& s,
@@ -69,6 +69,14 @@ static void onNewName(Snapshot& snapshot,
 		      const char* name,
 		      bool complete,
 		      std::string& chunk);
+
+// For printing;
+
+static void printRelations(const Snapshot& snapshot,
+			   const std::string& title,
+			   std::ostream& s,
+			   RelationVector::size_type pos,
+			   RelationVector::size_type count);
 
 void addNewPkg(Snapshot& snapshot,
 	       const PkgFile& pkgFile,
@@ -363,7 +371,6 @@ PkgId strToPkgId(const Snapshot& snapshot, const std::string& name)
   PkgId pkgId = BadPkgId;
   if (!Dichotomy<std::string>().findSingle(snapshot.pkgNames, name, pkgId))
     pkgId = BadPkgId;
-  assert(pkgId != BadPkgId);
   return pkgId;
 }
 
@@ -387,7 +394,10 @@ void rearrangeNames(Snapshot& snapshot)
   for(StringVector::size_type i = 0;i < snapshot.pkgNames.size();i++)
     {
       StringVector::size_type res = 0;
-      d.findSingle(newNames, snapshot.pkgNames[i], res);
+      const bool found = d.findSingle(newNames, snapshot.pkgNames[i], res);
+      assert(found);
+      assert(res < newNames.size());
+      assert(snapshot.pkgNames[i] == newNames[res]);
       newPositions[i] = res;
     }
   for(Deepsolver::PkgSnapshot::PkgVector::size_type i = 0;i < snapshot.pkgs.size();i++)
@@ -398,7 +408,7 @@ void rearrangeNames(Snapshot& snapshot)
     }
   for(Deepsolver::PkgSnapshot::RelationVector::size_type i = 0;i < snapshot.relations.size();i++)
     {
-      Deepsolver::PkgSnapshot::Relation r = snapshot.relations[i];
+      Deepsolver::PkgSnapshot::Relation& r = snapshot.relations[i];
       assert(r.pkgId < newPositions.size());
       r.pkgId = newPositions[r.pkgId];
     }
@@ -480,7 +490,7 @@ void loadFromFile(Snapshot& snapshot,
       newEntry.conflictsCount = readSizeValue(s);
       newEntry.obsoletesPos = readSizeValue(s);
       newEntry.obsoletesCount = readSizeValue(s);
-      newEntry.flags = PkgFlagAvailableByRepo;
+      newEntry.flags = 0;
     }
   //Reading package relations;
   for(RelationVector::size_type i = 0;i < snapshot.relations.size();i++)
@@ -637,6 +647,95 @@ void saveToFile(const Snapshot& snapshot,
 	writeSizeValue(s, (size_t)-1);
     }
   s.flush();
+}
+
+void removeEqualPkgs(Snapshot& snapshot)
+{
+  PkgSnapshot::PkgVector& pkgs = snapshot.pkgs;
+  if (pkgs.empty())
+    return;
+  PkgSnapshot::PkgVector::size_type checkFrom = 0;
+  for(PkgSnapshot::PkgVector::size_type i = 1;i < pkgs.size();i++)
+    {
+      assert(checkFrom < pkgs.size());
+      assert(pkgs[checkFrom].pkgId != BadPkgId && pkgs[i].pkgId != BadPkgId);
+      if (pkgs[checkFrom].pkgId != pkgs[i].pkgId)
+	{
+	  checkFrom = i;
+	  continue;
+	}
+      PkgSnapshot::PkgVector::size_type k;
+      for(k = checkFrom;k < i;k++)
+	{
+	  if (pkgs[k].pkgId == BadPkgId)
+	    continue;
+	  assert(pkgs[i].pkgId == pkgs[k].pkgId);
+	  assert(pkgs[k].ver != NULL && pkgs[k].release != NULL);
+	  if (strcmp(pkgs[i].ver, pkgs[k].ver) == 0 &&
+	      strcmp(pkgs[i].release, pkgs[k].release) == 0 &&
+	      pkgs[i].buildTime == pkgs[k].buildTime)
+	    break;
+	}
+      if (k < i)
+	pkgs[i].pkgId = BadPkgId;
+    }
+  size_t offset = 0;
+  for(PkgSnapshot::PkgVector::size_type i = 0;i < pkgs.size();i++)
+    {
+      if (pkgs[i].pkgId == BadPkgId)
+	offset++; else
+	pkgs[i - offset] = pkgs[i];
+    }
+  assert(offset < pkgs.size());
+  pkgs.resize(pkgs.size() - offset);
+  logMsg(LOG_DEBUG, "snapshot:%zu doubled packages are filtered out", offset);
+}
+
+void printContent(const Snapshot& snapshot, std::ostream& s)
+{
+  for(PkgVector::size_type i = 0;i < snapshot.pkgs.size();i++)
+    {
+      const PkgSnapshot::Pkg& p = snapshot.pkgs[i]; 
+      assert(p.pkgId != BadPkgId);
+      s << ((p.flags & PkgFlagInstalled)?"Installed package: ":"Package: ");
+      s << pkgIdToStr(snapshot, p.pkgId) << "-";
+      if (p.epoch > 0)
+	s << p.epoch << ":";
+      assert(p.ver && p.release);
+      s << p.ver << "-" << p.release;
+      s << " (BuildTime: " << p.buildTime << ")" << std::endl;
+      printRelations(snapshot, "Requires:", s, p.requiresPos, p.requiresCount);
+      printRelations(snapshot, "Provides:", s, p.providesPos, p.providesCount);
+      printRelations(snapshot, "Conflicts:", s, p.conflictsPos, p.conflictsCount);
+      printRelations(snapshot, "Obsoletes:", s, p.obsoletesPos, p.obsoletesCount);
+    }
+}
+
+void printRelations(const Snapshot& snapshot,
+		    const std::string& title,
+		    std::ostream& s,
+		    RelationVector::size_type pos,
+		    RelationVector::size_type count)
+{
+  for(RelationVector::size_type k = 0;k < count;k++)
+    {
+      assert(k + pos < snapshot.relations.size());
+      const Relation& r = snapshot.relations[k + pos];
+      s << title <<"  " << pkgIdToStr(snapshot, r.pkgId);
+      if (r.verDir != VerNone)
+	{
+	  assert(r.ver);
+	  s << " ";
+	  if (r.verDir & VerLess)
+	    s << "<";
+	  if (r.verDir & VerGreater)
+	    s << ">";
+	  if (r.verDir & VerEquals)
+	    s << "=";
+	  s << " " << r.ver;
+	}
+      s << std::endl;
+    }
 }
 
 size_t getScore(const Snapshot& snapshot)

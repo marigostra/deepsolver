@@ -71,19 +71,16 @@ void Messages::onConfigSyntaxError(const ConfigFileException& e)
 
 void Messages::onConfigError(const ConfigException& e)
 {
-  m_stream << "There is an error in your configuration file. Please, consult your" << std::endl;
-  m_stream << "system administrator for problem resolving. Details listed below:" << std::endl;
+  m_stream << "There is an error in your configuration file. Please, fix and try again." << std::endl;
   m_stream << std::endl;
-  if (e.getLineNumber() > 0)
-    m_stream << e.getLocationDesignation() << ":" << e.getLine() << std::endl;
-  m_stream << e.getOptionDesignation() << ":";
+  m_stream << "Error: ";
   switch(e.getCode())
     {
     case ConfigException::UnknownOption:
       m_stream << "An unknown  option" << std::endl;
   break;
     case ConfigException::ValueCannotBeEmpty:
-      m_stream << "A value cannot be empty" << std::endl;
+      m_stream << "Value cannot be empty" << std::endl;
   break;
     case ConfigException::AddingNotPermitted:
       m_stream << "Adding not permitted" << std::endl;
@@ -97,16 +94,18 @@ void Messages::onConfigError(const ConfigException& e)
     case ConfigException::InvalidIntValue:
       m_stream << "An invalid integer value" << std::endl;
   break;
-
+    case ConfigException::InvalidUrl:
+      m_stream << "An invalid URL" << std::endl;
+  break;
     default:
       assert(0);
       return;
     } //switch(e.getCode());
+  m_stream << "Option: " << e.getOptionDesignation() << std::endl;
   if (e.getLineNumber() > 0)
     {
-      m_stream << std::endl;
-      m_stream << "Invalid line content:" << std::endl;
-    m_stream << e.getLine() << std::endl;
+      m_stream <<"Location: " <<  e.getLocationDesignation() << std::endl;
+      m_stream << "Line content: " << e.getLine() << std::endl;
     }
 }
 
@@ -303,6 +302,8 @@ void Messages::dsInstallLogo() const
 void Messages::dsInstallInitCliParser(CliParser& cliParser) const
 {
   cliParser.addKeyDoubleName("-n", "--dry-run", "print a solution and do nothing");
+  cliParser.addKeyDoubleName("-u", "--urls", "print URLs of packages for installation and do nothing");
+  cliParser.addKeyDoubleName("-f", "--files", "fetch packages and print file names");
   cliParser.addKeyDoubleName("-s", "--sat", "print SAT equation and do not touch any packages");
   cliParser.addKeyDoubleName("-h", "--help", "print this help screen and exit");
   cliParser.addKey("--log", "print log to console instead of user progress information");
@@ -330,6 +331,8 @@ void Messages::dsRemoveLogo() const
 void Messages::dsRemoveInitCliParser(CliParser& cliParser) const
 {
   cliParser.addKeyDoubleName("-n", "--dry-run", "print a solution and do nothing");
+  cliParser.addKeyDoubleName("-u", "--urls", "print URLs of packages for installation and do nothing");
+  cliParser.addKeyDoubleName("-f", "--files", "fetch packages and print file names");
   cliParser.addKeyDoubleName("-s", "--sat", "print SAT equation and do not touch any packages");
   cliParser.addKeyDoubleName("-h", "--help", "print this help screen and exit");
   cliParser.addKey("--log", "print log to console instead of user progress information");
@@ -378,6 +381,32 @@ void Messages::dsRequireOnInvalidInput()
     m_stream << "ds-require foo = 1.0" << std::endl;
     m_stream << "ds-require foo >= 1.0" << std::endl;
     m_stream << "..." << std::endl;
+}
+
+// ds-snapshot;
+
+void Messages::dsSnapshotLogo() const
+{
+  m_stream << "ds-snapshot: the Deepsolver utility to view package scope" << std::endl;
+  m_stream << "Version: " << PACKAGE_VERSION << std::endl;
+  m_stream << std::endl;
+}
+
+void Messages::dsSnapshotInitCliParser(CliParser& cliParser) const
+{
+  cliParser.addKeyDoubleName("-i", "--installed", "insert installed packages to scope");
+  cliParser.addKeyDoubleName("-h", "--help", "print this help screen and exit");
+  cliParser.addKey("--log", "print log to console instead of user progress information");
+  cliParser.addKey("--debug", "relax filtering level for log output");
+}
+
+void Messages::dsSnapshotHelp(const CliParser& cliParser) const
+{
+  dsSnapshotLogo();
+  m_stream << "Usage: ds-snapshot [--installed] [--help] [--log [--debug]] " << std::endl;
+  m_stream << std::endl;
+  m_stream << "Valid command line options are:" << std::endl;
+  cliParser.printHelp(m_stream);
 }
 
 bool Messages::confirmContinuing()

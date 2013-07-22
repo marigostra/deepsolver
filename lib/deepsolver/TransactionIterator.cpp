@@ -22,6 +22,16 @@
 
 DEEPSOLVER_BEGIN_NAMESPACE
 
+void TransactionIterator::getUrls(StringVector& toInstall,
+				  StringVector& toUpgrade,
+				  StringVector& toDowngrade) const
+{
+  PkgUrlsFile urlsFile(m_conf);
+  urlsFile.readUrls(m_install, toInstall);
+  urlsFile.readUrls(m_upgradeTo, toUpgrade);
+  urlsFile.readUrls(m_downgradeTo, toDowngrade);
+}
+
 void TransactionIterator::fetchPackages(AbstractFetchListener& listener,
 					const AbstractOperationContinueRequest& continueRequest)
 {
@@ -119,14 +129,14 @@ void TransactionIterator::fetchPackages(AbstractFetchListener& listener,
   for(StringVector::size_type i = 0;i < upgradeFileNames.size();i++)
     {
       std::string localFileName;
-      if (FilesFetch::isLocalFileUrl(upgradeUrls[i], localFileName))
+      if (!FilesFetch::isLocalFileUrl(upgradeUrls[i], localFileName))
 	m_filesUpgrade.insert(StringToStringMap::value_type(m_upgradeTo[i].name, Directory::mixNameComponents(dir, upgradeFileNames[i]))); else
 	m_filesUpgrade.insert(StringToStringMap::value_type(m_upgradeTo[i].name, localFileName));
     }
   for(StringVector::size_type i = 0;i < downgradeFileNames.size();i++)
     {
       std::string localFileName;
-      if (FilesFetch::isLocalFileUrl(downgradeFileNames[i], localFileName))
+      if (!FilesFetch::isLocalFileUrl(downgradeFileNames[i], localFileName))
 	m_filesDowngrade.insert(StringToStringMap::value_type(m_downgradeTo[i].name, Directory::mixNameComponents(dir, downgradeFileNames[i]))); else
 	m_filesDowngrade.insert(StringToStringMap::value_type(m_downgradeTo[i].name, localFileName));
     }

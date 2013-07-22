@@ -25,6 +25,7 @@ void PkgUtils::fillWithhInstalledPackages(AbstractPackageBackEnd& backEnd,
 					  ConstCharVector& strings,
 					  bool stopOnInvalidPkg)
 {
+  PkgSnapshot::removeEqualPkgs(snapshot);
   PkgSnapshot::PkgVector& pkgs = snapshot.pkgs;
   std::auto_ptr<AbstractInstalledPackagesIterator> it = backEnd.enumInstalledPackages();
   size_t installedCount = 0;

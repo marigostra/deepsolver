@@ -49,6 +49,10 @@ namespace Deepsolver
   virtual ~TransactionIterator() {}
 
   public:
+    void getUrls(StringVector& toInstall,
+		 StringVector& toUpgrade,
+		 StringVector& toDowngrade) const;
+
     void fetchPackages(AbstractFetchListener& listener,
 		       const AbstractOperationContinueRequest& continueRequest);
 
@@ -93,6 +97,21 @@ namespace Deepsolver
     const PkgVector& getDowngradeTo() const
     {
       return m_downgradeTo;
+    }
+
+    const StringVector& getFilesInstall() const
+    {
+      return m_filesInstall;
+    }
+
+    const StringToStringMap& getFilesUpgrade() const
+    {
+      return m_filesUpgrade;
+    }
+
+    const StringToStringMap& getFilesDowngrade() const
+    {
+      return m_filesDowngrade;
     }
 
   private:

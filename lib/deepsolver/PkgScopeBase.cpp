@@ -26,6 +26,23 @@ PkgId PkgScopeBase::packageIdOfVarId(VarId varId) const
   return m_pkgs[varId].pkgId;
 }
 
+std::string PkgScopeBase::getDesignation(const IdPkgRel& r) const
+{
+  std::string s = packageIdToStr(r.pkgId);
+  if (r.verDir == VerNone)
+    return s;
+  s += " ";
+  if (r.verDir & VerLess)
+    s += "<";
+  if (r.verDir & VerGreater)
+    s += ">";
+  if (r.verDir & VerEquals)
+    s += "=";
+  s += " ";
+  s += r.ver;
+  return s;
+}
+
 std::string PkgScopeBase::getVersion(VarId varId) const
 {
   assert(varId < m_pkgs.size());

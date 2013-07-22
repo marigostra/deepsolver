@@ -24,14 +24,14 @@ void FilesFetchProgress::onHeadersFetch()
 {
   if (m_suppressed)
     return;
-  m_stream << "Downloading basic repository data" << std::endl;
+  m_stream << "Looking through basic repository data..." << std::endl;
 }
 
 void FilesFetchProgress::onFetchBegin()
 {
   if (m_suppressed)
     return;
-  m_stream << "Starting files downloading" << std::endl;
+  m_stream << "Fetching files..." << std::endl;
 }
 
 void FilesFetchProgress::onFilesReading()
@@ -41,7 +41,7 @@ void FilesFetchProgress::onFilesReading()
   for(std::string::size_type i = 0;i < m_prevStrLen;i++)
     m_stream << "\b";
   m_prevStrLen = 0;
-  m_stream << "Reading downloaded data" << std::endl;
+  m_stream << "Collecting packages..." << std::endl;
 }
 
 void FilesFetchProgress::onFetchIsCompleted()
@@ -51,7 +51,7 @@ void FilesFetchProgress::onFetchIsCompleted()
   for(std::string::size_type i = 0;i < m_prevStrLen;i++)
     m_stream << "\b";
   m_prevStrLen = 0;
-  m_stream << "Downloading is completed!" << std::endl;
+  m_stream << "Fetching is completed." << std::endl;
 }
 
 void FilesFetchProgress::onFetchStatus(unsigned char currentPartPercents,
