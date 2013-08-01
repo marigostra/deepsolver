@@ -1,6 +1,12 @@
 
   Deepsolver changes log
 
+	0.3.4 (2013-08-01)
+
+Minor fixes:
+- altlinux-release.provide is moved to altlinux-release.conf;
+- sisyphus.repo is moved to sisyphus.conf.
+
 Critical bug fix in PkgSnapshot::rearrangeNames():
 -      Deepsolver::PkgSnapshot::Relation r = snapshot.relations[i];
 +      Deepsolver::PkgSnapshot::Relation& r = snapshot.relations[i];
@@ -37,6 +43,31 @@ ConfigAdapter changes:
 - New approach to configuration files errors indication;
 - More information about errors (always option path is included, almost always has file location);
 - Support for custom checks is added (URLs and so on).
+
+Stronger checks of the packages coming to core:
+- Checks are added that installed and repository packages are correct;
+- core.stop-invalid-installed-pkg and core.stop-invalid-repo-pkg configuration options are added to disable
+  checking if needed;
+- OperationException::InvalidInstalledPkg and OperationException::InvalidRepoPkg errors are added.
+
+New features:
+- Remote files with URL like "file://" are accessed without libcurl;
+- Downloading progress is shown only if there are remote files to fetch with libcurl;
+- Progress information is cleaned up.
+
+Segmentation faults fixes:
+- One in PkgSnapshot in logMsg() call;
+- The similar bug in loading process.
+
+Bug fixes:
+- Fixed bug in saving of packages relations without version;
+- Fixed bug in string buffer size calculation;
+- Fixed --dry-run command line option processing;
+- Fixed string buffer length calculation in PkgSnapshot::Enhance().
+
+New functions and methods:
+- "score" calculation for package snapshot (useful for consistency control);
+- static FilesFetch::isLocalFileUrl() is added.
 
 Deep code refactoring with following main changes:
 - All code is inside of Deepsolver namespace now;
