@@ -80,7 +80,7 @@ void RpmTransaction::process(const StringVector& install,
       std::cerr << "Ordering failed" << std::endl;
       return;
     }
-  rc = rpmRunTransactions(m_ts, rpmShowProgress, (void *)notifyFlags, NULL,
+  rc = rpmRunTransactions(m_ts, rpmShowProgress, (void *)(intptr_t)notifyFlags, NULL,
 			  &probs, (rpmtransFlags)tsFlags,
 			  (rpmprobFilterFlags)probFilter);
   if (rc > 0) 
