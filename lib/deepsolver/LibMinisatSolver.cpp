@@ -42,7 +42,7 @@ private:
   typedef std::map<int, VarId> IntToVarIdMap;
 
 private:
-  int m_nextFreeVar;//Always greater than real variable count by one;
+  size_t m_nextFreeVar;//Always greater than real variable count by one;
   VarIdToIntMap m_varIdToIntMap;
   IntToVarIdMap m_intToVarIdMap;
   IntVector m_clauses;
@@ -197,7 +197,7 @@ int LibMinisatSolver::mapVarId(VarId varId)
       assert(it->second != 0);
       return it->second;
     }
-  const int newValue = m_nextFreeVar;
+  const size_t newValue = m_nextFreeVar;
   m_varIdToIntMap.insert(VarIdToIntMap::value_type(varId, newValue));
   m_intToVarIdMap.insert(IntToVarIdMap::value_type(newValue, varId));
   m_nextFreeVar++;
