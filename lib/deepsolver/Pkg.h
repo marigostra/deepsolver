@@ -196,6 +196,7 @@ namespace Deepsolver
       if (!release.empty())
 	ss << release; else
 	ss << "NO_RELEASE";
+      return ss.str();
     }
 
     bool theSameAs(const PkgBase& p) const
