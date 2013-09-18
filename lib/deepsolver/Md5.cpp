@@ -207,7 +207,7 @@ void Md5::commitImpl(Context* ctx, unsigned char* digest) const
   transform(ctx->buf, ctx->in);
   byteSwap(ctx->buf, 4);
   memcpy(digest, ctx->buf, 16);
-  memset(ctx, 0, sizeof(ctx));	/* In case it's sensitive */
+  memset(ctx, 0, sizeof(*ctx));	/* In case it's sensitive */
 }
 
 DEEPSOLVER_END_NAMESPACE
