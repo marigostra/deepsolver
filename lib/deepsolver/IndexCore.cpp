@@ -494,8 +494,8 @@ void IndexCore::rebuildIndex(const RepoParams& params, const StringVector& toAdd
   while(reader->readNext(sect))
     {
       const std::string fileName = PkgSection::getPkgFileName(sect);
-      if(fileName.empty());
-      throw IndexCoreException(IndexCoreException::InternalIOProblem);
+      if(fileName.empty())
+	throw IndexCoreException(IndexCoreException::InternalIOProblem);
       for(PkgFileVector::size_type i = 0;i < pkgs.size();i++)
 	{
 	  if (fileName != pkgs[i].fileName)
