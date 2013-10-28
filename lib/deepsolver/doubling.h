@@ -21,7 +21,7 @@
 namespace Deepsolver
 {
   template<typename T>
-  void rmDub(std::vector<T>& v)
+  void noDoubling(std::vector<T>& v)
   {
     if (v.size() < 64)
       {

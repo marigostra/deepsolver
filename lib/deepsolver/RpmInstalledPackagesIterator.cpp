@@ -21,14 +21,14 @@
 
 DEEPSOLVER_BEGIN_NAMESPACE
 
-void RpmInstalledPackagesIterator::openEnum()
+void RpmInstalledPkgIterator::openEnum()
 {
   if (rpmdbOpen( "", &m_db, O_RDONLY, 0644 ) != 0)//FIXME:root directory;
     throw PackageBackEndException("rpmdbOpen()");
   m_it = rpmdbInitIterator(m_db, RPMDBI_PACKAGES, NULL, 0);
 }
 
-bool RpmInstalledPackagesIterator::moveNext(Pkg& pkg)
+bool RpmInstalledPkgIterator::moveNext(Pkg& pkg)
 {                                                                                                                                                              
   Header h = rpmdbNextIterator(m_it);
   if (!h)

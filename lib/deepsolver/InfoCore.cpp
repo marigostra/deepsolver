@@ -17,22 +17,22 @@
 
 #include"deepsolver/deepsolver.h"
 #include"deepsolver/InfoCore.h"
-#include"deepsolver/AbstractPackageBackEnd.h"
+#include"deepsolver/AbstractPkgBackEnd.h"
 #include"deepsolver/PkgSnapshot.h"
-#include"deepsolver/PkgUtils.h"
 
 DEEPSOLVER_BEGIN_NAMESPACE
 
 void InfoCore::listKnownPackages(PkgVector& pkgs, bool noInstalled, bool noRepoAvailable)
 {
+  /*FIXME:Should go to OperationCore
   assert(!noInstalled || !noRepoAvailable);
   pkgs.clear();
   if (noRepoAvailable && !noInstalled)
     {
       File::readAhead("/var/lib/rpm/Packages");//FIXME:take the value from configuration;
       logMsg(LOG_DEBUG, "Info core is requested to list all installed packages without available with known repositories");
-      std::auto_ptr<AbstractPackageBackEnd> backend = createRpmBackEnd();
-      std::auto_ptr<AbstractInstalledPackagesIterator> it = backend->enumInstalledPackages();
+      std::auto_ptr<AbstractPkgBackEnd> backend = createRpmBackEnd();
+      std::auto_ptr<AbstractInstalledPkgIterator> it = backend->enumInstalledPkg();
       Pkg pkg;
       while(it->moveNext(pkg))
 	pkgs.push_back(pkg);
@@ -46,7 +46,7 @@ void InfoCore::listKnownPackages(PkgVector& pkgs, bool noInstalled, bool noRepoA
   if (!noInstalled)
     {
       File::readAhead("/var/lib/rpm/Packages");//FIXME:take the value from configuration;
-      std::auto_ptr<AbstractPackageBackEnd> backend = createRpmBackEnd();
+      std::auto_ptr<AbstractPkgBackEnd> backend = createRpmBackEnd();
       logMsg(LOG_DEBUG, "Adding information about installed packages");
       PkgUtils::fillWithhInstalledPackages(*backend.get(), snapshot, m_autoReleaseStrings, m_conf.root().stopOnInvalidInstalledPkg);
     }
@@ -62,6 +62,7 @@ void InfoCore::listKnownPackages(PkgVector& pkgs, bool noInstalled, bool noRepoA
       pkgs[i].buildTime = p[i].buildTime;
     }
   logMsg(LOG_DEBUG, "Collected list of %zu packages", pkgs.size());
+  */
 }
 
 DEEPSOLVER_END_NAMESPACE

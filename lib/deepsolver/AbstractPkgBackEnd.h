@@ -15,8 +15,8 @@
    General Public License for more details.
 */
 
-#ifndef DEEPSOLVER_ABSTRACT_PACKAGE_BACK_END_H
-#define DEEPSOLVER_ABSTRACT_PACKAGE_BACK_END_H
+#ifndef DEEPSOLVER_ABSTRACT_PKG_BACK_END_H
+#define DEEPSOLVER_ABSTRACT_PKG_BACK_END_H
 
 namespace Deepsolver
 {
@@ -28,14 +28,14 @@ namespace Deepsolver
    *
    * \sa AbstractPackageBackEnd RpmBackEnd RpmInstalledPackagesIterator
    */
-  class AbstractInstalledPackagesIterator
+  class AbstractInstalledPkgIterator
   {
   public:
     /**\brief The default constructor*/
-    AbstractInstalledPackagesIterator() {}
+    AbstractInstalledPkgIterator() {}
 
     /**\brief The destructor*/
-    virtual ~AbstractInstalledPackagesIterator() {}
+    virtual ~AbstractInstalledPkgIterator() {}
 
   public:
     /**\brief Goes to next installed package and fills data associated with it
@@ -50,7 +50,7 @@ namespace Deepsolver
      * \return Non-zero if there is next package or zero otherwise (including the case there are no packages at all)
      */
     virtual bool moveNext(Pkg& pkg) = 0; 
-  }; //class AbstractInstalledPackagesIterator;
+  }; //class AbstractInstalledPkgIterator;
 
   /**\brief The abstract package back-end interface
    *
@@ -65,14 +65,14 @@ namespace Deepsolver
    *
    * \sa RpmBackEnd 
    */
-  class AbstractPackageBackEnd
+  class AbstractPkgBackEnd
   {
   public:
     /**\brief The default constructor*/
-    AbstractPackageBackEnd() {}
+    AbstractPkgBackEnd() {}
 
     /**\brief The destructor*/
-    virtual ~AbstractPackageBackEnd() {}
+    virtual ~AbstractPkgBackEnd() {}
 
   public:
     /**\brief Prepares package back-end for any operations
@@ -95,7 +95,7 @@ namespace Deepsolver
      *
      * \return The integer value less than zero in case of ver1 less than ver2, greater than zero if ver1 greater than ver2 and zero otherwise
      */
-    virtual int versionCompare(const std::string& ver1, const std::string& ver2) const = 0;
+    virtual int verCmp(const std::string& ver1, const std::string& ver2) const = 0;
 
     /**\brief Overlaps two version ranges
      *
@@ -109,7 +109,7 @@ namespace Deepsolver
      *
      * \return Non-zero if intersection is not empty
      */
-    virtual bool versionOverlap(const VersionCond& ver1, const VersionCond& ver2) const = 0;
+    virtual bool verOverlap(const VersionCond& ver1, const VersionCond& ver2) const = 0;
 
     /**\brief Compares two version values for equality
      *
@@ -120,7 +120,7 @@ namespace Deepsolver
      *
      * \return Non-zero if two strings designates the same value or zero otherwise
      */
-    virtual bool versionEqual(const std::string& ver1, const std::string& ver2) const = 0;
+    virtual bool verEqual(const std::string& ver1, const std::string& ver2) const = 0;
 
     /**\brief Checks if one version is newer than another
      *
@@ -131,7 +131,7 @@ namespace Deepsolver
      *
      * \return Non-zero if ver1 is greater than ver2 or zero if ver1 is less or equal ver2
      */
-    virtual bool versionGreater(const std::string& ver1, const std::string& ver2) const = 0;
+    virtual bool verGreater(const std::string& ver1, const std::string& ver2) const = 0;
 
     /**\brief Creates an instance of an iterator over the set of installed packages
      *
@@ -142,7 +142,7 @@ namespace Deepsolver
      *
      * \return The iterator over set of installed packages
      */
-    virtual std::auto_ptr<AbstractInstalledPackagesIterator> enumInstalledPackages() const = 0;
+    virtual std::auto_ptr<AbstractInstalledPkgIterator> enumInstalledPkg() const = 0;
 
     /**\brief Reads header information from package file on disk
      *
@@ -153,7 +153,7 @@ namespace Deepsolver
      * \param [in] fileName The name of the file to read data from
      * \param [out] pkgFile The object to save retrieved data in
      */
-    virtual void readPackageFile(const std::string& fileName, PkgFile& pkgFile) const = 0;
+    virtual void readPkgFile(const std::string& fileName, PkgFile& pkgFile) const = 0;
 
     /**\brief Checks if provided file name is a proper package name
      *
@@ -202,12 +202,12 @@ namespace Deepsolver
 			     const StringVector& toRemove,
 			     const StringToStringMap& toUpgrade,
 			     const StringToStringMap& toDowngrade) = 0; 
-  }; //class AbstractPackageBackEnd;
+  }; //class AbstractPkgBackEnd;
 
-  std::auto_ptr<AbstractPackageBackEnd> createRpmBackEnd();
+  std::auto_ptr<AbstractPkgBackEnd> createRpmBackEnd();
 
-  //General proposal consider this line as main switch what backend we want;
-#define CREATE_PACKAGE_BACKEND createRpmBackEnd()
+  //General proposal is to consider this line as main switch what backend we want;
+#define CREATE_PKG_BACKEND createRpmBackEnd()
 } //namespace Deepsolver;
 
-#endif //DEEPSOLVER_ABSTRACT_PACKAGE_BACK_END_H;
+#endif //DEEPSOLVER_ABSTRACT_PKG_BACK_END_H;

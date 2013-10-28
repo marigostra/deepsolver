@@ -18,18 +18,18 @@
 #ifndef DEEPSOLVER_PACKAGE_INFO_PROCESSOR_H
 #define DEEPSOLVER_PACKAGE_INFO_PROCESSOR_H
 
-#include"deepsolver/AbstractPackageRecipient.h"
+#include"deepsolver/AbstractPkgRecipient.h"
 
 namespace Deepsolver
 {
-  class PackageInfoProcessor: public AbstractPackageRecipient
+  class PkgInfoProcessor: public AbstractPkgRecipient
   {
   public:
     /**\brief The default constructor*/
-    PackageInfoProcessor() {}
+    PkgInfoProcessor() {}
 
     /**\brief The destructor*/
-    virtual ~PackageInfoProcessor() {}
+    virtual ~PkgInfoProcessor() {}
 
   public:
     /**\brief Accepts new package file entry

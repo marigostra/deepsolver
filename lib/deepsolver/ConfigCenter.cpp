@@ -22,7 +22,7 @@
 
 DEEPSOLVER_BEGIN_NAMESPACE
 
-static std::string buildConfigParamTitle(const StringVector& path, const std::string& sectArg);
+//static std::string buildConfigParamTitle(const StringVector& path, const std::string& sectArg);
 
 static bool checkUrl(const std::string& url);
 
@@ -324,6 +324,7 @@ void ConfigCenter::addBooleanParam2(const std::string& path1,
 
 //Static functions;
 
+/*
 std::string buildConfigParamTitle(const StringVector& path, const std::string& sectArg)
 {
   assert(!path.empty());
@@ -334,6 +335,7 @@ std::string buildConfigParamTitle(const StringVector& path, const std::string& s
     value += "." + path[i];
   return value;
 }
+*/
 
 bool checkUrl(const std::string& url)
 {
@@ -345,3 +347,40 @@ bool checkUrl(const std::string& url)
 }
 
 DEEPSOLVER_END_NAMESPACE
+
+/*FIXME:
+VarId SatBuilder::byProvidesPriorityList(const VarIdVector& vars, PkgId provideEntry) const
+{
+
+  assert(!vars.empty());
+  const std::string provideName = m_scope.pkgIdToStr(provideEntry);
+  TaskSolverProvideInfoVector::size_type k = 0;
+  while(k < m_providesPriority.size() && provideName != m_providesPriority[k].name)
+    k++;
+  if (k >= m_providesPriority.size())
+    return BadVarId;
+  const StringVector& providers = m_providesPriority[k].providers;
+  for(StringVector::size_type i = 0;i < providers.size();i++)
+    {
+      if (!m_scope.checkName(providers[i]))
+	continue;
+      const PackageId providerId = m_scope.strToPackageId(providers[i]);
+      assert(providerId != BadPkgId);
+      for(VarIdVector::size_type k = 0;k < vars.size();k++)
+	if (providerId == m_scope.packageIdOfVarId(vars[k]))
+	  return vars[k];
+    }
+  return BadVarId;
+}
+
+  for(ConfProvideVector::size_type i = 0;i < root.provide.size();i++)
+    {
+      assert(!trim(root.provide[i].name).empty());
+      TaskSolverProvideInfo info(root.provide[i].name);
+      for(StringVector::size_type k = 0;k < root.provide[i].providers.size();k++)
+	info.providers.push_back(root.provide[i].providers[k]);
+      taskSolverData.provides.push_back(info);
+    }
+
+
+*/

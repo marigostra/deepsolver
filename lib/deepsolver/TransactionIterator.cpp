@@ -144,7 +144,7 @@ void TransactionIterator::fetchPackages(AbstractFetchListener& listener,
 
 void TransactionIterator::makeChanges()
 {
-  m_backEnd->transaction(m_filesInstall, m_namesRemove, m_filesUpgrade, m_filesDowngrade);
+  m_backend->transaction(m_filesInstall, m_namesRemove, m_filesUpgrade, m_filesDowngrade);
 }
 
 DEEPSOLVER_END_NAMESPACE

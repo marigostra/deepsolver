@@ -18,7 +18,7 @@
 #ifndef DEEPSOLVER_RPM_INSTALLED_PACKAGES_ITERATOR_H
 #define DEEPSOLVER_RPM_INSTALLED_PACKAGES_ITERATOR_H
 
-#include"deepsolver/AbstractPackageBackEnd.h"
+#include"deepsolver/AbstractPkgBackEnd.h"
 #include<rpm/rpmlib.h>
 
 
@@ -32,14 +32,14 @@ namespace Deepsolver
    *
    * \sa AbstractPackageBackEnd RpmBackEnd
    */
-  class RpmInstalledPackagesIterator: public AbstractInstalledPackagesIterator
+  class RpmInstalledPkgIterator: public AbstractInstalledPkgIterator
   {
   public:
     /**\brief The default constructor*/
-    RpmInstalledPackagesIterator() {}
+    RpmInstalledPkgIterator() {}
 
   /**\brief The destructor*/
-    virtual ~RpmInstalledPackagesIterator() {}
+    virtual ~RpmInstalledPkgIterator() {}
 
   public:
     void openEnum();
@@ -48,7 +48,7 @@ namespace Deepsolver
   private:
     rpmdb m_db;
     rpmdbMatchIterator m_it;
-  }; //class RpmInstalledPackagesIterator;
+  }; //class RpmInstalledPkgIterator;
 } //namespace Deepsolver;
 
 #endif //DEEPSOLVER_RPM_INSTALLED_PACKAGES_ITERATOR_H;

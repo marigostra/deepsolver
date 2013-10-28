@@ -17,7 +17,7 @@
 
 #include"deepsolver/deepsolver.h"
 #include"deepsolver/IndexCore.h"
-#include"deepsolver/AbstractPackageBackEnd.h"
+#include"deepsolver/AbstractPkgBackEnd.h"
 #include"deepsolver/PkgSection.h"
 #include"deepsolver/TextFormatSectionReader.h"
 #include"deepsolver/Md5File.h"
@@ -209,7 +209,7 @@ void IndexCore::buildIndex(const RepoParams& params)
     }
       pkgCompleteFile = std::auto_ptr<UnifiedOutput>(new StdOutput(pkgCompleteFileName));
   logMsg(LOG_DEBUG, "All files were created");
-  std::auto_ptr<AbstractPackageBackEnd> backend = CREATE_PACKAGE_BACKEND;
+  std::auto_ptr<AbstractPkgBackEnd> backend = CREATE_PKG_BACKEND;
   logMsg(LOG_DEBUG, "Package backend was created");
   //We ready to collect information about packages in specified directories;
   size_t countBinary = 0, countSource = 0;
@@ -225,7 +225,7 @@ void IndexCore::buildIndex(const RepoParams& params)
 	  if (!backend->validPkgFileName(it->name()))
 	    continue;
 	  PkgFile pkg;
-	  backend->readPackageFile(it->fullPath(), pkg);
+	  backend->readPkgFile(it->fullPath(), pkg);
 	  pkg.fileName = it->name();
 	  pkg.isSource = backend->validSourcePkgFileName(it->name());
 	  NamedPkgRelVector requires = pkg.requires;
@@ -330,13 +330,13 @@ void IndexCore::rebuildIndex(const RepoParams& params, const StringVector& toAdd
       if (!md5File.verifyItem(i, Directory::mixNameComponents(params.indexPath, md5File.items[i].fileName)))
 	throw IndexCoreException(IndexCoreException::CorruptedFile, Directory::mixNameComponents(params.indexPath, md5File.items[i].fileName));
     }
-  std::auto_ptr<AbstractPackageBackEnd> backend = CREATE_PACKAGE_BACKEND;
+  std::auto_ptr<AbstractPkgBackEnd> backend = CREATE_PKG_BACKEND;
   PkgFileVector pkgs;
   pkgs.resize(toAdd.size());
   logMsg(LOG_INFO, "Reading packages to add (%zu total)", pkgs.size());
   for(PkgFileVector::size_type i = 0;i < pkgs.size();i++)
     {
-      backend->readPackageFile(toAdd[i], pkgs[i]);
+      backend->readPkgFile(toAdd[i], pkgs[i]);
       pkgs[i].fileName = File::baseName(toAdd[i]);
       pkgs[i].isSource = backend->validSourcePkgFileName(toAdd[i]);
       NamedPkgRelVector requires = pkgs[i].requires;
@@ -749,7 +749,7 @@ void IndexCore::collectRefs(const std::string& dirName, StringSet& res)
       logMsg(LOG_INFO, "Directory \'%s\' does not contain a valid repo index:%s error:%s", dirName.c_str(), e.getType().c_str(), e.getMessage().c_str());
     }
   logMsg(LOG_INFO, "Since repository index reading failed  we are looking for just packages itself");
-  std::auto_ptr<AbstractPackageBackEnd> backend = CREATE_PACKAGE_BACKEND;
+  std::auto_ptr<AbstractPkgBackEnd> backend = CREATE_PKG_BACKEND;
   std::auto_ptr<Directory::Iterator> it = Directory::enumerate(dirName);
   while(it->moveNext())
     {
@@ -758,7 +758,7 @@ void IndexCore::collectRefs(const std::string& dirName, StringSet& res)
       if (!backend->validPkgFileName(it->name()))
 	continue;
       PkgFile pkgFile;
-      backend->readPackageFile(it->fullPath(), pkgFile);
+      backend->readPkgFile(it->fullPath(), pkgFile);
       for(NamedPkgRelVector::size_type i =0; i < pkgFile.requires.size();i++)
 	res.insert(pkgFile.requires[i].pkgName);
       for(NamedPkgRelVector::size_type i = 0;i < pkgFile.conflicts.size();i++)

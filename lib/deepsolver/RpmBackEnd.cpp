@@ -34,37 +34,37 @@ void RpmBackEnd::initialize()
     }
 }
 
-int RpmBackEnd::versionCompare(const std::string& ver1, const std::string& ver2) const
+int RpmBackEnd::verCmp(const std::string& ver1, const std::string& ver2) const
 {
   return rpmvercmp(ver1.c_str(), ver2.c_str());
 }
 
-bool RpmBackEnd::versionOverlap(const VersionCond& ver1, const VersionCond& ver2) const
+bool RpmBackEnd::verOverlap(const VersionCond& ver1, const VersionCond& ver2) const
 {
   return rpmRangesOverlap("", ver1.version.c_str(), buildSenseFlags(ver1),
 			  "", ver2.version.c_str(), buildSenseFlags(ver2));
 }
 
-bool RpmBackEnd::versionEqual(const std::string& ver1, const std::string& ver2) const
+bool RpmBackEnd::verEqual(const std::string& ver1, const std::string& ver2) const
 {
-  return versionOverlap(VersionCond(ver1), VersionCond(ver2));
+  return verOverlap(VersionCond(ver1), VersionCond(ver2));
 }
 
-bool RpmBackEnd::versionGreater(const std::string& ver1, const std::string& ver2) const
+bool RpmBackEnd::verGreater(const std::string& ver1, const std::string& ver2) const
 {
-  return versionOverlap(VersionCond(ver1, VerLess), VersionCond(ver2));
+  return verOverlap(VersionCond(ver1, VerLess), VersionCond(ver2));
 }
 
-std::auto_ptr<AbstractInstalledPackagesIterator> RpmBackEnd::enumInstalledPackages() const
+std::auto_ptr<AbstractInstalledPkgIterator> RpmBackEnd::enumInstalledPkg() const
 {
-  std::auto_ptr<RpmInstalledPackagesIterator> rpmIterator(new RpmInstalledPackagesIterator());
+  std::auto_ptr<RpmInstalledPkgIterator> rpmIterator(new RpmInstalledPkgIterator());
   rpmIterator->openEnum();
-  std::auto_ptr<AbstractInstalledPackagesIterator> it(rpmIterator.get());
+  std::auto_ptr<AbstractInstalledPkgIterator> it(rpmIterator.get());
   rpmIterator.release();
   return it;
 }
 
-void RpmBackEnd::readPackageFile(const std::string& fileName, PkgFile& pkgFile) const
+void RpmBackEnd::readPkgFile(const std::string& fileName, PkgFile& pkgFile) const
 {
   RpmFileHeaderReader reader;
   reader.load(fileName);
@@ -113,9 +113,9 @@ int buildSenseFlags(const VersionCond& c)
   return value;
 }
 
-std::auto_ptr<AbstractPackageBackEnd> createRpmBackEnd()
+std::auto_ptr<AbstractPkgBackEnd> createRpmBackEnd()
 {
-  return std::auto_ptr<AbstractPackageBackEnd>(new RpmBackEnd());
+  return std::auto_ptr<AbstractPkgBackEnd>(new RpmBackEnd());
 }
 
 bool RpmBackEnd::transaction(const StringVector& toInstall,

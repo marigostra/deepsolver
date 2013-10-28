@@ -18,7 +18,7 @@
 #ifndef DEEPSOLVER_PKG_SNAPSHOT_H
 #define DEEPSOLVER_PKG_SNAPSHOT_H
 
-#include"deepsolver/AbstractPackageRecipient.h"
+#include"deepsolver/AbstractPkgRecipient.h"
 
 #define DEEPSOLVER_BEGIN_PKG_SNAPSHOT_NAMESPACE namespace PkgSnapshot {
 #define DEEPSOLVER_END_PKG_SNAPSHOT_NAMESPACE }
@@ -174,7 +174,7 @@ namespace Deepsolver
     size_t getScore(const Snapshot& snapshot);
     bool theSameVersion(const Deepsolver::Pkg& p1, const Deepsolver::PkgSnapshot::Pkg& p2);
 
-    class PkgRecipientAdapter: public AbstractPackageRecipient
+    class PkgRecipientAdapter: public AbstractPkgRecipient
     {
     public:
       /**\brief The constructor*/

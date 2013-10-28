@@ -20,17 +20,34 @@
 
 DEEPSOLVER_BEGIN_NAMESPACE
 
-PkgId PkgScopeBase::packageIdOfVarId(VarId varId) const
+bool PkgScopeBase::knownPkgName(const std::string& name) const
 {
-  assert(varId < m_pkgs.size());
-  return m_pkgs[varId].pkgId;
+  assert(!name.empty());
+  return PkgSnapshot::checkName(m_snapshot, name);
+}
+
+std::string PkgScopeBase::getPkgName(VarId varId) const
+{
+  assert(varId != BadVarId && varId < m_pkgs.size());
+  return pkgIdToStr(m_pkgs[varId].pkgId);
+}
+
+std::string PkgScopeBase::getDesignation(VarId varId, int epochMode) const
+{
+  assert(varId != BadVarId);
+  const std::string name = getPkgName(varId);
+  const std::string ver = getVersion(varId, epochMode);
+  assert(!name.empty() && !ver.empty());
+  return name + "-" + ver;
 }
 
 std::string PkgScopeBase::getDesignation(const IdPkgRel& r) const
 {
-  std::string s = packageIdToStr(r.pkgId);
+  assert(r.pkgId != BadPkgId);
+  std::string s = pkgIdToStr(r.pkgId);
   if (r.verDir == VerNone)
     return s;
+  assert(!r.ver.empty());
   s += " ";
   if (r.verDir & VerLess)
     s += "<";
@@ -38,111 +55,80 @@ std::string PkgScopeBase::getDesignation(const IdPkgRel& r) const
     s += ">";
   if (r.verDir & VerEquals)
     s += "=";
-  s += " ";
-  s += r.ver;
-  return s;
+  return s + " " + r.ver;
 }
 
-std::string PkgScopeBase::getVersion(VarId varId) const
+std::string PkgScopeBase::getVersion(VarId varId, int epochMode) const
 {
-  assert(varId < m_pkgs.size());
+  assert(varId != BadVarId && varId < m_pkgs.size());
   const SnapshotPkg& pkg = m_pkgs[varId];
   assert(pkg.ver != NULL && pkg.release != NULL);
   std::ostringstream res;
-  res << pkg.epoch << ":" << pkg.ver << "-" << pkg.release;
+  switch(epochMode)
+    {
+    case EpochAlways:
+      res << pkg.epoch << ":";
+      break;
+    case EpochIfNonZero:
+  res << pkg.epoch << ":";
+  break;
+    };
+  res << pkg.ver << "-" << pkg.release;
   return res.str();
 }
 
-void PkgScopeBase::fillPkgData(VarId varId, Pkg& dest) const
+void PkgScopeBase::fullPkgData(VarId varId, Pkg& pkg) const
 {
-  assert(varId < m_pkgs.size());
-  const SnapshotPkg& pkg = m_pkgs[varId];
-  assert(pkg.ver != NULL || pkg.release != NULL);
-  dest.name = packageIdToStr(pkg.pkgId);
-  dest.epoch = pkg.epoch;
-  dest.version = pkg.ver;
-  dest.release = pkg.release;
-  dest.buildTime = pkg.buildTime;
+  assert(varId != BadVarId && varId < m_pkgs.size());
+  const SnapshotPkg& p = m_pkgs[varId];
+  assert(p.ver != NULL || p.release != NULL);
+  pkg.name = pkgIdToStr(p.pkgId);
+  pkg.epoch = p.epoch;
+  pkg.version = p.ver;
+  pkg.release = p.release;
+  pkg.buildTime = p.buildTime;
 }
 
-std::string PkgScopeBase::constructPackageName(VarId varId) const
+PkgId PkgScopeBase::pkgIdOfVarId(VarId varId) const
 {
-  assert(varId < m_pkgs.size());
-  const SnapshotPkg& pkg = m_pkgs[varId];
-  std::string res = packageIdToStr(pkg.pkgId);
-  assert(pkg.ver != NULL);
-  res += "-";
-  res += pkg.ver;
-  assert(pkg.release != NULL);
-  res += "-";
-  res += pkg.release;
-  return res;
+  assert(varId != BadVarId && varId < m_pkgs.size());
+  return m_pkgs[varId].pkgId;
 }
 
-std::string PkgScopeBase::getPackageName(VarId varId) const
+std::string PkgScopeBase::pkgIdToStr(PkgId pkgId) const
 {
-  assert(varId < m_pkgs.size());
-  const SnapshotPkg& pkg = m_pkgs[varId];
-return packageIdToStr(pkg.pkgId);
-}
-
-std::string PkgScopeBase::constructPackageNameWithBuildTime(VarId varId) const
-{
-  assert(varId < m_pkgs.size());
-  const SnapshotPkg& pkg = m_pkgs[varId];
-  std::ostringstream res;
-  res << packageIdToStr(pkg.pkgId);
-  assert(pkg.ver != NULL && pkg.release != NULL);
-  res << "-" << pkg.ver << "-" << pkg.release;
-  res << " (" << pkg.buildTime << ")";
-  return res.str();
-}
-
-bool PkgScopeBase::checkName(const std::string& name) const
-{
-  return PkgSnapshot::checkName(m_snapshot, name);
-}
-
-PkgId PkgScopeBase::strToPackageId(const std::string& name) const
-{
-  return PkgSnapshot::strToPkgId(m_snapshot, name);
-}
-
-std::string PkgScopeBase::packageIdToStr(PkgId pkgId) const
-{
+  assert(pkgId != BadPkgId);
   return PkgSnapshot::pkgIdToStr(m_snapshot, pkgId);
 }
 
-int PkgScopeBase::versionCompare(const std::string& ver1, const std::string& ver2) const
+PkgId PkgScopeBase::strToPkgId(const std::string& name) const
 {
-  return m_backEnd.versionCompare(ver1, ver2);
+  assert(!name.empty());
+  return PkgSnapshot::strToPkgId(m_snapshot, name);
 }
 
-bool PkgScopeBase::versionOverlap(const VersionCond& ver1, const VersionCond& ver2) const
+int PkgScopeBase::verCmp(const std::string& ver1, const std::string& ver2) const
 {
-  return m_backEnd.versionOverlap(ver1, ver2);
+  assert(!ver1.empty() && !ver2.empty());
+  return m_backend.verCmp(ver1, ver2);
 }
 
-bool PkgScopeBase::versionEqual(const std::string& ver1, const std::string& ver2) const
+bool PkgScopeBase::verOverlap(const VersionCond& ver1, const VersionCond& ver2) const
 {
-  return m_backEnd.versionEqual(ver1, ver2);
+  //FIXME:  assert(ver1.valid() && !ver2.valid());
+  return m_backend.verOverlap(ver1, ver2);
 }
 
-bool PkgScopeBase::versionGreater(const std::string& ver1, const std::string& ver2) const
+bool PkgScopeBase::verEqual(const std::string& ver1, const std::string& ver2) const
 {
-  return m_backEnd.versionGreater(ver1, ver2);
+  assert(!ver1.empty() && !ver2.empty());
+  return m_backend.verEqual(ver1, ver2);
 }
 
-std::string PkgScopeBase::constructFullVersion(VarId varId) const
+bool PkgScopeBase::verGreater(const std::string& ver1, const std::string& ver2) const
 {
-  assert(varId < m_pkgs.size());
-  const SnapshotPkg& pkg = m_pkgs[varId];
-  assert(pkg.ver != NULL && pkg.release != NULL);
-  std::ostringstream ss;
-  if (pkg.epoch > 0)
-    ss << pkg.epoch << ":";
-  ss << pkg.ver << "-" << pkg.release;
-  return ss.str();
+  assert(!ver1.empty() && !ver2.empty());
+  return m_backend.verGreater(ver1, ver2);
 }
 
 DEEPSOLVER_END_NAMESPACE

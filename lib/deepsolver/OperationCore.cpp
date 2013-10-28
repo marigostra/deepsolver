@@ -18,20 +18,136 @@
 #include"deepsolver/deepsolver.h"
 #include"deepsolver/OperationCore.h"
 #include"deepsolver/Repository.h"
-#include"deepsolver/PackageInfoProcessor.h"
+#include"deepsolver/PkgInfoProcessor.h"
 #include"deepsolver/FilesFetch.h"
-#include"deepsolver/AbstractPackageBackEnd.h"
+#include"deepsolver/AbstractPkgBackEnd.h"
 #include"deepsolver/AbstractTaskSolver.h"
-#include"deepsolver/AbstractSatSolver.h"
+#include"deepsolver/Sat.h"
 #include"deepsolver/PkgScope.h"
-#include"deepsolver/SatWriter.h"
 #include"deepsolver/PkgSnapshot.h"
-#include"deepsolver/PkgUtils.h"
 
 DEEPSOLVER_BEGIN_NAMESPACE
 
-static std::string urlToFileName(const std::string& url);
-static void buildTemporaryIndexFileNames(StringToStringMap& files, const std::string& tmpDirName);
+namespace
+{
+  void fillWithhInstalledPackages(AbstractPkgBackEnd& backend,
+				  PkgSnapshot::Snapshot& snapshot,
+				  ConstCharVector& strings,
+				  bool stopOnInvalidPkg)
+  {
+    PkgSnapshot::removeEqualPkgs(snapshot);
+    PkgSnapshot::PkgVector& pkgs = snapshot.pkgs;
+    std::auto_ptr<AbstractInstalledPkgIterator> it = backend.enumInstalledPkg();
+    size_t installedCount = 0;
+    PkgVector toInhanceWith;
+    Pkg pkg;
+    while(it->moveNext(pkg))
+      {
+	if (!pkg.valid())
+	  {
+	    if (stopOnInvalidPkg)
+	      throw OperationException(OperationException::InvalidInstalledPkg); else //FIXME:Add package designation here;
+	      logMsg(LOG_WARNING, "OS has an invalid package: %s", pkg.designation().c_str());
+	  }
+	installedCount++;
+	const PkgId pkgId = PkgSnapshot::strToPkgId(snapshot, pkg.name);//FIXME:must be got with checkName();
+	if (pkgId == BadPkgId)
+	  {
+	    toInhanceWith.push_back(pkg);
+	    continue;
+	  }
+	VarId fromVarId, toVarId;
+	PkgSnapshot::locateRange(snapshot, pkgId, fromVarId, toVarId);
+	//Here fromVarId can be equal to toVarId. That means name of installed package is met in relations of attached repositories;
+	bool found = 0;
+	for(VarId varId = fromVarId;varId < toVarId;varId++)
+	  {
+	    assert(varId < pkgs.size());
+	    PkgSnapshot::Pkg& oldPkg = pkgs[varId];
+	    assert(oldPkg.pkgId == pkgId);
+	    if (PkgSnapshot::theSameVersion(pkg, oldPkg))
+	      {
+		oldPkg.flags |= PkgFlagInstalled;
+		found = 1;
+	      }
+	  }
+	if (!found)
+	  toInhanceWith.push_back(pkg);
+      } //while(installed packages);
+    logMsg(LOG_DEBUG, "utils:the system has %zu installed packages, %zu of them should be added to the existing snapshot", installedCount, toInhanceWith.size());
+    PkgSnapshot::enhance(snapshot, toInhanceWith, PkgFlagInstalled, strings);
+  }
+
+  void fillUpgradeDowngrade(const AbstractPkgBackEnd& backend,
+			    const AbstractPkgScope& scope,
+			    VarIdVector& install,
+			    VarIdVector& remove,
+			    VarIdToVarIdMap& upgrade,
+			    VarIdToVarIdMap& downgrade)
+  {
+    upgrade.clear();
+    downgrade.clear();
+    for(VarIdVector::size_type i = 0;i < install.size();i++)
+      {
+	if (install[i] == BadVarId)
+	  continue;
+	VarIdVector::size_type j;
+	for(j = 0;j < remove.size();j++)
+	  if (remove[j] != BadVarId && scope.pkgIdOfVarId(remove[j]) == scope.pkgIdOfVarId(install[i]))
+	    break;
+	if (j >= remove.size())
+	  continue;
+	const std::string versionToInstall = scope.getVersion(install[i]);
+	const std::string versionToRemove = scope.getVersion(remove[j]);
+	if (!backend.verEqual(versionToInstall, versionToRemove))//Packages may be  with equal versions but with different build times;
+	  {
+	    if (backend.verGreater(versionToInstall, versionToRemove))
+	      upgrade.insert(VarIdToVarIdMap::value_type(remove[j], install[i])); else
+	      downgrade.insert(VarIdToVarIdMap::value_type(remove[j], install[i]));
+	    install[i] = BadVarId;
+	  } else
+	  logMsg(LOG_WARNING, "upgrade:trying to upgrade packages with same version but with different build time: %s and %s", scope.getDesignation(install[i]).c_str(), scope.getDesignation(remove[j]).c_str());
+	remove[j] = BadVarId;
+      }
+    for(VarIdVector::size_type i = 0;i < install.size();i++)
+      while (i < install.size() && install[i] == BadVarId)
+	{
+	  install[i] = install.back();
+	  install.pop_back();
+	}
+    for(VarIdVector::size_type i = 0;i < remove.size();i++)
+      while (i < remove.size() && remove[i] == BadVarId)
+	{
+	  remove[i] = remove.back();
+	  remove.pop_back();
+	}
+  }
+
+  std::string urlToFileName(const std::string& url)
+  {
+    std::string s;
+    for(std::string::size_type i = 0;i < url.length();i++)
+      {
+	const char c = url[i];
+	if ((c >= 'a' && c <= 'z') ||
+	    (c >= 'A' && c <= 'Z') ||
+	    (c >= '0' && c<= '9') ||
+	    c == '-' ||
+	    c == '_')
+	  s += c; else 
+	  if (s.empty() || s[s.length() - 1] != '-')
+	    s += '-';
+      } //for();
+    return s;
+  }
+
+  void buildTemporaryIndexFileNames(StringToStringMap& files, const std::string& tmpDirName)
+  {
+    for(StringToStringMap::iterator it = files.begin();it != files.end();it++)
+      it->second = Directory::mixNameComponents(tmpDirName, urlToFileName(it->first));
+  }
+}
+
 
 void OperationCore::fetchIndices(AbstractFetchListener& listener,
 				 const AbstractOperationContinueRequest& continueRequest)
@@ -96,7 +212,7 @@ void OperationCore::fetchIndices(AbstractFetchListener& listener,
   StringToPkgIdMap stringToPkgIdMap;
   PkgSnapshot::PkgRecipientAdapter snapshotAdapter(snapshot, m_autoReleaseStrings, stringToPkgIdMap);
   PkgUrlsFile urlsFile(m_conf);
-  PackageInfoProcessor infoProcessor;
+  PkgInfoProcessor infoProcessor;
   urlsFile.open();
   for(RepositoryVector::size_type i = 0; i < repo.size();i++)
     repo[i].loadPackageData(files, snapshotAdapter, urlsFile, infoProcessor);
@@ -121,64 +237,54 @@ std::auto_ptr<TransactionIterator> OperationCore::transaction(AbstractTransactio
   freeAutoReleaseStrings();
   for(StringVector::size_type i = 0;i < root.os.transactReadAhead.size();i++)
     File::readAhead(root.os.transactReadAhead[i]);
-  std::auto_ptr<AbstractPackageBackEnd> backEnd = CREATE_PACKAGE_BACKEND;
-  backEnd->initialize();
+  std::auto_ptr<AbstractPkgBackEnd> backend = CREATE_PKG_BACKEND;
+  backend->initialize();
   PkgSnapshot::Snapshot snapshot;
-  ProvideMap provideMap;
-  InstalledReferences requiresReferences, conflictsReferences;
   listener.onPkgListProcessingBegin();
   PkgSnapshot::loadFromFile(snapshot, Directory::mixNameComponents(m_conf.root().dir.pkgData, PKG_DATA_FILE_NAME), m_autoReleaseStrings);
   if (snapshot.pkgs.empty())//FIXME:
     throw NotImplementedException("Empty set of attached repositories");
-  PkgUtils::fillWithhInstalledPackages(*backEnd.get(), snapshot, m_autoReleaseStrings, root.stopOnInvalidInstalledPkg);
-  PkgUtils::prepareReversedMaps(snapshot, provideMap, requiresReferences, conflictsReferences);
+  fillWithhInstalledPackages(*backend.get(), snapshot, m_autoReleaseStrings, root.stopOnInvalidInstalledPkg);
+  PkgScope scope(*backend.get(), snapshot);
+  scope.initMetadata();
   listener.onPkgListProcessingEnd();
-  PkgScope scope(*backEnd.get(), snapshot, provideMap, requiresReferences, conflictsReferences);
-  TaskSolverData taskSolverData(*backEnd.get(), scope);
-  for(ConfProvideVector::size_type i = 0;i < root.provide.size();i++)
-    {
-      assert(!trim(root.provide[i].name).empty());
-      TaskSolverProvideInfo info(root.provide[i].name);
-      for(StringVector::size_type k = 0;k < root.provide[i].providers.size();k++)
-	info.providers.push_back(root.provide[i].providers[k]);
-      taskSolverData.provides.push_back(info);
-    }
+  TaskSolverData taskSolverData(*backend.get(), scope, m_conf);
   std::auto_ptr<AbstractTaskSolver> solver = createTaskSolver(taskSolverData);
   VarIdVector toInstall, toRemove;
   solver->solve(userTask, toInstall, toRemove);
   VarIdToVarIdMap toUpgrade, toDowngrade;
-  PkgUtils::fillUpgradeDowngrade(*backEnd.get(), scope, toInstall, toRemove, toUpgrade, toDowngrade);
+  fillUpgradeDowngrade(*backend.get(), scope, toInstall, toRemove, toUpgrade, toDowngrade);
   PkgVector pkgInstall, pkgRemove, pkgUpgradeFrom, pkgUpgradeTo, pkgDowngradeFrom, pkgDowngradeTo;
   for(VarIdVector::size_type i = 0;i < toInstall.size();i++)
     {
       Pkg pkg;
-      scope.fillPkgData(toInstall[i], pkg);
+      scope.fullPkgData(toInstall[i], pkg);
       pkgInstall.push_back(pkg);
     }
   for(VarIdVector::size_type i = 0;i < toRemove.size();i++)
     {
       Pkg pkg;
-      scope.fillPkgData(toRemove[i], pkg);
+      scope.fullPkgData(toRemove[i], pkg);
       pkgRemove.push_back(pkg);
     }
   for(VarIdToVarIdMap::const_iterator it = toUpgrade.begin();it != toUpgrade.end();it++)
     {
       Pkg pkg1, pkg2;
-      scope.fillPkgData(it->first, pkg1);
-      scope.fillPkgData(it->second, pkg2);
+      scope.fullPkgData(it->first, pkg1);
+      scope.fullPkgData(it->second, pkg2);
       pkgUpgradeFrom.push_back(pkg1);
       pkgUpgradeTo.push_back(pkg2);
     }
   for(VarIdToVarIdMap::const_iterator it = toDowngrade.begin();it != toDowngrade.end();it++)
     {
       Pkg pkg1, pkg2;
-      scope.fillPkgData(it->first, pkg1);
-      scope.fillPkgData(it->second, pkg2);
+      scope.fullPkgData(it->first, pkg1);
+      scope.fullPkgData(it->second, pkg2);
       pkgDowngradeFrom.push_back(pkg1);
       pkgDowngradeTo.push_back(pkg2);
     }
   freeAutoReleaseStrings();
-  return std::auto_ptr<TransactionIterator>(new TransactionIterator(m_conf, backEnd,
+  return std::auto_ptr<TransactionIterator>(new TransactionIterator(m_conf, backend,
 								    pkgInstall, pkgRemove,
 								    pkgUpgradeFrom, pkgUpgradeTo,
 								    pkgDowngradeFrom, pkgDowngradeTo));
@@ -186,6 +292,7 @@ std::auto_ptr<TransactionIterator> OperationCore::transaction(AbstractTransactio
 
 std::string OperationCore::generateSat(AbstractTransactionListener& listener, const UserTask& userTask)
 {
+  /*FIXME:
   const ConfRoot& root = m_conf.root();
   freeAutoReleaseStrings();
   for(StringVector::size_type i = 0;i < root.os.transactReadAhead.size();i++)
@@ -217,10 +324,13 @@ std::string OperationCore::generateSat(AbstractTransactionListener& listener, co
   const std::string res = writer.generateSat(userTask);
   freeAutoReleaseStrings();
   return res;
+  */
+  return "#DISABLED FOR NOW#";
 }
 
 void OperationCore::printPackagesByRequire(const NamedPkgRel& rel, std::ostream& s)
 {
+  /*FIXME:
   const ConfRoot& root = m_conf.root();
   freeAutoReleaseStrings();
   for(StringVector::size_type i = 0;i < root.os.transactReadAhead.size();i++)
@@ -257,10 +367,12 @@ void OperationCore::printPackagesByRequire(const NamedPkgRel& rel, std::ostream&
       s << std::endl;
       }
   freeAutoReleaseStrings();
+  */
 }
 
 void OperationCore::printSnapshot(bool withInstalled, std::ostream& s)
 {
+  /*FIXME:
   if (withInstalled)
     logMsg(LOG_DEBUG, "operation:printing snapshot with installed packages"); else
     logMsg(LOG_DEBUG, "operation:printing snapshot without installed packages");
@@ -279,32 +391,7 @@ void OperationCore::printSnapshot(bool withInstalled, std::ostream& s)
     PkgUtils::fillWithhInstalledPackages(*backEnd.get(), snapshot, m_autoReleaseStrings, root.stopOnInvalidInstalledPkg);
   PkgSnapshot::printContent(snapshot, s);
   freeAutoReleaseStrings();
-}
-
-//Static functions;
-
-std::string urlToFileName(const std::string& url)
-{
-  std::string s;
-  for(std::string::size_type i = 0;i < url.length();i++)
-    {
-      const char c = url[i];
-      if ((c >= 'a' && c <= 'z') ||
-	  (c >= 'A' && c <= 'Z') ||
-	  (c >= '0' && c<= '9') ||
-	  c == '-' ||
-	  c == '_')
-	s += c; else 
-	if (s.empty() || s[s.length() - 1] != '-')
-	  s += '-';
-    } //for();
-  return s;
-}
-
-void buildTemporaryIndexFileNames(StringToStringMap& files, const std::string& tmpDirName)
-{
-  for(StringToStringMap::iterator it = files.begin();it != files.end();it++)
-    it->second = Directory::mixNameComponents(tmpDirName, urlToFileName(it->first));
+  */
 }
 
 DEEPSOLVER_END_NAMESPACE

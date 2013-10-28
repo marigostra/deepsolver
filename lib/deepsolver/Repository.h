@@ -19,7 +19,7 @@
 #define DEEPSOLVER_REPOSITORY_H
 
 #include"deepsolver/ConfigCenter.h"
-#include"deepsolver/AbstractPackageRecipient.h"
+#include"deepsolver/AbstractPkgRecipient.h"
 #include"deepsolver/RepoParams.h"
 #include"deepsolver/PkgUrlsFile.h"
 
@@ -64,9 +64,9 @@ namespace Deepsolver
     void addIndexFilesForFetch(StringToStringMap& files);
 
     void loadPackageData(const StringToStringMap& files, 
-			 AbstractPackageRecipient& transactData,
+			 AbstractPkgRecipient& transactData,
 			 PkgUrlsFile& urlsFile,
-			 AbstractPackageRecipient& pkgInfoData);
+			 AbstractPkgRecipient& pkgInfoData);
 
   private:
     std::string buildInfoFileUrl() const;

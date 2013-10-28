@@ -22,22 +22,36 @@
 
 DEEPSOLVER_BEGIN_NAMESPACE
 
-void PkgScope::selectMatchingVarsAmongProvides(const IdPkgRel& rel, VarIdVector& vars) const
+namespace
+{
+  VersionCond constructVersionCondEquals(int epoch, 
+						   const std::string& version,
+						   const std::string& release)
+  {
+    assert(!version.empty());
+    assert(!release.empty());
+    std::ostringstream ss;
+    ss  << epoch << ":" << version << "-" << release;
+    return VersionCond(ss.str(), VerEquals);
+  }
+}
+
+void PkgScope::selectMatchingVarsProvidesOnly(const IdPkgRel& rel, VarIdVector& vars) const
 {
   vars.clear();
   if (rel.hasVer())
-    selectMatchingVarsAmongProvides(rel.pkgId, rel.extractVersionCond(), vars); else
-    selectMatchingVarsAmongProvides(rel.pkgId, vars);
+    selectMatchingVarsProvidesOnly(rel.pkgId, rel.extractVersionCond(), vars); else
+    selectMatchingVarsProvidesOnly(rel.pkgId, vars);
 }
 
   //Only provides must be considered here;
-void PkgScope::selectMatchingVarsAmongProvides(PkgId pkgId, VarIdVector& vars) const
+void PkgScope::selectMatchingVarsProvidesOnly(PkgId pkgId, VarIdVector& vars) const
 {
   vars.clear();
   selectVarsToTry(pkgId, vars, 0);//0 means do not include packageId itself;
 }
 
-void PkgScope::selectMatchingVarsAmongProvides(PackageId packageId, const VersionCond& ver, VarIdVector& vars) const
+void PkgScope::selectMatchingVarsProvidesOnly(PackageId packageId, const VersionCond& ver, VarIdVector& vars) const
 {
   //Considering only provides entries and only with version information;
   vars.clear();
@@ -57,7 +71,7 @@ void PkgScope::selectMatchingVarsAmongProvides(PackageId packageId, const Versio
 	    continue;  
 	  assert(m_relations[pos + j].verDir != VerNone);
 	  if (m_relations[pos + j].pkgId == packageId && 
-	      versionOverlap(VersionCond(m_relations[pos + j].ver, m_relations[pos + j].verDir), ver))
+	      verOverlap(VersionCond(m_relations[pos + j].ver, m_relations[pos + j].verDir), ver))
 	    break;
 	}
       if (j < count)
@@ -97,7 +111,7 @@ void PkgScope::selectMatchingVarsRealNames(PackageId packageId, const VersionCon
   for(VarId i = fromPos;i < toPos;i++)
     {
       assert(m_pkgs[i].pkgId == packageId);
-      if (versionOverlap(constructVersionCondEquals(m_pkgs[i].epoch, m_pkgs[i].ver, m_pkgs[i].release), ver))
+      if (verOverlap(constructVersionCondEquals(m_pkgs[i].epoch, m_pkgs[i].ver, m_pkgs[i].release), ver))
 	vars.push_back(i);
     }
 }
@@ -124,7 +138,7 @@ void PkgScope::selectMatchingVarsWithProvides(PackageId packageId, const Version
   for(VarIdVector::size_type i = 0;i < toTry.size();i++)
     {
       assert(toTry[i] < m_pkgs.size());
-      if (m_pkgs[toTry[i]].pkgId == packageId && versionOverlap(constructVersionCondEquals(m_pkgs[toTry[i]].epoch, m_pkgs[toTry[i]].ver, m_pkgs[toTry[i]].release), ver))
+      if (m_pkgs[toTry[i]].pkgId == packageId && verOverlap(constructVersionCondEquals(m_pkgs[toTry[i]].epoch, m_pkgs[toTry[i]].ver, m_pkgs[toTry[i]].release), ver))
 	{
 	  vars.push_back(toTry[i]);
 	  continue;
@@ -140,7 +154,7 @@ void PkgScope::selectMatchingVarsWithProvides(PackageId packageId, const Version
 	  if (!HAS_VERSION(m_relations[pos + j]))
 	    continue;  
 	  assert(m_relations[pos + j].verDir != VerNone);
-	  if (m_relations[pos + j].pkgId == packageId && versionOverlap(VersionCond(m_relations[pos + j].ver, m_relations[pos + j].verDir), ver))
+	  if (m_relations[pos + j].pkgId == packageId && verOverlap(VersionCond(m_relations[pos + j].ver, m_relations[pos + j].verDir), ver))
 	    break;
 	}
       if (j < count)
@@ -167,14 +181,14 @@ void PkgScope::selectTheNewest(VarIdVector& vars) const
     {
       assert(vars[i] < m_pkgs.size());
   assert(m_pkgs[vars[i]].ver != NULL);
-  if (versionGreater(constructFullVersion(vars[i]), constructFullVersion(currentMax)))
+  if (verGreater(getVersion(vars[i], EpochAlways), getVersion(currentMax, EpochAlways)))
     currentMax = vars[i];
     }
   assert(currentMax < m_pkgs.size());
-  const std::string maxVersion = constructFullVersion(currentMax);
+  const std::string maxVersion = getVersion(currentMax, EpochAlways);
   size_t hasCount = 0;
   for(VarIdVector::size_type i = 0;i < vars.size();i++)
-    if (versionEqual(constructFullVersion(vars[i]), maxVersion))
+    if (verEqual(getVersion(vars[i], EpochAlways), maxVersion))
       vars[hasCount++] = vars[i];
   assert(hasCount > 0);
   vars.resize(hasCount);
@@ -208,12 +222,12 @@ void PkgScope::selectTheNewestByProvide(VarIdVector& vars, PackageId provideEntr
   assert(vars.size() == versions.size());
   size_t currentMax = 0;
   for(StringVector::size_type i = 0;i < versions.size();i++)
-    if (versionGreater(versions[i], versions[currentMax]))
+    if (verGreater(versions[i], versions[currentMax]))
       currentMax = i;
   const std::string maxVersion = versions[currentMax];
   size_t hasCount = 0;
   for(StringVector::size_type i = 0;i < versions.size();i++)
-    if (versionEqual(versions[i], maxVersion))
+    if (verEqual(versions[i], maxVersion))
       vars[hasCount++] = vars[i];
   assert(hasCount > 0);
   vars.resize(hasCount);
@@ -270,7 +284,7 @@ void PkgScope::getConflicts(VarId varId, IdPkgRelVector& res) const
     res.push_back(IdPkgRel(withVersion[i], versions[i]));
 }
 
-void PkgScope::whatSatisfiesAmongInstalled(const IdPkgRel& rel, VarIdVector& res) const
+void PkgScope::whatSatisfyAmongInstalled(const IdPkgRel& rel, VarIdVector& res) const
 {
   assert(rel.pkgId != BadPkgId);
   res.clear();
@@ -299,7 +313,7 @@ void PkgScope::whatSatisfiesAmongInstalled(const IdPkgRel& rel, VarIdVector& res
       if (!(pkg.flags & PkgFlagInstalled))
 	continue;
       if (pkg.pkgId == rel.pkgId &&
-	  versionOverlap(constructVersionCondEquals(pkg.epoch, pkg.ver, pkg.release), VersionCond(rel.ver, rel.verDir)))
+	  verOverlap(constructVersionCondEquals(pkg.epoch, pkg.ver, pkg.release), VersionCond(rel.ver, rel.verDir)))
 	{
 	  res.push_back(vars[i]);
 	  continue;
@@ -316,7 +330,7 @@ void PkgScope::whatSatisfiesAmongInstalled(const IdPkgRel& rel, VarIdVector& res
 	      !HAS_VERSION(m_relations[pos + j]))//Provide entry has no version;
 	    continue;
 	  assert(m_relations[pos + j].verDir != VerNone);
-	  if (versionOverlap(VersionCond(m_relations[pos + j].ver, m_relations[pos + j].verDir), VersionCond(rel.ver, rel.verDir)))
+	  if (verOverlap(VersionCond(m_relations[pos + j].ver, m_relations[pos + j].verDir), VersionCond(rel.ver, rel.verDir)))
 	    {
 	      res.push_back(vars[i]);
 	      break;
@@ -325,7 +339,7 @@ void PkgScope::whatSatisfiesAmongInstalled(const IdPkgRel& rel, VarIdVector& res
     } //for(packages);
 }
 
-void PkgScope::whatDependsAmongInstalled(VarId varId, VarIdVector& res, IdPkgRelVector& resRels) const
+void PkgScope::whatDependAmongInstalled(VarId varId, VarIdVector& res, IdPkgRelVector& resRels) const
 {
   res.clear();
   resRels.clear();
@@ -333,7 +347,7 @@ void PkgScope::whatDependsAmongInstalled(VarId varId, VarIdVector& res, IdPkgRel
   const SnapshotPkg& pkg = m_pkgs[varId];
   VarIdVector v;
   //First of all checking the package itself;
-  m_installedRequiresEntries.searchReferencesTo(m_pkgs[varId].pkgId, v);
+  findPkgsByRequire(m_pkgs[varId].pkgId, v);
   for(VarIdVector::size_type i = 0;i < v.size();i++)
     {
       assert(v[i] < m_pkgs.size());
@@ -349,7 +363,7 @@ void PkgScope::whatDependsAmongInstalled(VarId varId, VarIdVector& res, IdPkgRel
 	    resRels.push_back(IdPkgRel(withoutVersion[k]));
 	  }
       for(PackageIdVector::size_type k = 0;k < withVersion.size();k++)
-	if (withVersion[k] == pkg.pkgId && versionOverlap(constructVersionCondEquals(pkg.epoch, pkg.ver, pkg.release), versions[k]))
+	if (withVersion[k] == pkg.pkgId && verOverlap(constructVersionCondEquals(pkg.epoch, pkg.ver, pkg.release), versions[k]))
 	  {
 	    res.push_back(v[i]);
 	    resRels.push_back(IdPkgRel(withVersion[k], versions[k]));
@@ -363,7 +377,7 @@ void PkgScope::whatDependsAmongInstalled(VarId varId, VarIdVector& res, IdPkgRel
       assert(pos + i < m_relations.size());
       const SnapshotRelation& rel = m_relations[pos + i];
       v.clear();
-      m_installedRequiresEntries.searchReferencesTo(rel.pkgId, v);
+      findPkgsByRequire(rel.pkgId, v);
       for(VarIdVector::size_type k = 0;k < v.size();k++)
 	{
 	  assert(v[k] < m_pkgs.size());
@@ -384,7 +398,7 @@ void PkgScope::whatDependsAmongInstalled(VarId varId, VarIdVector& res, IdPkgRel
 	    {
 	      assert(rel.verDir == VerEquals);//Actually it shouldn't be an assert, we can silently skip this provide;
 	      for(PackageIdVector::size_type q = 0;q < withVersion.size();q++)
-		if (withVersion[q] == rel.pkgId && versionOverlap(VersionCond(rel.ver, VerEquals), versions[q]))
+		if (withVersion[q] == rel.pkgId && verOverlap(VersionCond(rel.ver, VerEquals), versions[q]))
 		  {
 		    res.push_back(v[k]);
 		    resRels.push_back(IdPkgRel(withVersion[q], versions[q]));
@@ -394,7 +408,7 @@ void PkgScope::whatDependsAmongInstalled(VarId varId, VarIdVector& res, IdPkgRel
     } //for provides;
 }
 
-void PkgScope::whatConflictsAmongInstalled(VarId varId, VarIdVector& res, IdPkgRelVector& resRels) const
+void PkgScope::whatConflictAmongInstalled(VarId varId, VarIdVector& res, IdPkgRelVector& resRels) const
 {
   res.clear();
   resRels.clear();
@@ -402,7 +416,7 @@ void PkgScope::whatConflictsAmongInstalled(VarId varId, VarIdVector& res, IdPkgR
   const SnapshotPkg& pkg = m_pkgs[varId];
   VarIdVector v;
   //First of all checking the package itself;
-  m_installedConflictsEntries.searchReferencesTo(m_pkgs[varId].pkgId, v);
+findPkgsByConflict(m_pkgs[varId].pkgId, v);
   for(VarIdVector::size_type i = 0;i < v.size();i++)
     {
       assert(v[i] < m_pkgs.size());
@@ -418,7 +432,7 @@ void PkgScope::whatConflictsAmongInstalled(VarId varId, VarIdVector& res, IdPkgR
 	    resRels.push_back(IdPkgRel(withoutVersion[k]));
 	  }
       for(PackageIdVector::size_type k = 0;k < withVersion.size();k++)
-	if (withVersion[k] == pkg.pkgId && versionOverlap(constructVersionCondEquals(pkg.epoch, pkg.ver, pkg.release), versions[k]))
+	if (withVersion[k] == pkg.pkgId && verOverlap(constructVersionCondEquals(pkg.epoch, pkg.ver, pkg.release), versions[k]))
 	  {
 	    res.push_back(v[i]);
 	    resRels.push_back(IdPkgRel(withVersion[k], versions[k]));
@@ -432,7 +446,7 @@ void PkgScope::whatConflictsAmongInstalled(VarId varId, VarIdVector& res, IdPkgR
       assert(pos + i < m_relations.size());
       const SnapshotRelation& rel = m_relations[pos + i];
       v.clear();
-      m_installedConflictsEntries.searchReferencesTo(rel.pkgId, v);
+findPkgsByConflict(rel.pkgId, v);
       for(VarIdVector::size_type k = 0;k < v.size();k++)
 	{
 	  assert(v[k] < m_pkgs.size());
@@ -453,7 +467,7 @@ void PkgScope::whatConflictsAmongInstalled(VarId varId, VarIdVector& res, IdPkgR
 	    {
 	      assert(rel.verDir == VerEquals);//FIXME:Actually it shouldn't be an assert, we can silently skip this provide;
 	      for(PackageIdVector::size_type q = 0;q < withVersion.size();q++)
-		if (withVersion[q] == rel.pkgId && versionOverlap(VersionCond(rel.ver, VerEquals), versions[q]))
+		if (withVersion[q] == rel.pkgId && verOverlap(VersionCond(rel.ver, VerEquals), versions[q]))
 		  {
 		    res.push_back(v[k]);
 		    resRels.push_back(IdPkgRel(withVersion[q], versions[q]));
@@ -527,21 +541,10 @@ void PkgScope::selectVarsToTry(PkgId pkgId,
 	toTry.push_back(i);
     }
   VarIdVector providers;
-  m_provideMap.searchProviders(pkgId, providers);//FIXME:Good idea to push to toTry vector directly;
+findProviders(pkgId, providers);//FIXME:Good idea to push to toTry vector directly;
   for(VarIdVector::size_type i = 0;i < providers.size();i++)
     toTry.push_back(providers[i]);
   //Maybe it is good idea to perform doubling cleaning here, but it will take time;
-}
-
-VersionCond PkgScope::constructVersionCondEquals(int epoch, 
-						 const std::string& version,
-						 const std::string& release)
-{
-  assert(!version.empty());
-  assert(!release.empty());
-  std::ostringstream ss;
-  ss  << epoch << ":" << version << "-" << release;
-  return VersionCond(ss.str(), VerEquals);
 }
 
 DEEPSOLVER_END_NAMESPACE

@@ -15,11 +15,11 @@
    General Public License for more details.
 */
 
-#include"deepsolver.h"
-#include"deepsolver/AbstractSatSolver.h"
+#include"deepsolver/deepsolver.h"
+#include"deepsolver/Sat.h"
 #include<minisat.h>
 
-DEEPSOLVER_BEGIN_NAMESPACE
+DEEPSOLVER_BEGIN_SAT_NAMESPACE
 
 class LibMinisatSolver: public AbstractSatSolver
 {
@@ -42,7 +42,7 @@ private:
   typedef std::map<int, VarId> IntToVarIdMap;
 
 private:
-  size_t m_nextFreeVar;//Always greater than real variable count by one;
+  int m_nextFreeVar;//Always greater than real variable count by one;
   VarIdToIntMap m_varIdToIntMap;
   IntToVarIdMap m_intToVarIdMap;
   IntVector m_clauses;
@@ -197,17 +197,16 @@ int LibMinisatSolver::mapVarId(VarId varId)
       assert(it->second != 0);
       return it->second;
     }
-  const size_t newValue = m_nextFreeVar;
+  const int newValue = m_nextFreeVar;
   m_varIdToIntMap.insert(VarIdToIntMap::value_type(varId, newValue));
   m_intToVarIdMap.insert(IntToVarIdMap::value_type(newValue, varId));
   m_nextFreeVar++;
   return newValue;
 }
 
-std::auto_ptr<AbstractSatSolver> createLibMinisatSolver()
+std::auto_ptr<AbstractSatSolver> createDefaultSatSolver()
 {
   return std::auto_ptr<AbstractSatSolver>(new LibMinisatSolver());
 }
 
-
-DEEPSOLVER_END_NAMESPACE
+DEEPSOLVER_END_SAT_NAMESPACE

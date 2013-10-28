@@ -154,9 +154,9 @@ m_srcDescrFileUrl = dir + REPO_INDEX_SOURCES_DESCR_FILE;
 }
 
 void Repository::loadPackageData(const StringToStringMap& files,
-				 AbstractPackageRecipient& transactData,
+				 AbstractPkgRecipient& transactData,
 				 PkgUrlsFile& urlsFile,
-		     AbstractPackageRecipient& pkgInfoData)
+		     AbstractPkgRecipient& pkgInfoData)
 {
   StringToStringMap::const_iterator it = files.find(m_pkgFileUrl);
   assert(it != files.end());

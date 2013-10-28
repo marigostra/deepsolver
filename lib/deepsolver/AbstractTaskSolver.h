@@ -18,34 +18,23 @@
 #ifndef DEEPSOLVER_ABSTRACT_TASK_SOLVER_H
 #define DEEPSOLVER_ABSTRACT_TASK_SOLVER_H
 
-#include"deepsolver/AbstractPackageScope.h"
-#include"deepsolver/AbstractPackageBackEnd.h"
+#include"deepsolver/AbstractPkgBackEnd.h"
+#include"deepsolver/SolverBase.h"
 
 namespace Deepsolver
 {
-  struct TaskSolverProvideInfo
-  {
-    TaskSolverProvideInfo() {}
-
-    TaskSolverProvideInfo(const std::string& n)
-      : name(n) {}
-
-    std::string name;
-    StringVector providers;
-  }; //struct TaskSolverProvideInfo;
-
-  typedef std::vector<TaskSolverProvideInfo> TaskSolverProvideInfoVector;
-  typedef std::list<TaskSolverProvideInfo> TaskSolverProvideInfoList;
-
   struct TaskSolverData
   {
-    TaskSolverData(const AbstractPackageBackEnd& b, AbstractPackageScope& s)
-      : backEnd(b),
-	scope(s) {}
+    TaskSolverData(const AbstractPkgBackEnd& b,
+		   const AbstractPkgScope& s,
+		   const Solver::AbstractProvidePriority& p)
+      : backend(b),
+	scope(s),
+	providePriority(p) {}
 
-    const AbstractPackageBackEnd& backEnd;
-    AbstractPackageScope& scope;
-    TaskSolverProvideInfoVector provides;
+    const AbstractPkgBackEnd& backend;
+    const AbstractPkgScope& scope;
+    const Solver::AbstractProvidePriority&providePriority; 
   }; //struct TaskSolverData;
 
   class AbstractTaskSolver
@@ -55,10 +44,12 @@ namespace Deepsolver
     virtual ~AbstractTaskSolver() {}
 
   public:
-    virtual void solve(const UserTask& task, VarIdVector& toInstall, VarIdVector& toRemove) = 0;
+    virtual void solve(const UserTask& userTask, 
+		       VarIdVector& install,
+		       VarIdVector& remove) const = 0;
   }; //class AbstractTaskSolver;
 
-  std::auto_ptr<AbstractTaskSolver> createTaskSolver(TaskSolverData& taskSolverData);
+  std::auto_ptr<AbstractTaskSolver> createTaskSolver(const TaskSolverData& taskSolverData);
 } //namespace Deepsolver;
 
 #endif //DEEPSOLVER_ABSTRACT_TASK_SOLVER_H;

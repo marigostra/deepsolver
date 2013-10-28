@@ -15,10 +15,8 @@
    General Public License for more details.
 */
 
-#ifndef DEEPSOLVER_ABSTRACT_PACKAGE_RECIPIENT_H
-#define DEEPSOLVER_ABSTRACT_PACKAGE_RECIPIENT_H
-
-#include"deepsolver/Pkg.h"
+#ifndef DEEPSOLVER_ABSTRACT_PKG_RECIPIENT_H
+#define DEEPSOLVER_ABSTRACT_PKG_RECIPIENT_H
 
 namespace Deepsolver 
 {
@@ -30,14 +28,14 @@ namespace Deepsolver
    *
    * \sa Repository PackageScopeContentBuilder
    */
-  class AbstractPackageRecipient
+  class AbstractPkgRecipient
   {
   public:
     /**\brief The default constructor*/
-    AbstractPackageRecipient() {}
+    AbstractPkgRecipient() {}
 
     /**\brief The destructor*/
-    virtual ~AbstractPackageRecipient() {}
+    virtual ~AbstractPkgRecipient() {}
 
   public:
     /**\brief Accepts new package file entry
@@ -47,7 +45,7 @@ namespace Deepsolver
      * \param [in] pkgFile The newly available package file entry
      */
     virtual void onNewPkgFile(const PkgFile& pkgFile) = 0;
-  }; //class AbstractPackageRecipient;
+  }; //class AbstractPkgRecipient;
 } //namespace Deepsolver;
 
-#endif //DEEPSOLVER_ABSTRACT_PACKAGE_RECIPIENT_H;
+#endif //DEEPSOLVER_ABSTRACT_PKG_RECIPIENT_H;

@@ -18,9 +18,9 @@
 #ifndef DEEPSOLVER_TRANSACTION_ITERATOR_H
 #define DEEPSOLVER_TRANSACTION_ITERATOR_H
 
-#include"deepsolver/AbstractPackageBackEnd.h"
+#include"deepsolver/AbstractPkgBackEnd.h"
 #include"deepsolver/ConfigCenter.h"
-#include"deepsolver/AbstractOperationContinueRequest.h"
+#include"deepsolver/AbstractContinueRequest.h"
 #include"deepsolver/AbstractFetchListener.h"
 
 namespace Deepsolver
@@ -29,7 +29,7 @@ namespace Deepsolver
   {
   public:
     TransactionIterator(const ConfigCenter& conf,
-			std::auto_ptr<AbstractPackageBackEnd> backEnd,
+			std::auto_ptr<AbstractPkgBackEnd> backend,
 			const PkgVector& install,
 			const PkgVector& remove,
 			const PkgVector& upgradeFrom,
@@ -37,7 +37,7 @@ namespace Deepsolver
 			const PkgVector& downgradeFrom,
 			const PkgVector& downgradeTo)
       : m_conf(conf),
-	m_backEnd(backEnd),
+	m_backend(backend),
 	m_install(install),
 	m_remove(remove),
 	m_upgradeFrom(upgradeFrom),
@@ -58,10 +58,10 @@ namespace Deepsolver
 
     void makeChanges();
 
-    const AbstractPackageBackEnd& getBackEnd() const
+    const AbstractPkgBackEnd& getBackEnd() const
     {
-      assert(m_backEnd.get() != NULL);
-      return *m_backEnd.get();
+      assert(m_backend.get() != NULL);
+      return *m_backend.get();
     }
 
     bool emptyTask() const
@@ -116,7 +116,7 @@ namespace Deepsolver
 
   private:
     const ConfigCenter& m_conf;
-    std::auto_ptr<AbstractPackageBackEnd> m_backEnd;
+    std::auto_ptr<AbstractPkgBackEnd> m_backend;
     PkgVector m_install, m_remove;
     PkgVector m_upgradeFrom, m_upgradeTo;
     PkgVector m_downgradeFrom, m_downgradeTo;

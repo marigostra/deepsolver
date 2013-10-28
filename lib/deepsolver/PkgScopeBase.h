@@ -18,15 +18,13 @@
 #ifndef DEEPSOLVER_PKG_SCOPE_BASE_H
 #define DEEPSOLVER_PKG_SCOPE_BASE_H
 
-#include"deepsolver/AbstractPackageBackEnd.h"
-#include"deepsolver/AbstractPackageScope.h"
+#include"deepsolver/AbstractPkgBackEnd.h"
+#include"deepsolver/SolverBase.h"
 #include"deepsolver/PkgSnapshot.h"
-#include"deepsolver/ProvideMap.h"
-#include"deepsolver/InstalledReferences.h"
 
 namespace Deepsolver
 {
-  class PkgScopeBase: public AbstractPackageScope
+  class PkgScopeBase: public AbstractPkgScope
   {
   protected:
     typedef PkgSnapshot::Snapshot Snapshot;
@@ -36,49 +34,37 @@ namespace Deepsolver
     typedef PkgSnapshot::RelationVector SnapshotRelationVector;
 
   public:
-    PkgScopeBase(const AbstractPackageBackEnd& backEnd,
-		 const Snapshot& snapshot,
-		 const ProvideMap& provideMap,
-		 const InstalledReferences& installedRequiresEntries,
-		 const InstalledReferences& installedConflictsEntries)
-      : m_backEnd(backEnd),
+    PkgScopeBase(const AbstractPkgBackEnd& backend, const Snapshot& snapshot)
+      : m_backend(backend),
 	m_snapshot(snapshot),
 	m_pkgs(snapshot.pkgs),
-      m_relations(snapshot.relations),
-	m_provideMap(provideMap),
-	m_installedRequiresEntries(installedRequiresEntries),
-	m_installedConflictsEntries(installedConflictsEntries) {}
+	m_relations(snapshot.relations) {}
 
     /**\brief The destructor*/
   virtual ~PkgScopeBase() {}
 
   public:
-    PackageId packageIdOfVarId(VarId varId) const;
-    std::string getDesignation(const IdPkgRel& r) const;
-    std::string getVersion(VarId varId) const;
-    void fillPkgData(VarId varId, Pkg& pkg) const;
-    std::string constructPackageName(VarId varId) const;
-    std::string getPackageName(VarId varId) const;
-    std::string constructPackageNameWithBuildTime(VarId varId) const;
-    bool checkName(const std::string& name) const;
-    PackageId strToPackageId(const std::string& name) const;
-    std::string packageIdToStr(PackageId packageId) const;
+    bool knownPkgName(const std::string& name) const override;
+    std::string getPkgName(VarId varId) const override;
+    std::string getDesignation(VarId varId, int epochMode) const override;
+    std::string getDesignation(const IdPkgRel& r) const override;
+    std::string getVersion(VarId varId, int epochMode) const override;
+    void fullPkgData(VarId varId, Pkg& pkg) const override;
+    PkgId pkgIdOfVarId(VarId varId) const override;
+    std::string pkgIdToStr(PkgId pkgId) const override;
+    PkgId strToPkgId(const std::string& name) const override;
 
 protected:
-    int versionCompare(const std::string& ver1, const std::string& ver2) const;
-    bool versionOverlap(const VersionCond& ver1, const VersionCond& ver2) const;
-    bool versionEqual(const std::string& ver1, const std::string& ver2) const;
-    bool versionGreater(const std::string& ver1, const std::string& ver2) const;
-    std::string constructFullVersion(VarId varId) const;
+    int verCmp(const std::string& ver1, const std::string& ver2) const;
+    bool verOverlap(const VersionCond& ver1, const VersionCond& ver2) const;
+    bool verEqual(const std::string& ver1, const std::string& ver2) const;
+    bool verGreater(const std::string& ver1, const std::string& ver2) const;
 
 protected:
-    const AbstractPackageBackEnd& m_backEnd;
+    const AbstractPkgBackEnd& m_backend;
     const Snapshot& m_snapshot;
     const SnapshotPkgVector& m_pkgs;
     const SnapshotRelationVector& m_relations;
-    const ProvideMap& m_provideMap;
-    const InstalledReferences& m_installedRequiresEntries;
-    const InstalledReferences& m_installedConflictsEntries;
   }; //class PkgScopeBase;
 } //namespace Deepsolver;
 

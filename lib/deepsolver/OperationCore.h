@@ -20,7 +20,7 @@
 
 #include"deepsolver/ConfigCenter.h"
 #include"deepsolver/TransactionIterator.h"
-#include"deepsolver/AbstractOperationContinueRequest.h"
+#include"deepsolver/AbstractContinueRequest.h"
 #include"deepsolver/AbstractFetchListener.h"
 #include"deepsolver/AutoReleaseStrings.h"
 

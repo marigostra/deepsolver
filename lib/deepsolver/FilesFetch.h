@@ -18,7 +18,7 @@
 #ifndef DEEPSOLVER_FILES_FETCH_H
 #define DEEPSOLVER_FILES_FETCH_H
 
-#include"deepsolver/AbstractOperationContinueRequest.h"
+#include"deepsolver/AbstractContinueRequest.h"
 #include"deepsolver/AbstractFetchListener.h"
 #include"deepsolver/CurlInterface.h"
 

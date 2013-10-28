@@ -18,61 +18,57 @@
 #ifndef DEEPSOLVER_PKG_SCOPE_H
 #define DEEPSOLVER_PKG_SCOPE_H
 
-#include"deepsolver/PkgScopeBase.h"
+#include"deepsolver/PkgScopeMetadata.h"
 
 namespace Deepsolver
 {
-  class PkgScope: public PkgScopeBase
+  class PkgScope: public PkgScopeMetadata
   {
   public:
-    PkgScope(const AbstractPackageBackEnd& backEnd,
-	     const Snapshot& snapshot,
-	     const ProvideMap& provideMap,
-	     const InstalledReferences& installedRequiresEntries,
-	     const InstalledReferences& installedConflictsEntries)
-      : PkgScopeBase(backEnd, snapshot, provideMap, installedRequiresEntries, installedConflictsEntries) {}
+    PkgScope(const AbstractPkgBackEnd& backend, const Snapshot& snapshot)
+      : PkgScopeMetadata(backend, snapshot) {}
 
     /**\brief The destructor*/
   virtual ~PkgScope() {}
 
   public:
-    void selectMatchingVarsAmongProvides(const IdPkgRel& rel, VarIdVector& vars) const;
-    void selectMatchingVarsAmongProvides(PackageId packageId, VarIdVector& vars) const;
+    void selectMatchingVarsProvidesOnly(const IdPkgRel& rel, VarIdVector& vars) const override;
+    void selectMatchingVarsProvidesOnly(PackageId packageId, VarIdVector& vars) const override;
 
-    void selectMatchingVarsAmongProvides(PackageId packageId,
+    void selectMatchingVarsProvidesOnly(PackageId packageId,
 					 const VersionCond& ver,
-					 VarIdVector& vars) const;
+					 VarIdVector& vars) const override;
 
-    void selectMatchingVarsRealNames(const IdPkgRel& rel, VarIdVector& vars) const;
-    void selectMatchingVarsRealNames(PackageId packageId, VarIdVector& vars) const;
+    void selectMatchingVarsRealNames(const IdPkgRel& rel, VarIdVector& vars) const override;
+    void selectMatchingVarsRealNames(PackageId packageId, VarIdVector& vars) const override;
 
     void selectMatchingVarsRealNames(PackageId packageId,
 				     const VersionCond& ver,
-				     VarIdVector& vars) const;
+				     VarIdVector& vars) const override;
 
-    void selectMatchingVarsWithProvides(const IdPkgRel& rel, VarIdVector& vars) const;
-    void selectMatchingVarsWithProvides(PackageId packageId, VarIdVector& vars) const;
+    void selectMatchingVarsWithProvides(const IdPkgRel& rel, VarIdVector& vars) const override;
+    void selectMatchingVarsWithProvides(PackageId packageId, VarIdVector& vars) const override;
 
     void selectMatchingVarsWithProvides(PackageId packageId,
 					const VersionCond& ver,
-					VarIdVector& vars) const;
+					VarIdVector& vars) const override;
 
-    bool isInstalled(VarId varId) const;
-    void selectTheNewest(VarIdVector& vars) const;
-    void selectTheNewestByProvide(VarIdVector& vars, PackageId provideEntry) const;
-    bool allProvidesHaveTheVersion(const VarIdVector& vars, PackageId provideEntry) const;
-    void getRequires(VarId varId, IdPkgRelVector& res) const;
-    void getConflicts(VarId varId, IdPkgRelVector& res) const;
+    bool isInstalled(VarId varId) const override;
+    void selectTheNewest(VarIdVector& vars) const override;
+    void selectTheNewestByProvide(VarIdVector& vars, PackageId provideEntry) const override;
+    bool allProvidesHaveTheVersion(const VarIdVector& vars, PackageId provideEntry) const override;
+    void getRequires(VarId varId, IdPkgRelVector& res) const override;
+    void getConflicts(VarId varId, IdPkgRelVector& res) const override;
 
-    void whatConflictsAmongInstalled(VarId varId,
+    void whatConflictAmongInstalled(VarId varId,
 				     VarIdVector& res,
-				     IdPkgRelVector& resRels) const;
+				     IdPkgRelVector& resRels) const override;
 
-    void whatDependsAmongInstalled(VarId varId,
+    void whatDependAmongInstalled(VarId varId,
 				   VarIdVector& res,
-				   IdPkgRelVector& resRels) const;
+				   IdPkgRelVector& resRels) const override;
 
-    void whatSatisfiesAmongInstalled(const IdPkgRel& rel, VarIdVector& res) const;
+    void whatSatisfyAmongInstalled(const IdPkgRel& rel, VarIdVector& res) const override;
 
   private:
     void getRequires(VarId varId,
@@ -88,11 +84,6 @@ namespace Deepsolver
 		      PackageIdVector& withoutVersion,
 		      PackageIdVector& withVersion,
 		      VersionCondVector& versions) const;
-
-  private:
-    static VersionCond constructVersionCondEquals(int epoch, 
-						  const std::string& version,
-						  const std::string& release);
   }; //class PkgScope;
 } //namespace Deepsolver;
 

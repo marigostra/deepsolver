@@ -18,7 +18,7 @@
 #ifndef DEEPSOLVER_RPM_BACKEND_H
 #define DEEPSOLVER_RPM_BACKEND_Hs
 
-#include"deepsolver/AbstractPackageBackEnd.h"
+#include"deepsolver/AbstractPkgBackEnd.h"
 #include"deepsolver/RpmInstalledPackagesIterator.h"
 //FIXME:#include"rpm/Rpmdb.h"
 //FIXME:#include"rpm/RpmFile.h"
@@ -36,7 +36,7 @@ namespace Deepsolver
    *
    * \sa AbstractPackageBackEnd
    */
-  class RpmBackEnd: public AbstractPackageBackEnd
+  class RpmBackEnd: public AbstractPkgBackEnd
   {
   public:
     /**\brief The default constructor*/
@@ -46,20 +46,20 @@ namespace Deepsolver
     virtual ~RpmBackEnd() {}
 
   public:
-    void initialize();
-    int versionCompare(const std::string& ver1, const std::string& ver2) const;
-    bool versionOverlap(const VersionCond& ver1, const VersionCond& ver2) const;
-    bool versionEqual(const std::string& ver1, const std::string& ver2) const;
-    bool versionGreater(const std::string& ver1, const std::string& ver2) const;
-    std::auto_ptr<AbstractInstalledPackagesIterator> enumInstalledPackages() const;
-    void readPackageFile(const std::string& fileName, PkgFile& pkgFile) const;
-    bool validPkgFileName(const std::string& fileName) const;
-    bool validSourcePkgFileName(const std::string& fileName) const;
+    void initialize() override;
+    int verCmp(const std::string& ver1, const std::string& ver2) const override;
+    bool verOverlap(const VersionCond& ver1, const VersionCond& ver2) const override;
+    bool verEqual(const std::string& ver1, const std::string& ver2) const override;
+    bool verGreater(const std::string& ver1, const std::string& ver2) const override;
+    std::auto_ptr<AbstractInstalledPkgIterator> enumInstalledPkg() const override;
+    void readPkgFile(const std::string& fileName, PkgFile& pkgFile) const override;
+    bool validPkgFileName(const std::string& fileName) const override;
+    bool validSourcePkgFileName(const std::string& fileName) const override;
 
     bool transaction(const StringVector& toInstall,
 		     const StringVector& toRemove,
 		     const StringToStringMap& toUpgrade,
-		     const StringToStringMap& toDowngrade); 
+		     const StringToStringMap& toDowngrade) override;
   }; //class RpmBackEnd;
 } //namespace Deepsolver;
 

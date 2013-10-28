@@ -20,6 +20,7 @@
 
 #include"deepsolver/ConfigAdapter.h"
 #include"deepsolver/ConfigData.h"
+#include"deepsolver/SolverBase.h"
 
 namespace Deepsolver
 {
@@ -49,6 +50,7 @@ namespace Deepsolver
    */
   class ConfigCenter
     : public ConfigAdapter,
+    public Solver::AbstractProvidePriority,
       private AbstractConfigFileHandler
   {
   public:
@@ -105,7 +107,13 @@ namespace Deepsolver
       return m_root;
     }
 
-  private:
+  public:
+    VarId byProvidesPriorityList(const VarIdVector& vars, PkgId providePkgId) const override
+    {
+      assert(providePkgId != BadPkgId && !vars.empty());
+      return vars.front();//FIXME:
+    }
+
   private:
     void initValues();
     void initRepoValues();
