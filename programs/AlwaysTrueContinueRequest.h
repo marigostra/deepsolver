@@ -18,7 +18,7 @@
 #ifndef DEEPSOLVER_ALWAYS_TRUE_CONTINUE_REQUEST_H
 #define DEEPSOLVER_ALWAYS_TRUE_CONTINUE_REQUEST_H
 
-#include"deepsolver/AbstractOperationContinueRequest.h"
+#include"deepsolver/AbstractContinueRequest.h"
 
 namespace Deepsolver
 {
