@@ -31,6 +31,9 @@ namespace Deepsolver
   class AbstractInstalledPkgIterator
   {
   public:
+    typedef std::shared_ptr<AbstractInstalledPkgIterator> Ptr;
+
+  public:
     /**\brief The default constructor*/
     AbstractInstalledPkgIterator() {}
 
@@ -67,6 +70,9 @@ namespace Deepsolver
    */
   class AbstractPkgBackEnd
   {
+  public:
+    typedef std::shared_ptr<AbstractPkgBackEnd> Ptr;
+
   public:
     /**\brief The default constructor*/
     AbstractPkgBackEnd() {}
@@ -142,7 +148,7 @@ namespace Deepsolver
      *
      * \return The iterator over set of installed packages
      */
-    virtual std::auto_ptr<AbstractInstalledPkgIterator> enumInstalledPkg() const = 0;
+    virtual AbstractInstalledPkgIterator::Ptr enumInstalledPkg() const = 0;
 
     /**\brief Reads header information from package file on disk
      *
@@ -204,7 +210,7 @@ namespace Deepsolver
 			     const StringToStringMap& toDowngrade) = 0; 
   }; //class AbstractPkgBackEnd;
 
-  std::auto_ptr<AbstractPkgBackEnd> createRpmBackEnd();
+  AbstractPkgBackEnd::Ptr createRpmBackEnd();
 
   //General proposal is to consider this line as main switch what backend we want;
 #define CREATE_PKG_BACKEND createRpmBackEnd()

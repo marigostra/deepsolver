@@ -33,8 +33,10 @@ namespace Deepsolver
       RefCountedEntry(VarId v, bool s)
 	: varId(v),
 	  oldState(s),
-	  newState(0),
-	  refNum(0) {}
+	  newState(s),
+	  refNum(0), 
+	  bfsMark(0),
+	  processed(0 ) {}
 
       virtual ~RefCountedEntry() {}
 
@@ -84,6 +86,8 @@ public:
       bool oldState, newState;
       size_t refNum;
       Sat::Sat sat;
+      bool bfsMark;
+      bool processed;
     }; //class RefCountedEntry;
 
     typedef std::vector<RefCountedEntry*> RefCountedEntryVector;
@@ -113,6 +117,13 @@ public:
 	for(RefCountedEntryVector::size_type i = 0;i < m_entries.size();++i)
 	  delete m_entries[i];
 	m_entries.clear();
+      }
+
+      void clearBfsMarks()
+      {
+	for(RefCountedEntryVector::size_type i = 0;i < m_entries.size();++i)
+	  if (m_entries[i] != NULL)
+	    m_entries[i]->bfsMark = 0;
       }
 
       size_t size() const
@@ -151,7 +162,8 @@ public:
 
       RefCountedEntry& newEntry(VarId varId, bool installed)
       {
-	assert(!hasEntry(varId));
+	assert(varId != BadVarId && !hasEntry(varId));
+	assert(varId < m_entries.size());
 	m_entries[varId] = new RefCountedEntry(varId, installed);
 	return *m_entries[varId];
       }
@@ -188,7 +200,7 @@ public:
 
     private:
       void onUserTask(const UserTask& userTask);
-      void fillEntry(VarId varId);
+      void incRef(VarId varId);
       VarId onUserItemToInstall(const UserTaskItemToInstall& item) const;
       void toBeInstalled(VarId VarId);
       void toBeRemoved(VarId varId);
@@ -203,13 +215,15 @@ public:
       const AbstractPkgScope& m_scope; 
       const AbstractProvidePriority& m_providePriority;
       VarIdSet m_userTaskInstall, m_userTaskRemove;
+      VarIdVector m_pending;
     }; //class SatBuilder;
 
     class Solver: public AbstractTaskSolver
     {
     public:
       Solver(const TaskSolverData& taskSolverData)
-	: m_taskSolverData(taskSolverData) {}
+	: m_taskSolverData(taskSolverData),
+	  m_scope(taskSolverData.scope) {}
 
       virtual ~Solver() {}
 
@@ -218,15 +232,20 @@ public:
 			 VarIdVector& install,
 			 VarIdVector& remove) const override;
 
+      void dumpSat(const UserTask& userTask, std::ostream& s) const;
+
     private:
       bool solveSat(RefCountedEntries& p,
 			const VarIdSet& userTaskInstall,
 			const VarIdSet& userTaskRemove) const;
 
-      void filterSolution(RefCountedEntries& p) const;
+      void filterSolution(RefCountedEntries& p,
+			  const VarIdSet& userTaskInstall,
+			  const VarIdSet& userTaskRemove) const;
 
     private:
       const TaskSolverData& m_taskSolverData;
+      const AbstractPkgScope& m_scope;
     }; //class Solver;
   } //namespace Solver;
 } //namespace Deepsolver;

@@ -395,6 +395,7 @@ void Messages::dsSnapshotLogo() const
 void Messages::dsSnapshotInitCliParser(CliParser& cliParser) const
 {
   cliParser.addKeyDoubleName("-i", "--installed", "insert installed packages to scope");
+  cliParser.addKey("--ids", "print internal package IDs");
   cliParser.addKeyDoubleName("-h", "--help", "print this help screen and exit");
   cliParser.addKey("--log", "print log to console instead of user progress information");
   cliParser.addKey("--debug", "relax filtering level for log output");

@@ -78,6 +78,7 @@ namespace Deepsolver
       virtual void whatSatisfyAmongInstalled(const IdPkgRel& rel, VarIdVector& res) const = 0;
 
     public:
+      virtual size_t getPkgCount() const = 0;
       virtual bool knownPkgName(const std::string& name) const = 0;
       virtual std::string getPkgName(VarId varId) const = 0;
       virtual std::string getDesignation(VarId varId, int epochMode) const = 0;

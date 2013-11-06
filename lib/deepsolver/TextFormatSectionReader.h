@@ -25,6 +25,9 @@ namespace Deepsolver
   class AbstractTextFormatSectionReader
   {
   public:
+    typedef std::shared_ptr<AbstractTextFormatSectionReader> Ptr;
+
+  public:
     /**\brief The default constructor*/
     AbstractTextFormatSectionReader() {}
 
@@ -46,6 +49,9 @@ namespace Deepsolver
 
   class TextFormatSectionReader: public AbstractTextFormatSectionReader
   {
+  public:
+    typedef std::shared_ptr<TextFormatSectionReader> Ptr;
+
   public:
     /**\brief The default constructor*/
   TextFormatSectionReader() {}
@@ -76,6 +82,9 @@ namespace Deepsolver
 
   class TextFormatSectionReaderGzip: public AbstractTextFormatSectionReader
   {
+  public:
+    typedef std::shared_ptr<TextFormatSectionReaderGzip> Ptr;
+
   public:
     /**\brief The default constructor*/
     TextFormatSectionReaderGzip() {}

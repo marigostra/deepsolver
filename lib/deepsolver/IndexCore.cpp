@@ -31,6 +31,9 @@ DEEPSOLVER_BEGIN_NAMESPACE
 class UnifiedOutput
 {
 public:
+  typedef std::shared_ptr<UnifiedOutput> Ptr;
+
+public:
   UnifiedOutput() {}
   virtual ~UnifiedOutput() {}
 
@@ -148,11 +151,64 @@ private:
   RegExpVector m_regExps;
 }; //class RegExpCollection;
 
-static std::string compressionExtension(char compressionType);
-static bool fileFromDirs(const std::string& fileName, const StringVector& dirs);
-static std::auto_ptr<AbstractTextFormatSectionReader> createRebuildReader(const std::string& fileName, const RepoParams& params);
-static std::auto_ptr<AbstractTextFormatSectionReader> createRebuildReaderNoCompression(const std::string& fileName);
-static std::auto_ptr<UnifiedOutput> createRebuildWriter(const std::string& fileName, const RepoParams& params);
+namespace 
+{
+  std::string compressionExtension(char compressionType)
+  {
+    if (compressionType == RepoParams::CompressionTypeGzip)
+      return COMPRESSION_SUFFIX_GZIP;
+    assert(compressionType == RepoParams::CompressionTypeNone);
+    return "";
+  }
+
+  bool fileFromDirs(const std::string& fileName, const StringVector& dirs)
+  {
+    std::string tail;
+    for(StringVector::const_iterator it = dirs.begin();it != dirs.end();it++)
+      if (stringBegins(fileName, *it, tail))
+	return 1;
+    return 0;
+  }
+
+  AbstractTextFormatSectionReader::Ptr createRebuildReader(const std::string& fileName, const RepoParams& params)
+  {
+    if (params.compressionType == RepoParams::CompressionTypeNone)
+      {
+	TextFormatSectionReader::Ptr reader(new TextFormatSectionReader());
+	reader->open(fileName);
+	return reader;
+      }
+    if (params.compressionType == RepoParams::CompressionTypeGzip)
+      {
+	TextFormatSectionReaderGzip::Ptr reader(new TextFormatSectionReaderGzip());
+	reader->open(fileName);
+	return reader;
+      }
+    assert(0);
+    return NULL;
+  }
+
+  AbstractTextFormatSectionReader::Ptr createRebuildReaderNoCompression(const std::string& fileName)
+  {
+    TextFormatSectionReader::Ptr reader(new TextFormatSectionReader());
+    reader->open(fileName);
+    return reader;
+  }
+
+  UnifiedOutput::Ptr createRebuildWriter(const std::string& fileName, const RepoParams& params)
+  {
+    switch (params.compressionType)
+      {
+      case RepoParams::CompressionTypeNone:
+	return UnifiedOutput::Ptr(new StdOutput(fileName));
+      case RepoParams::CompressionTypeGzip:
+	return UnifiedOutput::Ptr(new GzipOutput(fileName));
+      default:
+	assert(0);
+      }
+    return NULL;
+  }
+}
 
 void IndexCore::buildIndex(const RepoParams& params)
 {
@@ -190,26 +246,26 @@ void IndexCore::buildIndex(const RepoParams& params)
   const std::string srcDescrFileName = Directory::mixNameComponents(params.indexPath, REPO_INDEX_SOURCES_DESCR_FILE + compressionExtension(params.compressionType));
   const std::string pkgFileListFileName = Directory::mixNameComponents(params.indexPath, REPO_INDEX_PACKAGES_FILELIST_FILE + compressionExtension(params.compressionType));
   const std::string pkgCompleteFileName = Directory::mixNameComponents(params.indexPath, REPO_INDEX_PACKAGES_COMPLETE_FILE);
-  std::auto_ptr<UnifiedOutput> pkgFile, pkgDescrFile, pkgFileListFile, pkgCompleteFile, srcFile, srcDescrFile;
+  UnifiedOutput::Ptr pkgFile, pkgDescrFile, pkgFileListFile, pkgCompleteFile, srcFile, srcDescrFile;
   if (params.compressionType == RepoParams::CompressionTypeGzip)
     {
-      pkgFile = std::auto_ptr<UnifiedOutput>(new GzipOutput(pkgFileName));
-      pkgDescrFile = std::auto_ptr<UnifiedOutput>(new GzipOutput(pkgDescrFileName));
-      pkgFileListFile = std::auto_ptr<UnifiedOutput>(new GzipOutput(pkgFileListFileName));
-      srcFile = std::auto_ptr<UnifiedOutput>(new GzipOutput(srcFileName));
-      srcDescrFile = std::auto_ptr<UnifiedOutput>(new GzipOutput(srcDescrFileName));
+      pkgFile = UnifiedOutput::Ptr(new GzipOutput(pkgFileName));
+      pkgDescrFile = UnifiedOutput::Ptr(new GzipOutput(pkgDescrFileName));
+      pkgFileListFile = UnifiedOutput::Ptr(new GzipOutput(pkgFileListFileName));
+      srcFile = UnifiedOutput::Ptr(new GzipOutput(srcFileName));
+      srcDescrFile = UnifiedOutput::Ptr(new GzipOutput(srcDescrFileName));
     } else 
     {
       assert(params.compressionType == RepoParams::CompressionTypeNone);
-      pkgFile = std::auto_ptr<UnifiedOutput>(new StdOutput(pkgFileName));
-      pkgDescrFile = std::auto_ptr<UnifiedOutput>(new StdOutput(pkgDescrFileName));
-      pkgFileListFile = std::auto_ptr<UnifiedOutput>(new StdOutput(pkgFileListFileName));
-      srcFile = std::auto_ptr<UnifiedOutput>(new StdOutput(srcFileName));
-      srcDescrFile = std::auto_ptr<UnifiedOutput>(new StdOutput(srcDescrFileName));
+      pkgFile = UnifiedOutput::Ptr(new StdOutput(pkgFileName));
+      pkgDescrFile = UnifiedOutput::Ptr(new StdOutput(pkgDescrFileName));
+      pkgFileListFile = UnifiedOutput::Ptr(new StdOutput(pkgFileListFileName));
+      srcFile = UnifiedOutput::Ptr(new StdOutput(srcFileName));
+      srcDescrFile = UnifiedOutput::Ptr(new StdOutput(srcDescrFileName));
     }
-      pkgCompleteFile = std::auto_ptr<UnifiedOutput>(new StdOutput(pkgCompleteFileName));
+  pkgCompleteFile = UnifiedOutput::Ptr(new StdOutput(pkgCompleteFileName));
   logMsg(LOG_DEBUG, "All files were created");
-  std::auto_ptr<AbstractPkgBackEnd> backend = CREATE_PKG_BACKEND;
+  AbstractPkgBackEnd::Ptr backend = CREATE_PKG_BACKEND;
   logMsg(LOG_DEBUG, "Package backend was created");
   //We ready to collect information about packages in specified directories;
   size_t countBinary = 0, countSource = 0;
@@ -217,7 +273,7 @@ void IndexCore::buildIndex(const RepoParams& params)
     {
       logMsg(LOG_INFO, "Reading packages in \'%s\'", params.pkgSources[i].c_str());
       m_listener.onPackageCollecting(params.pkgSources[i]);
-      std::auto_ptr<Directory::Iterator> it = Directory::enumerate(params.pkgSources[i]);
+      Directory::Iterator::Ptr it = Directory::enumerate(params.pkgSources[i]);
       while(it->moveNext())
 	{
 	  if (it->name() == "." || it->name() == "..")
@@ -330,7 +386,7 @@ void IndexCore::rebuildIndex(const RepoParams& params, const StringVector& toAdd
       if (!md5File.verifyItem(i, Directory::mixNameComponents(params.indexPath, md5File.items[i].fileName)))
 	throw IndexCoreException(IndexCoreException::CorruptedFile, Directory::mixNameComponents(params.indexPath, md5File.items[i].fileName));
     }
-  std::auto_ptr<AbstractPkgBackEnd> backend = CREATE_PKG_BACKEND;
+  AbstractPkgBackEnd::Ptr backend = CREATE_PKG_BACKEND;
   PkgFileVector pkgs;
   pkgs.resize(toAdd.size());
   logMsg(LOG_INFO, "Reading packages to add (%zu total)", pkgs.size());
@@ -349,8 +405,8 @@ void IndexCore::rebuildIndex(const RepoParams& params, const StringVector& toAdd
   skipToAdd.resize(toAdd.size());
   std::string sect;
   std::string inputFileName, outputFileName;
-    std::auto_ptr<AbstractTextFormatSectionReader> reader;
-  std::auto_ptr<UnifiedOutput> writer;
+  AbstractTextFormatSectionReader::Ptr reader;
+    UnifiedOutput::Ptr writer;
 
     //Packages file;
   for(BoolVector::size_type i = 0;i < skipToAdd.size();i++)
@@ -532,7 +588,7 @@ void IndexCore::rebuildIndex(const RepoParams& params, const StringVector& toAdd
   logMsg(LOG_INFO, "Patching \'%s\' to \'%s\'", inputFileName.c_str(), outputFileName.c_str());
   m_listener.onPatchingFile(inputFileName);
   reader = createRebuildReaderNoCompression(inputFileName);
-  writer = std::auto_ptr<UnifiedOutput>(new StdOutput(outputFileName));
+  writer = UnifiedOutput::Ptr(new StdOutput(outputFileName));
   reader->init();
   while(reader->readNext(sect))
     {
@@ -661,7 +717,7 @@ void IndexCore::refilterProvides(const RepoParams& params)
       logMsg(LOG_DEBUG, "%zu external references collected", externalReferences.size());
       logMsg(LOG_DEBUG, "Reading \'%s\' to pick up internal references", pkgFileName.c_str());
 	  m_listener.onReferenceCollecting(params.indexPath);
-      std::auto_ptr<AbstractTextFormatSectionReader> reader = createRebuildReader(pkgFileName, params);
+	  AbstractTextFormatSectionReader::Ptr reader = createRebuildReader(pkgFileName, params);
       size_t count = 0;
       std::string sect;
       reader->init();
@@ -677,7 +733,7 @@ void IndexCore::refilterProvides(const RepoParams& params)
   File::unlink(pkgFileName);
   m_listener.onProvidesCleaning();
   logMsg(LOG_DEBUG, "Creating new \'%s\'", pkgFileName.c_str());
-  std::auto_ptr<UnifiedOutput> pkgFile = createRebuildWriter(pkgFileName, params);
+  UnifiedOutput::Ptr pkgFile = createRebuildWriter(pkgFileName, params);
   std::ifstream is(pkgCompleteFileName.c_str());
   if (!is.is_open())
     throw IndexCoreException(IndexCoreException::InternalIOProblem);
@@ -725,7 +781,7 @@ void IndexCore::collectRefs(const std::string& dirName, StringSet& res)
     repoParams.readInfoFile(Directory::mixNameComponents(dirName, REPO_INDEX_INFO_FILE));
     const std::string pkgFileName = Directory::mixNameComponents(dirName, REPO_INDEX_PACKAGES_FILE) + compressionExtension(repoParams.compressionType);
     const std::string srcFileName = Directory::mixNameComponents(dirName, REPO_INDEX_SOURCES_FILE) + compressionExtension(repoParams.compressionType);
-    std::auto_ptr<AbstractTextFormatSectionReader> reader = createRebuildReader(pkgFileName, repoParams);
+    AbstractTextFormatSectionReader::Ptr reader = createRebuildReader(pkgFileName, repoParams);
     logMsg(LOG_DEBUG, "Created section reader for reading file \'%s\'", pkgFileName.c_str());
     std::string sect;
     reader->init();
@@ -749,8 +805,8 @@ void IndexCore::collectRefs(const std::string& dirName, StringSet& res)
       logMsg(LOG_INFO, "Directory \'%s\' does not contain a valid repo index:%s error:%s", dirName.c_str(), e.getType().c_str(), e.getMessage().c_str());
     }
   logMsg(LOG_INFO, "Since repository index reading failed  we are looking for just packages itself");
-  std::auto_ptr<AbstractPkgBackEnd> backend = CREATE_PKG_BACKEND;
-  std::auto_ptr<Directory::Iterator> it = Directory::enumerate(dirName);
+  AbstractPkgBackEnd::Ptr backend = CREATE_PKG_BACKEND;
+  Directory::Iterator::Ptr it = Directory::enumerate(dirName);
   while(it->moveNext())
     {
       if (it->name() == "." || it->name() == "..")
@@ -764,58 +820,6 @@ void IndexCore::collectRefs(const std::string& dirName, StringSet& res)
       for(NamedPkgRelVector::size_type i = 0;i < pkgFile.conflicts.size();i++)
 	res.insert(pkgFile.conflicts[i].pkgName);
     }
-}
-
-std::string compressionExtension(char compressionType)
-{
-  if (compressionType == RepoParams::CompressionTypeGzip)
-    return COMPRESSION_SUFFIX_GZIP;
-  assert(compressionType == RepoParams::CompressionTypeNone);
-  return "";
-}
-
-bool fileFromDirs(const std::string& fileName, const StringVector& dirs)
-{
-  std::string tail;
-  for(StringVector::const_iterator it = dirs.begin();it != dirs.end();it++)
-    if (stringBegins(fileName, *it, tail))
-      return 1;
-  return 0;
-}
-
-std::auto_ptr<AbstractTextFormatSectionReader> createRebuildReader(const std::string& fileName, const RepoParams& params)
-{
-  if (params.compressionType == RepoParams::CompressionTypeNone)
-    {
-      std::auto_ptr<TextFormatSectionReader> reader(new TextFormatSectionReader());
-      reader->open(fileName);
-      return std::auto_ptr<AbstractTextFormatSectionReader>(reader.release());
-    }
-  if (params.compressionType == RepoParams::CompressionTypeGzip)
-    {
-      std::auto_ptr<TextFormatSectionReaderGzip> reader(new TextFormatSectionReaderGzip());
-      reader->open(fileName);
-      return std::auto_ptr<AbstractTextFormatSectionReader>(reader.release());
-    }
-  assert(0);
-  return std::auto_ptr<AbstractTextFormatSectionReader>();
-}
-
-std::auto_ptr<AbstractTextFormatSectionReader> createRebuildReaderNoCompression(const std::string& fileName)
-{
-  std::auto_ptr<TextFormatSectionReader> reader(new TextFormatSectionReader());
-  reader->open(fileName);
-  return std::auto_ptr<AbstractTextFormatSectionReader>(reader.release());
-}
-
-std::auto_ptr<UnifiedOutput> createRebuildWriter(const std::string& fileName, const RepoParams& params)
-{
-  if (params.compressionType == RepoParams::CompressionTypeNone)
-    return std::auto_ptr<UnifiedOutput>(new StdOutput(fileName));
-  if (params.compressionType == RepoParams::CompressionTypeGzip)
-    return std::auto_ptr<UnifiedOutput>(new GzipOutput(fileName));
-  assert(0);
-  return std::auto_ptr<UnifiedOutput>();
 }
 
 DEEPSOLVER_END_NAMESPACE

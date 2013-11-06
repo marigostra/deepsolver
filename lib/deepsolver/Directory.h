@@ -45,6 +45,9 @@ namespace Deepsolver
     class Iterator
     {
     public:
+      typedef std::shared_ptr<Iterator> Ptr;
+
+    public:
       /**\brief The constructor 
        *
        * This is the main constructor. It takes the name of directory it
@@ -158,9 +161,9 @@ namespace Deepsolver
      *
      * \param [in] path The name of the directory to enumerate files in
      *
-     * \return The auto_ptr<> to the prepared iterator
+     * \return The Iterator::Ptr to the prepared iterator
      */
-    static std::auto_ptr<Iterator> enumerate(const std::string& path);
+    static Iterator::Ptr enumerate(const std::string& path);
   }; //class Directory;
 } //namespace Deepsolver;
 

@@ -22,9 +22,16 @@ DEEPSOLVER_BEGIN_NAMESPACE
 
 void PkgScopeMetadata::initMetadata()
 {
+  const clock_t start = clock();
   fillRevMapProvides();
   fillRevMapRequires();
   fillRevMapConflicts();
+  const double duration = (double)(clock() - start) / CLOCKS_PER_SEC;
+  logMsg(LOG_DEBUG, "scope:metadata constructed in %f sec", duration);
+  logMsg(LOG_DEBUG, "scope:the scope is initialized for %zu packages", m_pkgs.size());
+  logMsg(LOG_DEBUG, "scope:revmap for provides contains %zu items", m_revMapProvides.size());
+  logMsg(LOG_DEBUG, "scope:revmap for installed requires contains %zu items", m_revMapInstalledRequires.size());
+  logMsg(LOG_DEBUG, "scope:revmap for installed conflicts contains %zu items", m_revMapInstalledConflicts.size());
 }
 
 void PkgScopeMetadata::fillRevMapProvides()

@@ -51,7 +51,7 @@ namespace Deepsolver
     bool verOverlap(const VersionCond& ver1, const VersionCond& ver2) const override;
     bool verEqual(const std::string& ver1, const std::string& ver2) const override;
     bool verGreater(const std::string& ver1, const std::string& ver2) const override;
-    std::auto_ptr<AbstractInstalledPkgIterator> enumInstalledPkg() const override;
+    AbstractInstalledPkgIterator::Ptr enumInstalledPkg() const override;
     void readPkgFile(const std::string& fileName, PkgFile& pkgFile) const override;
     bool validPkgFileName(const std::string& fileName) const override;
     bool validSourcePkgFileName(const std::string& fileName) const override;

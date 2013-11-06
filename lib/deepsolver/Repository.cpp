@@ -26,9 +26,64 @@
 
 DEEPSOLVER_BEGIN_NAMESPACE
 
-static std::auto_ptr<AbstractTextFormatSectionReader> createReader(const std::string& fileName, char compressionType);
-static void splitSectionLines(const std::string& sect, StringVector& lines);
-static std::string getFileNameFromUrl(const std::string& url);
+namespace
+{
+  AbstractTextFormatSectionReader::Ptr createReader(const std::string& fileName, char compressionType)
+  {
+    switch(compressionType)
+      {
+      case RepoParams::CompressionTypeNone:{
+	TextFormatSectionReader::Ptr reader(new TextFormatSectionReader());
+	reader->open(fileName);
+	return reader;
+      }
+      case RepoParams::CompressionTypeGzip: {
+	TextFormatSectionReaderGzip::Ptr reader(new TextFormatSectionReaderGzip());
+	reader->open(fileName);
+	return reader;
+      }
+      default:
+	assert(0);
+      }
+    return NULL;
+  }
+
+  void splitSectionLines(const std::string& sect, StringVector& lines)
+  {
+    lines.clear();
+    std::string line;
+    for(std::string::size_type i = 0;i < sect.length();i++)
+      {
+	if (sect[i] == '\r')
+	  continue;
+	if (sect[i] == '\n')
+	  {
+	    line = trim(line);
+	    if (!line.empty())
+	      lines.push_back(line);
+	    line.erase();
+	    continue;
+	  }
+	line += sect[i];
+      }
+    line = trim(line);
+    if (!line.empty())
+      lines.push_back(line);
+  }
+
+  std::string getFileNameFromUrl(const std::string& url)
+  {
+    if (trim(url).empty())
+      return "";
+    std::string::size_type pos = url.length();
+    for(std::string::size_type i = 0;i < url.length();i++)
+      if (url[i] == '/')
+	pos = i;
+    if (pos + 1 >= url.length())
+      return "";
+    return url.substr(pos + 1);
+  }
+}
 
 void Repository::fetchInfoAndChecksum()
 {
@@ -189,7 +244,7 @@ void Repository::loadPackageData(const StringToStringMap& files,
   std::string invalidLineValue;
   std::string sect;
   StringVector lines;
-  std::auto_ptr<AbstractTextFormatSectionReader> reader = createReader(pkgFileName, m_compressionType);
+  AbstractTextFormatSectionReader::Ptr reader = createReader(pkgFileName, m_compressionType);
   reader->init();
   while(reader->readNext(sect))
     {
@@ -308,60 +363,6 @@ std::string Repository::buildBinaryPackageUrl(const PkgFile& pkgFile) const
   value += REPO_PACKAGES_DIR_PREFIX + m_component + "/";
   value += pkgFile.fileName;
   return value;
-}
-
-std::auto_ptr<AbstractTextFormatSectionReader> createReader(const std::string& fileName, char compressionType)
-{
-  if (compressionType == RepoParams::CompressionTypeNone)
-    {
-      std::auto_ptr<TextFormatSectionReader> reader(new TextFormatSectionReader());
-      reader->open(fileName);
-      return std::auto_ptr<AbstractTextFormatSectionReader>(reader.release());
-    }
-  if (compressionType == RepoParams::CompressionTypeGzip)
-    {
-      std::auto_ptr<TextFormatSectionReaderGzip> reader(new TextFormatSectionReaderGzip());
-      reader->open(fileName);
-      return std::auto_ptr<AbstractTextFormatSectionReader>(reader.release());
-    }
-  assert(0);
-  return std::auto_ptr<AbstractTextFormatSectionReader>();
-}
-
-void splitSectionLines(const std::string& sect, StringVector& lines)
-{
-  lines.clear();
-  std::string line;
-  for(std::string::size_type i = 0;i < sect.length();i++)
-    {
-      if (sect[i] == '\r')
-	continue;
-      if (sect[i] == '\n')
-	{
-	  line = trim(line);
-	  if (!line.empty())
-	    lines.push_back(line);
-	  line.erase();
-	  continue;
-	}
-      line += sect[i];
-    }
-  line = trim(line);
-  if (!line.empty())
-    lines.push_back(line);
-}
-
-std::string getFileNameFromUrl(const std::string& url)
-{
-  if (trim(url).empty())
-    return "";
-  std::string::size_type pos = url.length();
-  for(std::string::size_type i = 0;i < url.length();i++)
-    if (url[i] == '/')
-      pos = i;
-  if (pos + 1 >= url.length())
-    return "";
-  return url.substr(pos + 1);
 }
 
 DEEPSOLVER_END_NAMESPACE

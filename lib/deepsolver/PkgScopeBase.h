@@ -44,6 +44,7 @@ namespace Deepsolver
   virtual ~PkgScopeBase() {}
 
   public:
+    size_t getPkgCount() const override;
     bool knownPkgName(const std::string& name) const override;
     std::string getPkgName(VarId varId) const override;
     std::string getDesignation(VarId varId, int epochMode) const override;

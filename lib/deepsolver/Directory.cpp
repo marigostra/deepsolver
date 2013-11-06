@@ -69,7 +69,7 @@ bool Directory::ensureExistsAndEmpty(const std::string& name, bool needEraseCont
 void Directory::eraseContent(const std::string& name)
 {
   assert(!name.empty());
-  std::auto_ptr<Iterator> it = enumerate(name);
+  Iterator::Ptr it = enumerate(name);
   while(it->moveNext())
     {
       if (it->name() == "." || it->name() == "..")
@@ -116,12 +116,12 @@ std::string Directory::Iterator::fullPath() const
   return Directory::mixNameComponents(m_path, m_currentName);//FIXME:
 }
 
-std::auto_ptr<Directory::Iterator> Directory::enumerate(const std::string& path)
+Directory::Iterator::Ptr Directory::enumerate(const std::string& path)
 {
   DIR* dir = opendir(path.c_str());
   if (!dir)
     SYS_STOP("opendir(" + path + ")");
-  return std::auto_ptr<Iterator>(new Iterator(path, dir));
+  return Iterator::Ptr(new Iterator(path, dir));
 }
 
 std::string Directory::mixNameComponents(const std::string& part1, const std::string& part2)
@@ -146,7 +146,7 @@ std::string Directory::mixNameComponents(const std::string& part1, const std::st
 bool Directory::empty(const std::string& path)
 {
   assert(!path.empty());
-  std::auto_ptr<Iterator> it = enumerate(path);
+  Iterator::Ptr it = enumerate(path);
   while (it->moveNext())
     {
       if (it->name() != "." && it->name() != "..")

@@ -237,7 +237,7 @@ void ConfigCenter::loadFromDir(const std::string& path)
 {
   logMsg(LOG_DEBUG, "config:reading config file fragments from \'%s\'", path.c_str());
   StringVector files;
-  std::auto_ptr<Directory::Iterator> it = Directory::enumerate(path);
+  Directory::Iterator::Ptr it = Directory::enumerate(path);
   while(it->moveNext())
     {
       const std::string fileName = it->fullPath();

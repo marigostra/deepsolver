@@ -20,6 +20,11 @@
 
 DEEPSOLVER_BEGIN_NAMESPACE
 
+size_t PkgScopeBase::getPkgCount() const
+{
+  return m_pkgs.size();
+}
+
 bool PkgScopeBase::knownPkgName(const std::string& name) const
 {
   assert(!name.empty());

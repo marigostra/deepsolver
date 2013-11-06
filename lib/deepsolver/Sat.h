@@ -87,6 +87,9 @@ namespace Deepsolver
     class AbstractSatSolver
     {
     public:
+      typedef std::shared_ptr<AbstractSatSolver> Ptr;
+
+    public:
       typedef std::map<VarId, bool> VarIdToBoolMap;
 
     public:
@@ -99,7 +102,7 @@ namespace Deepsolver
       virtual bool solve(VarIdToBoolMap& res, VarIdVector& conflicts) = 0;
     }; //class AbstractSatSolver;
 
-    std::auto_ptr<AbstractSatSolver> createDefaultSatSolver();
+    AbstractSatSolver::Ptr createDefaultSatSolver();
   } //namespace Sat;
 } //namespace Deepsolver;
 

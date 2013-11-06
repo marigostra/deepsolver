@@ -84,10 +84,17 @@ namespace Deepsolver
     void fetchIndices(AbstractFetchListener& listener,
 		      const AbstractOperationContinueRequest& continueRequest);
 
-    std::auto_ptr<TransactionIterator> transaction(AbstractTransactionListener& listener, const UserTask& task);
-    std::string generateSat(AbstractTransactionListener& listener, const UserTask& task);
+    TransactionIterator::Ptr transaction(AbstractTransactionListener& listener, const UserTask& task);
+
+    void generateSat(AbstractTransactionListener& listener,
+		     const UserTask& task,
+		     std::ostream& s);
+
     void printPackagesByRequire(const NamedPkgRel& rel, std::ostream& s);
-    void printSnapshot(bool withInstalled, std::ostream& s);
+
+    void printSnapshot(bool withInstalled, 
+		       bool withIds,
+		       std::ostream& s);
 
   private:
     const ConfigCenter& m_conf;

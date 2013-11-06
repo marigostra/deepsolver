@@ -165,7 +165,7 @@ int main(int argc, char* argv[])
       }
     if (!cliParser.wasKeyUsed("--sat"))
       {
-	std::auto_ptr<TransactionIterator> it = core.transaction(transactionProgress, userTask);
+	TransactionIterator::Ptr it = core.transaction(transactionProgress, userTask);
 	if (cliParser.wasKeyUsed("--urls"))
 	  {
 	    printUrls(*it.get());
@@ -193,9 +193,8 @@ int main(int argc, char* argv[])
 	it->makeChanges();
       } else
       {
-	const std::string res = core.generateSat(transactionProgress, userTask);
 	std::cout << std::endl;
-	std::cout << res;
+	core.generateSat(transactionProgress, userTask, std::cout);
       }
   }
   catch (const ConfigFileException& e)

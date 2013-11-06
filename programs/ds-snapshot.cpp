@@ -21,8 +21,12 @@
 
 using namespace Deepsolver;
 
-static CliParser cliParser;
-static bool withInstalled = 0;
+namespace 
+{
+  CliParser cliParser;
+  bool withInstalled = 0;
+  bool withIds = 0;
+}
 
 void parseCmdLine(int argc, char* argv[])
 {
@@ -51,6 +55,7 @@ void parseCmdLine(int argc, char* argv[])
       exit(EXIT_SUCCESS);
     }
   withInstalled = cliParser.wasKeyUsed("--installed");
+  withIds = cliParser.wasKeyUsed("--ids");
 }
 
 int main(int argc, char* argv[])
@@ -65,7 +70,7 @@ int main(int argc, char* argv[])
     conf.loadFromDir(DEFAULT_CONFIG_DIR_NAME);
     conf.commit();
     OperationCore core(conf);
-    core.printSnapshot(withInstalled, std::cout);
+    core.printSnapshot(withInstalled, withIds, std::cout);
   }
   catch (const ConfigFileException& e)
     {

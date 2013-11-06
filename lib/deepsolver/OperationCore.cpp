@@ -22,7 +22,6 @@
 #include"deepsolver/FilesFetch.h"
 #include"deepsolver/AbstractPkgBackEnd.h"
 #include"deepsolver/AbstractTaskSolver.h"
-#include"deepsolver/Sat.h"
 #include"deepsolver/PkgScope.h"
 #include"deepsolver/PkgSnapshot.h"
 
@@ -37,7 +36,7 @@ namespace
   {
     PkgSnapshot::removeEqualPkgs(snapshot);
     PkgSnapshot::PkgVector& pkgs = snapshot.pkgs;
-    std::auto_ptr<AbstractInstalledPkgIterator> it = backend.enumInstalledPkg();
+    AbstractInstalledPkgIterator::Ptr it = backend.enumInstalledPkg();
     size_t installedCount = 0;
     PkgVector toInhanceWith;
     Pkg pkg;
@@ -231,13 +230,13 @@ void OperationCore::fetchIndices(AbstractFetchListener& listener,
   //FIXME:remove file lock;
 }
 
-std::auto_ptr<TransactionIterator> OperationCore::transaction(AbstractTransactionListener& listener, const UserTask& userTask)
+TransactionIterator::Ptr OperationCore::transaction(AbstractTransactionListener& listener, const UserTask& userTask)
 {
   const ConfRoot& root = m_conf.root();
   freeAutoReleaseStrings();
   for(StringVector::size_type i = 0;i < root.os.transactReadAhead.size();i++)
     File::readAhead(root.os.transactReadAhead[i]);
-  std::auto_ptr<AbstractPkgBackEnd> backend = CREATE_PKG_BACKEND;
+  AbstractPkgBackEnd::Ptr backend = CREATE_PKG_BACKEND;
   backend->initialize();
   PkgSnapshot::Snapshot snapshot;
   listener.onPkgListProcessingBegin();
@@ -249,7 +248,7 @@ std::auto_ptr<TransactionIterator> OperationCore::transaction(AbstractTransactio
   scope.initMetadata();
   listener.onPkgListProcessingEnd();
   TaskSolverData taskSolverData(*backend.get(), scope, m_conf);
-  std::auto_ptr<AbstractTaskSolver> solver = createTaskSolver(taskSolverData);
+  AbstractTaskSolver::Ptr solver = createTaskSolver(taskSolverData);
   VarIdVector toInstall, toRemove;
   solver->solve(userTask, toInstall, toRemove);
   VarIdToVarIdMap toUpgrade, toDowngrade;
@@ -284,48 +283,34 @@ std::auto_ptr<TransactionIterator> OperationCore::transaction(AbstractTransactio
       pkgDowngradeTo.push_back(pkg2);
     }
   freeAutoReleaseStrings();
-  return std::auto_ptr<TransactionIterator>(new TransactionIterator(m_conf, backend,
+  return TransactionIterator::Ptr(new TransactionIterator(m_conf, backend,
 								    pkgInstall, pkgRemove,
 								    pkgUpgradeFrom, pkgUpgradeTo,
 								    pkgDowngradeFrom, pkgDowngradeTo));
 }
 
-std::string OperationCore::generateSat(AbstractTransactionListener& listener, const UserTask& userTask)
+void OperationCore::generateSat(AbstractTransactionListener& listener,
+				const UserTask& userTask,
+				std::ostream& s)
 {
-  /*FIXME:
   const ConfRoot& root = m_conf.root();
   freeAutoReleaseStrings();
   for(StringVector::size_type i = 0;i < root.os.transactReadAhead.size();i++)
     File::readAhead(root.os.transactReadAhead[i]);
-  std::auto_ptr<AbstractPackageBackEnd> backEnd = CREATE_PACKAGE_BACKEND;
-  backEnd->initialize();
+  AbstractPkgBackEnd::Ptr backend = CREATE_PKG_BACKEND;
+  backend->initialize();
   PkgSnapshot::Snapshot snapshot;
-  ProvideMap provideMap;
-  InstalledReferences requiresReferences, conflictsReferences;
   listener.onPkgListProcessingBegin();
   PkgSnapshot::loadFromFile(snapshot, Directory::mixNameComponents(m_conf.root().dir.pkgData, PKG_DATA_FILE_NAME), m_autoReleaseStrings);
-  logMsg(LOG_DEBUG, "operation:the score of the snapshot just loaded is %zu", PkgSnapshot::getScore(snapshot));
   if (snapshot.pkgs.empty())//FIXME:
     throw NotImplementedException("Empty set of attached repositories");
-  PkgUtils::fillWithhInstalledPackages(*backEnd.get(), snapshot, m_autoReleaseStrings, root.stopOnInvalidInstalledPkg);
-  PkgUtils::prepareReversedMaps(snapshot, provideMap, requiresReferences, conflictsReferences);
+  fillWithhInstalledPackages(*backend.get(), snapshot, m_autoReleaseStrings, root.stopOnInvalidInstalledPkg);
+  PkgScope scope(*backend.get(), snapshot);
+  scope.initMetadata();
   listener.onPkgListProcessingEnd();
-  PkgScope scope(*backEnd.get(), snapshot, provideMap, requiresReferences, conflictsReferences);
-  TaskSolverData taskSolverData(*backEnd.get(), scope);
-  for(ConfProvideVector::size_type i = 0;i < root.provide.size();i++)
-    {
-      assert(!trim(root.provide[i].name).empty());
-      TaskSolverProvideInfo info(root.provide[i].name);
-      for(StringVector::size_type k = 0;k < root.provide[i].providers.size();k++)
-	info.providers.push_back(root.provide[i].providers[k]);
-      taskSolverData.provides.push_back(info);
-    }
-  SatWriter writer(taskSolverData);
-  const std::string res = writer.generateSat(userTask);
-  freeAutoReleaseStrings();
-  return res;
-  */
-  return "#DISABLED FOR NOW#";
+  TaskSolverData taskSolverData(*backend.get(), scope, m_conf);
+  AbstractTaskSolver::Ptr solver = createTaskSolver(taskSolverData);
+  solver->dumpSat(userTask, s);
 }
 
 void OperationCore::printPackagesByRequire(const NamedPkgRel& rel, std::ostream& s)
@@ -335,7 +320,7 @@ void OperationCore::printPackagesByRequire(const NamedPkgRel& rel, std::ostream&
   freeAutoReleaseStrings();
   for(StringVector::size_type i = 0;i < root.os.transactReadAhead.size();i++)
     File::readAhead(root.os.transactReadAhead[i]);
-  std::auto_ptr<AbstractPackageBackEnd> backEnd = CREATE_PACKAGE_BACKEND;
+  AbstractPackageBackEnd::ptr backEnd = CREATE_PACKAGE_BACKEND;
   backEnd->initialize();
   PkgSnapshot::Snapshot snapshot;
   ProvideMap provideMap;
@@ -370,12 +355,11 @@ void OperationCore::printPackagesByRequire(const NamedPkgRel& rel, std::ostream&
   */
 }
 
-void OperationCore::printSnapshot(bool withInstalled, std::ostream& s)
+void OperationCore::printSnapshot(bool withInstalled, 
+				  bool withIds,
+				  std::ostream& s)
 {
-  /*FIXME:
-  if (withInstalled)
-    logMsg(LOG_DEBUG, "operation:printing snapshot with installed packages"); else
-    logMsg(LOG_DEBUG, "operation:printing snapshot without installed packages");
+  logMsg(LOG_DEBUG, withInstalled?"operation:printing snapshot with installed packages":"operation:printing snapshot without installed packages"); 
   const ConfRoot& root = m_conf.root();
   freeAutoReleaseStrings();
   if (withInstalled)
@@ -383,15 +367,14 @@ void OperationCore::printSnapshot(bool withInstalled, std::ostream& s)
       for(StringVector::size_type i = 0;i < root.os.transactReadAhead.size();i++)
 	File::readAhead(root.os.transactReadAhead[i]);
     }
-  std::auto_ptr<AbstractPackageBackEnd> backEnd = CREATE_PACKAGE_BACKEND;
+  AbstractPkgBackEnd::Ptr backEnd = CREATE_PKG_BACKEND;
   backEnd->initialize();
   PkgSnapshot::Snapshot snapshot;
   PkgSnapshot::loadFromFile(snapshot, Directory::mixNameComponents(m_conf.root().dir.pkgData, PKG_DATA_FILE_NAME), m_autoReleaseStrings);
   if (withInstalled)
-    PkgUtils::fillWithhInstalledPackages(*backEnd.get(), snapshot, m_autoReleaseStrings, root.stopOnInvalidInstalledPkg);
-  PkgSnapshot::printContent(snapshot, s);
+    fillWithhInstalledPackages(*backEnd.get(), snapshot, m_autoReleaseStrings, root.stopOnInvalidInstalledPkg);
+  PkgSnapshot::printContent(snapshot, withIds, s);
   freeAutoReleaseStrings();
-  */
 }
 
 DEEPSOLVER_END_NAMESPACE

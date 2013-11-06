@@ -170,7 +170,11 @@ namespace Deepsolver
 		    ConstCharVector& strings);
 
     void removeEqualPkgs(Snapshot& snapshot);
-    void printContent(const Snapshot& snapshot, std::ostream& s);
+
+    void printContent(const Snapshot& snapshot, 
+		      bool withIds,
+		      std::ostream& s);
+
     size_t getScore(const Snapshot& snapshot);
     bool theSameVersion(const Deepsolver::Pkg& p1, const Deepsolver::PkgSnapshot::Pkg& p2);
 

@@ -145,11 +145,11 @@ equation[i] = new int[m_clauseSizes[i]];
       equation[i][j] = m_clauses[index++];
   assert(index == m_clauses.size());
   unsigned char* solution = new unsigned char[m_nextFreeVar];
-  for(size_t i = 0;i < m_nextFreeVar;i++)
+  for(size_t i = 0;i < (size_t)m_nextFreeVar;i++)
     solution[i] = 0;
   data.setSolution(solution);
   unsigned char* collisions = new unsigned char[m_nextFreeVar];
-  for(size_t i = 0;i < m_nextFreeVar;i++)
+  for(size_t i = 0;i < (size_t)m_nextFreeVar;i++)
     collisions[i] = 0;
   data.setCollisions(collisions);
   logMsg(LOG_DEBUG, "libminisat:calling libminisat to solve the task with %zu variables in %zu clauses", m_nextFreeVar - 1, m_clauseSizes.size());
@@ -163,7 +163,7 @@ equation[i] = new int[m_clauseSizes[i]];
   if (code == MINISAT_UNSAT)
     {
       conflicts.clear();
-      for(size_t i = 1;i < m_nextFreeVar;i++)
+      for(size_t i = 1;i < (size_t)m_nextFreeVar;i++)
 	if (collisions[i])
 	  {
 	    IntToVarIdMap::const_iterator it = m_intToVarIdMap.find(i);
@@ -179,7 +179,7 @@ equation[i] = new int[m_clauseSizes[i]];
       return 0;
     }
   logMsg(LOG_DEBUG, "libminisat:libminisat found a solution!");
-  for(size_t i = 1;i < m_nextFreeVar;i++)
+  for(size_t i = 1;i < (size_t)m_nextFreeVar;i++)
     {
       IntToVarIdMap::const_iterator it = m_intToVarIdMap.find(i);
       assert(it != m_intToVarIdMap.end());
@@ -204,9 +204,9 @@ int LibMinisatSolver::mapVarId(VarId varId)
   return newValue;
 }
 
-std::auto_ptr<AbstractSatSolver> createDefaultSatSolver()
+AbstractSatSolver::Ptr createDefaultSatSolver()
 {
-  return std::auto_ptr<AbstractSatSolver>(new LibMinisatSolver());
+  return AbstractSatSolver::Ptr(new LibMinisatSolver());
 }
 
 DEEPSOLVER_END_SAT_NAMESPACE

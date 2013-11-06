@@ -28,8 +28,11 @@ namespace Deepsolver
   class TransactionIterator
   {
   public:
+    typedef std::shared_ptr<TransactionIterator> Ptr;
+
+  public:
     TransactionIterator(const ConfigCenter& conf,
-			std::auto_ptr<AbstractPkgBackEnd> backend,
+			AbstractPkgBackEnd::Ptr backend,
 			const PkgVector& install,
 			const PkgVector& remove,
 			const PkgVector& upgradeFrom,
@@ -116,7 +119,7 @@ namespace Deepsolver
 
   private:
     const ConfigCenter& m_conf;
-    std::auto_ptr<AbstractPkgBackEnd> m_backend;
+    AbstractPkgBackEnd::Ptr m_backend;
     PkgVector m_install, m_remove;
     PkgVector m_upgradeFrom, m_upgradeTo;
     PkgVector m_downgradeFrom, m_downgradeTo;

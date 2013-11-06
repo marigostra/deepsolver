@@ -691,13 +691,17 @@ void removeEqualPkgs(Snapshot& snapshot)
   logMsg(LOG_DEBUG, "snapshot:%zu doubled packages are filtered out", offset);
 }
 
-void printContent(const Snapshot& snapshot, std::ostream& s)
+void printContent(const Snapshot& snapshot, 
+		  bool withIds,
+		  std::ostream& s)
 {
   for(PkgVector::size_type i = 0;i < snapshot.pkgs.size();i++)
     {
       const PkgSnapshot::Pkg& p = snapshot.pkgs[i]; 
       assert(p.pkgId != BadPkgId);
-      s << ((p.flags & PkgFlagInstalled)?"Installed package: ":"Package: ");
+      if (withIds)
+	s << "#" << i << ((p.flags & PkgFlagInstalled)?", installed: ": ": "); else
+	s << ((p.flags & PkgFlagInstalled)?"Installed package: ":"Package: ");
       s << pkgIdToStr(snapshot, p.pkgId) << "-";
       if (p.epoch > 0)
 	s << p.epoch << ":";

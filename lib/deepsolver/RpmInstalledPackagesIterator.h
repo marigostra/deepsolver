@@ -35,6 +35,9 @@ namespace Deepsolver
   class RpmInstalledPkgIterator: public AbstractInstalledPkgIterator
   {
   public:
+    typedef std::shared_ptr<RpmInstalledPkgIterator> Ptr;
+
+  public:
     /**\brief The default constructor*/
     RpmInstalledPkgIterator() {}
 

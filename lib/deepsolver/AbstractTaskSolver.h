@@ -40,6 +40,9 @@ namespace Deepsolver
   class AbstractTaskSolver
   {
   public:
+    typedef std::shared_ptr<AbstractTaskSolver> Ptr;
+
+  public:
     AbstractTaskSolver() {}
     virtual ~AbstractTaskSolver() {}
 
@@ -47,9 +50,11 @@ namespace Deepsolver
     virtual void solve(const UserTask& userTask, 
 		       VarIdVector& install,
 		       VarIdVector& remove) const = 0;
+
+    virtual void dumpSat(const UserTask& userTask, std::ostream& s) const = 0;
   }; //class AbstractTaskSolver;
 
-  std::auto_ptr<AbstractTaskSolver> createTaskSolver(const TaskSolverData& taskSolverData);
+  AbstractTaskSolver::Ptr createTaskSolver(const TaskSolverData& taskSolverData);
 } //namespace Deepsolver;
 
 #endif //DEEPSOLVER_ABSTRACT_TASK_SOLVER_H;
