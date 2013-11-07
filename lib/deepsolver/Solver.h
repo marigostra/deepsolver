@@ -27,6 +27,14 @@ namespace Deepsolver
 {
   namespace Solver
   {
+    using Sat::Lit;
+    using Sat::Clause;
+    using Sat::unitClause;
+    using Sat::AbstractSatSolver;
+    using Sat::createDefaultSatSolver;
+    using Sat::Sat;
+    typedef AbstractSatSolver::VarIdToBoolMap VarIdToBoolMap;
+
     class RefCountedEntry
     {
     public:
@@ -35,8 +43,9 @@ namespace Deepsolver
 	  oldState(s),
 	  newState(s),
 	  refNum(0), 
+	  ambiguous(0),
 	  bfsMark(0),
-	  processed(0 ) {}
+	  replacementFor(BadVarId) {}
 
       virtual ~RefCountedEntry() {}
 
@@ -44,9 +53,9 @@ namespace Deepsolver
       void onConflict(VarId v)
       {
 	assert(v != BadVarId);
-	Sat::Clause c;
-	c.push_back(Sat::Lit(varId, 1));
-	c.push_back(Sat::Lit(v, 1));
+	Clause c;
+	c.push_back(Lit(varId, 1));
+	c.push_back(Lit(v, 1));
 	sat.push_back(c);
       }
 
@@ -57,12 +66,12 @@ namespace Deepsolver
 	    logMsg(LOG_WARNING, "solver:trying to add a require without alternatives");
 	    return;
 	  }
-	Sat::Clause c;
-	c.push_back(Sat::Lit(varId, 1));
+	Clause c;
+	c.push_back(Lit(varId, 1));
 	for(VarIdVector::size_type i = 0;i < alternatives.size();++i)
 	  {
 	    assert(alternatives[i] != BadVarId);
-	    c.push_back(Sat::Lit(alternatives[i]));
+	    c.push_back(Lit(alternatives[i]));
 	  }
 	sat.push_back(c);
       }
@@ -70,24 +79,33 @@ namespace Deepsolver
       void onDependent(VarId dependent, const VarIdVector& alternatives)
       {
 	assert(dependent != BadVarId);
-	Sat::Clause c;
-	c.push_back(Sat::Lit(varId));
-	c.push_back(Sat::Lit(dependent, 1));
+	Clause c;
+	c.push_back(Lit(varId));
+	c.push_back(Lit(dependent, 1));
 	for(VarIdVector::size_type i = 0;i < alternatives.size();++i)
 	  {
 	    assert(alternatives[i] != BadVarId);
-	    c.push_back(Sat::Lit(alternatives[i]));
+	    c.push_back(Lit(alternatives[i]));
   }
 	sat.push_back(c);
       }
 
-public:
+      void clearAllMarks()
+      {
+	ambiguous = 0;
+	bfsMark = 0;
+	for(Sat::size_type i = 0;i < sat.size();++i)
+	  for(Clause::size_type j = 0;j < sat[i].size();++j)
+	    sat[i][j].ambiguous = 0;
+      }
+
+    public:
       VarId varId;
       bool oldState, newState;
       size_t refNum;
-      Sat::Sat sat;
-      bool bfsMark;
-      bool processed;
+      Sat sat;
+      bool ambiguous, bfsMark;
+      VarId replacementFor;
     }; //class RefCountedEntry;
 
     typedef std::vector<RefCountedEntry*> RefCountedEntryVector;
@@ -112,6 +130,13 @@ public:
 	  m_entries[i] = NULL;
       }
 
+      void erase(VarId varId)
+      {
+	assert(varId != BadVarId && hasEntry(varId));
+	delete m_entries[varId];
+	m_entries[varId] = NULL;
+      }
+
       void clear()
       {
 	for(RefCountedEntryVector::size_type i = 0;i < m_entries.size();++i)
@@ -126,6 +151,13 @@ public:
 	    m_entries[i]->bfsMark = 0;
       }
 
+      void clearAllMarks()
+      {
+	for(RefCountedEntryVector::size_type i = 0;i < m_entries.size();++i)
+	  if (m_entries[i] != NULL)
+	    m_entries[i]->clearAllMarks();
+      }
+
       size_t size() const
       {
 	return m_entries.size();
@@ -138,7 +170,13 @@ public:
 
       RefCountedEntry& getEntry(VarId varId)
       {
-	assert(varId < m_entries.size());
+	assert(varId < m_entries.size() && hasEntry(varId));
+	return *m_entries[varId];
+      }
+
+      const RefCountedEntry& getEntry(VarId varId) const
+      {
+	assert(varId < m_entries.size() && hasEntry(varId));
 	return *m_entries[varId];
       }
 
@@ -152,12 +190,6 @@ public:
       {
 	assert(hasEntry(varId) && m_entries[varId]->refNum > 0);
 	m_entries[varId]->refNum--;
-      }
-
-      const RefCountedEntry& getEntry(VarId varId) const
-      {
-	assert(varId < m_entries.size());
-	return *m_entries[varId];
       }
 
       RefCountedEntry& newEntry(VarId varId, bool installed)
@@ -200,12 +232,16 @@ public:
 
     private:
       void onUserTask(const UserTask& userTask);
-      void incRef(VarId varId);
+      void use(VarId varId);
       VarId onUserItemToInstall(const UserTaskItemToInstall& item) const;
       void toBeInstalled(VarId VarId);
+      void toBeInstalled(VarId varId, VarId replacementFor);
       void toBeRemoved(VarId varId);
       VarId byProvidesPriorityList(const VarIdVector& vars, PkgId provideEntry) const;
       VarId byProvidesPrioritySorting(const VarIdVector& vars) const;
+
+      void onPending();
+      void preSatOptimization();
 
     public:
       RefCountedEntries p;
@@ -216,6 +252,7 @@ public:
       const AbstractProvidePriority& m_providePriority;
       VarIdSet m_userTaskInstall, m_userTaskRemove;
       VarIdVector m_pending;
+      VarIdToVarIdMap m_replPending;
     }; //class SatBuilder;
 
     class Solver: public AbstractTaskSolver
@@ -237,11 +274,13 @@ public:
     private:
       bool solveSat(RefCountedEntries& p,
 			const VarIdSet& userTaskInstall,
-			const VarIdSet& userTaskRemove) const;
+		    const VarIdSet& userTaskRemove,
+	const VarIdVector& fixedToInstall) const;
 
       void filterSolution(RefCountedEntries& p,
 			  const VarIdSet& userTaskInstall,
-			  const VarIdSet& userTaskRemove) const;
+			  const VarIdSet& userTaskRemove,
+const VarIdVector& fixedToInstall) const;
 
     private:
       const TaskSolverData& m_taskSolverData;

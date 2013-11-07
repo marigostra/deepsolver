@@ -23,8 +23,6 @@
 
 DEEPSOLVER_BEGIN_SOLVER_NAMESPACE
 
-typedef Sat::AbstractSatSolver::VarIdToBoolMap VarIdToBoolMap;
-
 class Bfs
 {
 public:
@@ -34,27 +32,42 @@ public:
       virtual ~Bfs() {}
 
   public:
+  void go(const VarIdSet startSet1, const VarIdSet& startSet2)
+  {
+    VarIdVector startFrom;
+    for(VarIdSet::const_iterator it = startSet1.begin();it != startSet1.end();++it)
+      startFrom.push_back(*it);
+    for(VarIdSet::const_iterator it = startSet2.begin();it != startSet2.end();++it)
+      startFrom.push_back(*it);
+    go(startFrom);
+  }
+
       void go(const VarIdVector& startFrom)
       {
 	const clock_t start = clock();
 	assert(!startFrom.empty());
 	for(VarIdVector::size_type i = 0;i < startFrom.size();++i)
+	  {
+	    assert(!m_p.getEntry(startFrom[i]).ambiguous);
 	  m_pending.push_back(startFrom[i]);
+	  }
 	while(!m_pending.empty())
 	  {
 	    const VarId varId = m_pending.back();
 	    m_pending.pop_back();
 	    assert(m_p.hasEntry(varId));
 	    RefCountedEntry& e = m_p.getEntry(varId);
-	    assert(!e.processed);
+	    assert(!e.ambiguous);
 	    if (e.bfsMark)
 	      continue;
 	    e.bfsMark = 1;
-	    for(Sat::Sat::size_type s = 0;s < e.sat.size();++s)
-	      for(Sat::Clause::size_type c = 0;c < e.sat[s].size();++c)
+	    for(Sat::size_type s = 0;s < e.sat.size();++s)
+	      for(Clause::size_type c = 0;c < e.sat[s].size();++c)
 		{
 		  const VarId v = e.sat[s][c].varId;
-		  if (v != e.varId && !m_p.getEntry(v).processed)
+		  const bool ambiguous = e.sat[s][c].ambiguous;
+		  if (!ambiguous && v != e.varId && 
+		      !m_p.getEntry(v).ambiguous)
 		    m_pending.push_back(v);
 		  }
 	  }
@@ -100,6 +113,19 @@ void SatBuilder::build(const UserTask& userTask)
       p.incRef(*it);
     }
   logMsg(LOG_DEBUG, "solver:user task yields %zu pending packages", m_pending.size());
+  onPending();
+  preSatOptimization();
+  logMsg(LOG_DEBUG, "solver:got %zu replacements to add", m_replPending.size());
+  for(VarIdToVarIdMap::const_iterator it = m_replPending.begin();it != m_replPending.end();++it)
+    if (p.hasEntry(it->first))
+    toBeInstalled(it->second, it->first);
+  onPending();
+  const double duration = (double)(clock() - start) / CLOCKS_PER_SEC;
+    logMsg(LOG_DEBUG, "solver:SAT construction completed in %f sec", duration);
+}
+
+void SatBuilder::onPending()
+{
   while(!m_pending.empty())
     {
       const VarId varId = m_pending.back();
@@ -114,8 +140,89 @@ void SatBuilder::build(const UserTask& userTask)
 	toBeRemoved(varId);
       p.incRef(varId);
     }
-  const double duration = (double)(clock() - start) / CLOCKS_PER_SEC;
-    logMsg(LOG_DEBUG, "solver:SAT construction completed in %f sec", duration);
+
+}
+
+void SatBuilder::preSatOptimization()
+{
+  BoolVector rem;
+  rem.resize(m_scope.getPkgCount());
+  while(1)
+    {
+      logMsg(LOG_DEBUG, "solver:new pass for pre-sat optimization");
+  for(VarId i = 0;i < rem.size();++i)
+    rem[i] = m_scope.isInstalled(i);
+  assert(rem.size() == p.size());
+  //Collecting installed packages without negative literals;
+  for(VarId i = 0;i < p.size();++i)
+    if (p.hasEntry(i))
+      {
+	const RefCountedEntry& e = p.getEntry(i);
+	for(Sat::size_type s = 0;s < e.sat.size();++s)
+	  for(Clause::size_type c = 0;c < e.sat[s].size();++c)
+	    if (e.sat[s][c].neg)
+	      {
+		assert(e.sat[s][c].varId < rem.size());
+		rem[e.sat[s][c].varId] = 0;
+	      }
+      }    
+  //Removing clauses containing obviously true literals;
+  for(VarId i = 0;i < p.size();++i)
+    if (p.hasEntry(i))
+      for(Sat::size_type s = 0;s < p.getEntry(i).sat.size();++s)
+	{
+	  RefCountedEntry& e = p.getEntry(i);
+	  Clause::size_type c;
+	  for(c = 0;c < e.sat[s].size();++c)
+	    {
+	      assert(e.sat[s][c].varId < rem.size());
+	      //TODO:Actually we are able to do something similar and with packages to remove;
+	      if (!e.sat[s][c].neg &&
+		  (rem[e.sat[s][c].varId] ||
+		   m_userTaskInstall.find(e.sat[s][c].varId) != m_userTaskInstall.end()))
+		break;
+	    }
+	  if (c >= e.sat[s].size())
+	    continue;
+	  assert(!e.sat[s][c].neg);
+	  e.sat[s].clear();
+	}
+  size_t clausesRemoved = 0;
+  for(VarId i = 0;i < p.size();++i)
+    if (p.hasEntry(i))
+      {
+	RefCountedEntry& e = p.getEntry(i);
+	size_t offset = 0;
+	for(Sat::size_type s = 0;s < e.sat.size();++s)
+	  if (e.sat[s].empty())
+	    offset++; else
+	    if (offset > 0)
+	      e.sat[s - offset] = e.sat[s];
+	assert(offset <= e.sat.size());
+	if (offset > 0)
+	  e.sat.resize(e.sat.size() - offset);
+	clausesRemoved += offset;
+      }
+  logMsg(LOG_DEBUG, "solver:%zu clauses filtered out", clausesRemoved);
+  //Invoking BFS;
+  p.clearAllMarks();
+  Bfs(p).go(m_userTaskInstall, m_userTaskRemove);
+  //Actual removing;
+  size_t remNum = 0;
+  for(VarId i = 0;i < p.size();++i)
+    if (p.hasEntry(i))
+      {
+	if (!p.getEntry(i).bfsMark)
+	  {
+	    p.erase(i);
+	    remNum++;
+	  }
+      }
+  logMsg(LOG_DEBUG, "solver:%zu involved packages could be safely excluded", remNum);
+  if (remNum == 0)
+    break;
+    }
+
 }
 
 void SatBuilder::onUserTask(const UserTask& userTask)
@@ -153,18 +260,31 @@ void SatBuilder::onUserTask(const UserTask& userTask)
     }
 }
 
-void SatBuilder::incRef(VarId varId)
+void SatBuilder::use(VarId varId)
 {
   assert(varId != BadVarId);
-  //Actual reference counter increment is done in SatBuilder::build() with checking the entry exists;
   m_pending.push_back(varId);
 }
 
 void SatBuilder::toBeInstalled(VarId varId)
 {
+  toBeInstalled(varId, BadVarId);
+}
+
+void SatBuilder::toBeInstalled(VarId varId, VarId replacementFor)
+{
   assert(varId != BadVarId && !m_scope.isInstalled(varId));
   if (p.hasEntry(varId))
-    return;
+    {
+      if (replacementFor != BadVarId)
+	{
+      RefCountedEntry& e = p.getEntry(varId);
+      if (e.replacementFor == BadVarId)
+e.replacementFor = replacementFor; else
+	logMsg(LOG_WARNING, "%s desired to be a replacement for %s but was considered as a replacement for %s previously, left unchanged", m_scope.getDesignation(varId).c_str(), m_scope.getDesignation(replacementFor).c_str(), m_scope.getDesignation(e.replacementFor).c_str());
+	}
+      return;
+    }
   if (m_userTaskRemove.find(varId) != m_userTaskRemove.end())
     {
 #ifdef UNBOUNDED_LOG
@@ -173,9 +293,13 @@ void SatBuilder::toBeInstalled(VarId varId)
       return;
     }
 #ifdef UNBOUNDED_LOG
-  logMsg(LOG_DEBUG, "solver:install-type sat construction for %s", m_scope.getDesignation(varId).c_str());
+  if (replacementFor != BadVarId)
+    logMsg(LOG_DEBUG, "solver:install-type sat construction for %s as a replacement for %s", m_scope.getDesignation(varId).c_str(), m_scope.getDesignation(replacementFor).c_str()); else
+    logMsg(LOG_DEBUG, "solver:install-type sat construction for %s", m_scope.getDesignation(varId).c_str());
 #endif //UNBOUNDED_LOG;
   RefCountedEntry& entry = p.newEntry(varId, 0);//0 means currently not installed;
+  if (replacementFor != BadVarId)
+    entry.replacementFor = replacementFor;
   //Blocking other versions of this package (FIXME:Not every package requires that);
   VarIdVector otherVer;
   m_scope.selectMatchingVarsRealNames(m_scope.pkgIdOfVarId(varId), otherVer);
@@ -183,7 +307,7 @@ void SatBuilder::toBeInstalled(VarId varId)
   for(VarIdVector::size_type i = 0;i < otherVer.size();++i)
     if (otherVer[i] != varId)
       {
-	incRef(otherVer[i]);
+	use(otherVer[i]);
 	entry.onConflict(otherVer[i]);
       }
   //Requires;
@@ -207,7 +331,7 @@ void SatBuilder::toBeInstalled(VarId varId)
       noDoubling(alternatives);
       entry.onRequire(alternatives);
       for(VarIdVector::size_type k = 0;k < alternatives.size();++k)
-	incRef(alternatives[k]);
+	use(alternatives[k]);
     }
   //Conflicts;
   IdPkgRelVector conflicts;
@@ -227,7 +351,7 @@ void SatBuilder::toBeInstalled(VarId varId)
 	if (vars[k] != varId)//Package may not conflict with itself;
 	  {
 	    entry.onConflict(vars[k]);
-	    incRef(vars[k]);
+	    use(vars[k]);
 	  }
     }
   //Here we check are there any conflicts among the installed packages;
@@ -238,7 +362,7 @@ void SatBuilder::toBeInstalled(VarId varId)
     {
       assert(m_scope.isInstalled(vars[i]));
       entry.onConflict(vars[i]);
-      incRef(vars[i]);
+      use(vars[i]);
     }
 }
 
@@ -275,9 +399,27 @@ void SatBuilder::toBeRemoved(VarId varId)
 	    break;
 	  }
       entry.onDependent(dependent[i], alternatives);
-      incRef(dependent[i]);
+      use(dependent[i]);
       for(VarIdVector::size_type k = 0;k < alternatives.size();++k)
-	incRef(alternatives[k]);
+	use(alternatives[k]);
+    }
+  //What about a replacement with newer version?
+  VarIdVector replacements;
+  m_scope.selectMatchingVarsRealNames(m_scope.pkgIdOfVarId(varId), replacements);
+  noDoubling(replacements);
+  for(VarIdVector::size_type i = 0;i < replacements.size();++i)
+    if (replacements[i] == varId)
+      {
+	replacements[i] = replacements.back();
+	replacements.pop_back();
+	break;
+      }
+  if (!replacements.empty())
+    {
+      m_scope.selectTheNewest(replacements);
+      assert(!replacements.empty());
+      assert(m_replPending.find(varId) == m_replPending.end());
+      m_replPending.insert(VarIdToVarIdMap::value_type(varId, replacements.front()));
     }
 }
 
@@ -359,8 +501,24 @@ void Solver::solve(const UserTask& userTask,
 {
   SatBuilder builder(m_taskSolverData.backend, m_taskSolverData.scope, m_taskSolverData.providePriority);
   builder.build(userTask);
-  solveSat(builder.p, builder.userTaskInstall(), builder.userTaskRemove());
-  filterSolution(builder.p, builder.userTaskInstall(), builder.userTaskRemove());
+  VarIdVector fixedToInstall;
+  solveSat(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), fixedToInstall);
+  filterSolution(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), fixedToInstall);
+
+  for(size_t i = 0;i < builder.p.size();++i)
+    if (builder.p.hasEntry(i))
+      {
+	const RefCountedEntry& e = builder.p.getEntry(i);
+	if (!e.newState && e.replacementFor != BadVarId &&
+	    builder.p.getEntry(e.replacementFor).oldState &&
+	    !builder.p.getEntry(e.replacementFor).newState)
+	  fixedToInstall.push_back(e.varId);
+      }
+  logMsg(LOG_DEBUG, "solver:%zu gathered as fixed to install", fixedToInstall.size());
+
+  solveSat(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), fixedToInstall);
+  filterSolution(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), fixedToInstall);
+
   for(size_t i = 0;i < builder.p.size();++i)
     {
       if (!builder.p.hasEntry(i))
@@ -377,8 +535,9 @@ void Solver::dumpSat(const UserTask& userTask, std::ostream& s) const
 {
   SatBuilder builder(m_taskSolverData.backend, m_taskSolverData.scope, m_taskSolverData.providePriority);
   builder.build(userTask);
-  solveSat(builder.p, builder.userTaskInstall(), builder.userTaskRemove());
-  filterSolution(builder.p, builder.userTaskInstall(), builder.userTaskRemove());
+  VarIdVector fixedToInstall;
+  solveSat(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), fixedToInstall);
+  filterSolution(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), fixedToInstall);
 
   for(size_t i = 0;i < builder.p.size();++i)
     if (builder.p.hasEntry(i))
@@ -389,17 +548,18 @@ void Solver::dumpSat(const UserTask& userTask, std::ostream& s) const
 	s << "# " << m_scope.getDesignation(e.varId) << std::endl;
 	s << "# Old installation state: " << (e.oldState?"yes":"no") << std::endl;
 	s << "# New installation state: " << (e.newState?"yes":"no") << std::endl;
-	s << "# Ambiguous: " << (e.processed?"yes":"no") << std::endl;
+	s << "# Ambiguous: " << (e.ambiguous?"yes":"no") << std::endl;
 
-	for(Sat::Sat::size_type ss = 0;ss < e.sat.size();++ss)
+	for(Sat::size_type ss = 0;ss < e.sat.size();++ss)
 	  {
 	    s << "(" << std::endl;
 
-	    for(Sat::Clause::size_type c = 0;c < e.sat[ss].size();++c)
+	    for(Clause::size_type c = 0;c < e.sat[ss].size();++c)
 	      {
 		const VarId varId = e.sat[ss][c].varId;
 		const bool neg = e.sat[ss][c].neg;
-		if (e.processed)
+		const bool ambiguous = e.sat[ss][c].ambiguous;
+		if (e.ambiguous || ambiguous)
 		  s << "#";
 		if (neg)
 		  s << "!";
@@ -414,16 +574,19 @@ void Solver::dumpSat(const UserTask& userTask, std::ostream& s) const
 
 bool Solver::solveSat(RefCountedEntries& p,
 			   const VarIdSet& userTaskInstall,
-			   const VarIdSet& userTaskRemove) const
+		      const VarIdSet& userTaskRemove,
+		      const VarIdVector& fixedToInstall) const
 {
-  Sat::AbstractSatSolver::Ptr satSolver = Sat::createDefaultSatSolver();
+  AbstractSatSolver::Ptr satSolver = createDefaultSatSolver();
   for(VarIdSet::const_iterator it = userTaskInstall.begin();it != userTaskInstall.end();++it)
-    satSolver->addClause(Sat::unitClause(Sat::Lit(*it)));
+    satSolver->addClause(unitClause(Lit(*it)));
+  for(VarIdVector::size_type i = 0;i < fixedToInstall.size();++i)
+    satSolver->addClause(unitClause(Lit(fixedToInstall[i])));
   for(VarIdSet::const_iterator it = userTaskRemove.begin();it != userTaskRemove.end();++it)
-    satSolver->addClause(Sat::unitClause(Sat::Lit(*it, 1)));
+    satSolver->addClause(unitClause(Lit(*it, 1)));
   for(VarId i = 0;i < p.size();++i)
     if (p.hasEntry(i))
-      for(Sat::Sat::size_type k = 0;k < p.getEntry(i).sat.size();++k)
+      for(Sat::size_type k = 0;k < p.getEntry(i).sat.size();++k)
 	satSolver->addClause(p.getEntry(i).sat[k]);
   VarIdToBoolMap res;
   VarIdVector conflicts;//FIXME:Remove conflicts;
@@ -436,47 +599,66 @@ bool Solver::solveSat(RefCountedEntries& p,
 
   void Solver::filterSolution(RefCountedEntries& p,
 			      const VarIdSet& userTaskInstall,
-			      const VarIdSet& userTaskRemove) const
+			      const VarIdSet& userTaskRemove,
+			      const VarIdVector& fixedToInstall) const
 {
+  p.clearAllMarks();
+
   while(1)
     {
       logMsg(LOG_DEBUG, "solver:new filtering pass");
-      size_t unchangedCount = 0, installedUnchangedCount = 0, referencesReleasedCount = 0;
+      size_t releasedReferenceCount = 0;
       for(VarId i = 0;i < p.size();++i)
 	if (p.hasEntry(i))
 	  {
 	    RefCountedEntry& e = p.getEntry(i);
-	    if (e.processed || e.oldState != e.newState)
-	      continue;
-	    for(Sat::Sat::size_type s = 0;s < e.sat.size();++s)
-	      for(Sat::Clause::size_type c = 0;c < e.sat[s].size();++c)
-		if (e.sat[s][c].varId != e.varId)
+	    if (e.ambiguous)
+	    continue;
+	    if (e.oldState != e.newState && e.oldState)
+	      {
+		for(Sat::size_type s = 0;s < e.sat.size();++s)
 		  {
-		    const VarId varId = e.sat[s][c].varId;
-		  p.decRef(varId);
-		  referencesReleasedCount++;
-		  if (		  p.getEntry(varId).refNum == 0)
-		    logMsg(LOG_DEBUG, "solver:%s no longer has any references", m_scope.getDesignation(varId).c_str());
+		    Clause::size_type c;
+		    for(c = 0;c < e.sat[s].size();++c)
+		      if (!e.sat[s][c].neg &&
+			  p.getEntry(e.sat[s][c].varId).newState)
+			break;
+		    if 	      (c < e.sat[s].size())
+		      for(c = 0;c < e.sat[s].size();++c)
+			if (e.sat[s][c].neg &&
+			    !e.sat[s][c].ambiguous)
+			  {
+			    e.sat[s][c].ambiguous = 1;
+			    releasedReferenceCount++;
+			  }
 		  }
+		continue;
+	      }
+	    if(e.oldState != e.newState)
+	      continue;
 
-	    if (e.oldState == 1)
-	      installedUnchangedCount++;
-	      //	      logMsg(LOG_DEBUG, "solver:installed %s is unchanged", m_scope.getDesignation(e.varId).c_str());
-
-	    unchangedCount++;
-	    e.processed = 1;
+	    e.ambiguous = 1;
+	    for(Sat::size_type s = 0;s < e.sat.size();++s)
+	      for(Clause::size_type c = 0;c < e.sat[s].size();++c)
+		if (e.sat[s][c].varId != e.varId)
+		  //		  {
+		  //		    const VarId varId = e.sat[s][c].varId;
+		  releasedReferenceCount++;
+	    //		  }
 	  }
-      logMsg(LOG_DEBUG, "solver:%zu unchanged entries found, %zu of them installed, %zu references released", unchangedCount, installedUnchangedCount, referencesReleasedCount);
-      if (unchangedCount == 0)
-	break;
 
+      logMsg(LOG_DEBUG, "solver:%zu references released", releasedReferenceCount);
+      if (releasedReferenceCount == 0)
+return;
+
+      p.clearBfsMarks();
       VarIdVector bfsSeed;
       for(VarIdSet::const_iterator it = userTaskInstall.begin();it != userTaskInstall.end();++it)
 	bfsSeed.push_back(*it);
-
       for(VarIdSet::const_iterator it = userTaskRemove.begin();it != userTaskRemove.end();++it)
 	bfsSeed.push_back(*it);
-      p.clearBfsMarks();
+      for(VarIdVector::size_type i = 0;i < fixedToInstall.size();++i)
+	bfsSeed.push_back(fixedToInstall[i]);
       Bfs(p).go(bfsSeed);
 
       size_t rolledBackCount = 0;
@@ -491,6 +673,8 @@ bool Solver::solveSat(RefCountedEntries& p,
 	      }
 	}
       logMsg(LOG_DEBUG, "solver:%zu packages have been rolled back", rolledBackCount);
+      if (rolledBackCount == 0)
+	return;
     }
 }
 

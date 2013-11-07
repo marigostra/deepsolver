@@ -28,13 +28,19 @@ namespace Deepsolver
     struct Lit
     {
       Lit()
-	: varId(BadVarId), neg(0) {}
+	: varId(BadVarId),
+	  neg(0),
+	  ambiguous(0) {}
 
       Lit(VarId v)
-	: varId(v), neg(0) {}
+	: varId(v),
+	  neg(0),
+	  ambiguous(0) {}
 
       Lit(VarId v, bool n)
-	: varId(v), neg(n) {}
+	: varId(v),
+	  neg(n),
+	  ambiguous(0) {}
 
       bool operator ==(const Lit& lit) const
       {
@@ -72,6 +78,7 @@ namespace Deepsolver
 
       VarId varId;
       bool neg;
+      bool ambiguous;
     }; //struct Lit;
 
     typedef std::vector<Lit> Clause;
