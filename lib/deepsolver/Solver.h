@@ -43,6 +43,7 @@ namespace Deepsolver
 	  oldState(s),
 	  newState(s),
 	  refNum(0), 
+	  germ(0),
 	  ambiguous(0),
 	  bfsMark(0),
 	  replacementFor(BadVarId) {}
@@ -104,6 +105,8 @@ namespace Deepsolver
       bool oldState, newState;
       size_t refNum;
       Sat sat;
+      bool germ;
+      VarIdVector reconstruct;
       bool ambiguous, bfsMark;
       VarId replacementFor;
     }; //class RefCountedEntry;
@@ -200,6 +203,17 @@ namespace Deepsolver
 	return *m_entries[varId];
       }
 
+      RefCountedEntry& ensureEntryExists(VarId varId, bool installed)
+      {
+	assert(varId != BadVarId);
+	if (hasEntry(varId))
+	  return getEntry(varId);
+	assert(varId < m_entries.size());
+	m_entries[varId] = new RefCountedEntry(varId, installed);
+	return *m_entries[varId];
+      }
+
+
     private:
       RefCountedEntryVector m_entries;
     }; //class RefCountedEntries;Ref
@@ -233,6 +247,14 @@ namespace Deepsolver
     private:
       void onUserTask(const UserTask& userTask);
       void use(VarId varId);
+
+      //Returns true if germ finally exists and item to reconstruct is added;
+      //False only if the package is already fully constructed;
+      bool useGermInstalled(VarId varId, VarId reconstruct);
+
+      //Returns true if germ finally exists and item to reconstruct is added;
+      //False only if the package is already fully constructed;
+      bool useGermUninstalled(VarId varId, VarId reconstruct);
       VarId onUserItemToInstall(const UserTaskItemToInstall& item) const;
       void toBeInstalled(VarId VarId);
       void toBeInstalled(VarId varId, VarId replacementFor);
@@ -241,7 +263,10 @@ namespace Deepsolver
       VarId byProvidesPrioritySorting(const VarIdVector& vars) const;
 
       void onPending();
-      void preSatOptimization();
+      //This method in contrast to onPending() doesn't care whether packages are processed or not;
+      void reconstruct(const VarIdVector& vars);
+
+      bool ensureSatCorrect() const;
 
     public:
       RefCountedEntries p;
