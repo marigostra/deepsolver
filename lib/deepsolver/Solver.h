@@ -18,6 +18,8 @@
 #ifndef DEEPSOLVER_SOLVER_H
 #define DEEPSOLVER_SOLVER_H
 
+//#define DEEPSOLVER_SOLVER_DEBUG
+
 #include"deepsolver/AbstractPkgBackEnd.h"
 #include"deepsolver/SolverBase.h"
 #include"deepsolver/Sat.h"
@@ -147,6 +149,16 @@ namespace Deepsolver
 	m_entries.clear();
       }
 
+      void clearGerms()
+      {
+	for(RefCountedEntryVector::size_type i = 0;i < m_entries.size();++i)
+	  if (m_entries[i] != NULL && m_entries[i]->germ)
+	    {
+	      delete m_entries[i];
+	      m_entries[i] = NULL;
+	    }
+      }
+
       void clearBfsMarks()
       {
 	for(RefCountedEntryVector::size_type i = 0;i < m_entries.size();++i)
@@ -246,7 +258,7 @@ namespace Deepsolver
 
     private:
       void onUserTask(const UserTask& userTask);
-      void use(VarId varId);
+      void use(VarId varId, VarId referenceFrom);
 
       //Returns true if germ finally exists and item to reconstruct is added;
       //False only if the package is already fully constructed;
@@ -277,7 +289,10 @@ namespace Deepsolver
       const AbstractProvidePriority& m_providePriority;
       VarIdSet m_userTaskInstall, m_userTaskRemove;
       VarIdVector m_pending;
-      VarIdToVarIdMap m_replPending;
+      //      VarIdToVarIdMap m_replPending;
+#ifdef DEEPSOLVER_SOLVER_DEBUG
+      VarIdVector m_debugReferences;
+#endif //DEEPSOLVER_SOLVER_DEBUG;
     }; //class SatBuilder;
 
     class Solver: public AbstractTaskSolver

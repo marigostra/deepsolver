@@ -88,6 +88,11 @@ void SatBuilder::build(const UserTask& userTask)
   m_userTaskInstall.clear();
   m_userTaskRemove.clear();
   m_pending.clear();
+#ifdef DEEPSOLVER_SOLVER_DEBUG
+  m_debugReferences.resize(m_scope.getPkgCount());
+  for(VarIdVector::size_type i = 0;i < m_debugReferences.size();++i)
+    m_debugReferences[i] = BadVarId;
+#endif //DEEPSOLVER_SOLVER_DEBUG;
   onUserTask(userTask);
   //FIXME:Check user task collision;
   for(VarIdSet::const_iterator it = m_userTaskInstall.begin();it != m_userTaskInstall.end();++it)
@@ -137,6 +142,17 @@ void SatBuilder::build(const UserTask& userTask)
   logMsg(LOG_DEBUG, "solver:%zu installed germs involved", installedGermCount);
   logMsg(LOG_DEBUG, "solver:%zu uninstalled germs involved", uninstalledGermCount);
   assert(ensureSatCorrect());
+  p.clearGerms();
+#ifdef DEEPSOLVER_SOLVER_DEBUG
+  logMsg(LOG_DEBUG, "Dumping references to installed packages:");
+  for(VarIdVector::size_type i = 0;i < m_debugReferences.size();++i)
+    if (m_debugReferences[i] != BadVarId && m_scope.isInstalled(i))
+      logMsg(LOG_DEBUG, "installed %s has initial reference from %s", m_scope.getPkgName(i).c_str(), m_scope.getDesignation(m_debugReferences[i]).c_str());
+  logMsg(LOG_DEBUG, "Dumping references to uninstalled packages:");
+  for(VarIdVector::size_type i = 0;i < m_debugReferences.size();++i)
+    if (m_debugReferences[i] != BadVarId && !m_scope.isInstalled(i))
+      logMsg(LOG_DEBUG, "%s has initial reference from %s", m_scope.getDesignation(i).c_str(), m_scope.getDesignation(m_debugReferences[i]).c_str());
+#endif //DEEPSOLVER_SOLVER_DEBUG;
 }
 
 bool SatBuilder::ensureSatCorrect() const
@@ -172,7 +188,7 @@ bool SatBuilder::ensureSatCorrect() const
 	  } //for(clauses);
 	clauseNum += e.sat.size();
       } //if(hasEntry());
-  logMsg(LOG_INFO, "SAT check completed successfully: %zu clauses with %zu literals", clauseNum, litNum);
+  logMsg(LOG_DEBUG, "solver:SAT check completed successfully: %zu clauses with %zu literals", clauseNum, litNum);
   return 1;
 }
 
@@ -194,8 +210,7 @@ void SatBuilder::reconstruct(const VarIdVector& vars)
 {
   for(VarIdVector::size_type i = 0;i < vars.size();++i)
     {
-      assert(p.hasEntry(vars[i]));
-      assert(!p.getEntry(vars[i]).germ);
+      assert(p.hasEntry(vars[i]) && !p.getEntry(vars[i]).germ);
       if (!m_scope.isInstalled(vars[i]))
 	toBeInstalled(vars[i]); else
 	toBeRemoved(vars[i]);
@@ -237,9 +252,13 @@ void SatBuilder::onUserTask(const UserTask& userTask)
     }
 }
 
-void SatBuilder::use(VarId varId)
+void SatBuilder::use(VarId varId, VarId referenceFrom)
 {
-  assert(varId != BadVarId);
+  assert(varId != BadVarId && referenceFrom != BadVarId);
+#ifdef DEEPSOLVER_SOLVER_DEBUG
+  if (varId < m_debugReferences.size() && m_debugReferences[varId] == BadVarId)
+    m_debugReferences[varId] = referenceFrom;
+#endif //DEEPSOLVER_SOLVER_DEBUG;
   m_pending.push_back(varId);
 }
 
@@ -261,6 +280,7 @@ bool SatBuilder::useGermInstalled(VarId varId, VarId reconstruct)
       e.reconstruct.push_back(reconstruct);
       return 1;
     }
+  //  logMsg(LOG_DEBUG, "Creating germ for %s", m_scope.getDesignation(varId).c_str());
   RefCountedEntry& e = p.newEntry(varId, 1);//1 means the package is currently installed;
   e.germ = 1;
   e.reconstruct.push_back(reconstruct);
@@ -299,7 +319,9 @@ void SatBuilder::toBeInstalled(VarId varId)
 void SatBuilder::toBeInstalled(VarId varId, VarId replacementFor)
 {
   assert(varId != BadVarId && !m_scope.isInstalled(varId));
-  //  logMsg(LOG_DEBUG, "to install %s", m_scope.getDesignation(varId).c_str());
+#ifdef UNBOUNDED_LOG
+    logMsg(LOG_DEBUG, "to install %s", m_scope.getDesignation(varId).c_str());
+#endif //UNBOUNDED_LOG;
   if (m_userTaskRemove.find(varId) != m_userTaskRemove.end())
       return;
   RefCountedEntry& entry = p.ensureEntryExists(varId, 0);//0 means currently not installed;
@@ -320,13 +342,11 @@ void SatBuilder::toBeInstalled(VarId varId, VarId replacementFor)
       {
 	if (!m_scope.isInstalled(otherVer[i]))
 	  {
-	    //	    	    logMsg(LOG_DEBUG, "blocking uninstalled %s", m_scope.getDesignation(otherVer[i]).c_str());
 	    if (!useGermUninstalled(otherVer[i], varId))
 	    entry.onConflict(otherVer[i]);
 	  } else
 	  {
-	    //	    	    logMsg(LOG_DEBUG, "blocking installed %s", m_scope.getDesignation(otherVer[i]).c_str());
-	    use(otherVer[i]);
+	    use(otherVer[i], varId);
 	    entry.onConflict(otherVer[i]);
 	  }
       } //Blocking other versions;
@@ -345,13 +365,15 @@ void SatBuilder::toBeInstalled(VarId varId, VarId replacementFor)
       m_scope.selectMatchingVarsWithProvides(requires[i], alternatives);
       if (alternatives.empty())
 	{
-	  //	  logMsg(LOG_ERR, "unmet %s in package %s", m_scope.getDesignation(requires[i]).c_str(), m_scope.getDesignation(varId).c_str());
+	  logMsg(LOG_ERR, "unmet %s in package %s", m_scope.getDesignation(requires[i]).c_str(), m_scope.getDesignation(varId).c_str());
       assert(0);//FIXME:Exception;
 	}
       noDoubling(alternatives);
-      //      logMsg(LOG_DEBUG, "require %s", m_scope.getDesignation(requires[i]).c_str());
-      //      for(VarIdVector::size_type k = 0;k < alternatives.size();++k)
-	//	logMsg(LOG_DEBUG, "matching %s", m_scope.getDesignation(alternatives[k]).c_str());
+#ifdef UNBOUNDED_LOG
+      logMsg(LOG_DEBUG, "require %s", m_scope.getDesignation(requires[i]).c_str());
+      for(VarIdVector::size_type k = 0;k < alternatives.size();++k)
+      	logMsg(LOG_DEBUG, "matching %s", m_scope.getDesignation(alternatives[k]).c_str());
+#endif //UNBOUNDEDLOG;
       bool noGerms = 1;
       for(VarIdVector::size_type k = 0;k < alternatives.size();++k)
 	{
@@ -362,9 +384,11 @@ void SatBuilder::toBeInstalled(VarId varId, VarId replacementFor)
 	}
       if (!noGerms)
 	continue;
-      //      logMsg(LOG_DEBUG, "no germs found");
+#ifdef UNBOUNDED_LOG
+      logMsg(LOG_DEBUG, "no germs found");
+#endif //UNBOUNDED_LOG;
 	for(VarIdVector::size_type k = 0;k < alternatives.size();++k)
-	  use(alternatives[k]);
+	  use(alternatives[k], varId);
       entry.onRequire(alternatives);
     }
   //Conflicts;
@@ -390,7 +414,7 @@ void SatBuilder::toBeInstalled(VarId varId, VarId replacementFor)
 	    entry.onConflict(vars[k]);
 	  } else
 	  {
-	    use(vars[k]);
+	    use(vars[k], varId);
 	    entry.onConflict(vars[k]);
 	  }
 	  }
@@ -403,7 +427,7 @@ void SatBuilder::toBeInstalled(VarId varId, VarId replacementFor)
     {
       assert(m_scope.isInstalled(vars[i]));
       entry.onConflict(vars[i]);
-      use(vars[i]);
+      use(vars[i], varId);
     }
 }
 
@@ -449,9 +473,9 @@ void SatBuilder::toBeRemoved(VarId varId)
       if (!noGerms)
 	continue;
 	for(VarIdVector::size_type k = 0;k < alternatives.size();++k)
-	  use(alternatives[k]);
+	  use(alternatives[k], varId);
       entry.onDependent(dependent[i], alternatives);
-      use(dependent[i]);
+      use(dependent[i], varId);
     }
   /*
   //What about a replacement with newer version?
@@ -554,7 +578,40 @@ void Solver::solve(const UserTask& userTask,
   builder.build(userTask);
   VarIdVector fixedToInstall;
   solveSat(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), fixedToInstall);
+#ifdef DEEPSOLVER_SOLVER_DEBUG
+  size_t remainInstalledCount = 0;
+  logMsg(LOG_DEBUG, "The following involved packages will stay in the system according by clear minisat solution:");
+  for(VarId i = 0;i < builder.p.size();++i)
+    if (builder.p.hasEntry(i))
+    {
+      const RefCountedEntry& e = builder.p.getEntry(i);
+      if (!e.oldState || !e.newState)
+	continue;
+      logMsg(LOG_DEBUG, "%s", m_scope.getPkgName(e.varId).c_str());
+      remainInstalledCount++;
+    }
+  logMsg(LOG_DEBUG, "%zu remain installed", remainInstalledCount);
+#endif //DEEPSOLVER_SOLVER_DEBUG;
   filterSolution(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), fixedToInstall);
+#ifdef DEEPSOLVER_SOLVER_DEBUG
+  logMsg(LOG_DEBUG, "The following references to packages being removed cannot be optimized: (the list contains only valuable entries)");
+  for(VarId i = 0;i < builder.p.size();++i)
+    if (builder.p.hasEntry(i))
+      {
+	const RefCountedEntry& e = builder.p.getEntry(i);
+	if (e.ambiguous)
+	  continue;
+	for(Sat::size_type s = 0;s < e.sat.size();++s)
+	  for(Clause::size_type c = 0;c < e.sat[s].size();++c)
+	    if (e.sat[s][c].varId != e.varId &&
+		m_scope.pkgIdOfVarId(e.sat[s][c].varId) != m_scope.pkgIdOfVarId(e.varId) &&
+!e.sat[s][c].ambiguous &&
+		!builder.p.getEntry(e.sat[s][c].varId).ambiguous &&
+		!builder.p.getEntry(e.sat[s][c].varId).newState)
+	    logMsg(LOG_DEBUG, "%s has reference from %s", m_scope.getDesignation(e.sat[s][c].varId).c_str(), m_scope.getDesignation(e.varId).c_str());
+      }
+#endif //DEEPSOLVER_SOLVER_DEBUG;
+
 
   /*
   for(size_t i = 0;i < builder.p.size();++i)
@@ -576,6 +633,8 @@ void Solver::solve(const UserTask& userTask,
       if (!builder.p.hasEntry(i))
 	continue;
       const RefCountedEntry& e = builder.p.getEntry(i);
+      if (e.ambiguous)
+	continue;
       if (!e.oldState && e.newState)
 	install.push_back(i);
       if (e.oldState && !e.newState)
@@ -592,34 +651,31 @@ void Solver::dumpSat(const UserTask& userTask, std::ostream& s) const
   filterSolution(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), fixedToInstall);
 
   for(size_t i = 0;i < builder.p.size();++i)
-    if (builder.p.hasEntry(i))
+    if (builder.p.hasEntry(i) && !builder.p.getEntry(i).germ)
       {
 	const RefCountedEntry& e = builder.p.getEntry(i);
-	assert(e.varId == i);
 
 	s << "# " << m_scope.getDesignation(e.varId) << std::endl;
-	s << "# Old installation state: " << (e.oldState?"yes":"no") << std::endl;
-	s << "# New installation state: " << (e.newState?"yes":"no") << std::endl;
+	s << "# Installation: " << (e.oldState?"Yes":"No") << " -> " << (e.newState?"Yes":"No") << std::endl;
 	s << "# Ambiguous: " << (e.ambiguous?"yes":"no") << std::endl;
-
 	for(Sat::size_type ss = 0;ss < e.sat.size();++ss)
 	  {
 	    s << "(" << std::endl;
-
 	    for(Clause::size_type c = 0;c < e.sat[ss].size();++c)
 	      {
 		const VarId varId = e.sat[ss][c].varId;
 		const bool neg = e.sat[ss][c].neg;
 		const bool ambiguous = e.sat[ss][c].ambiguous;
 		if (e.ambiguous || ambiguous)
-		  s << "#";
+		  s << "#"; else
+		  s << " ";
 		if (neg)
-		  s << "!";
+		  s << " !"; else
+		  s << "  ";
 		s << m_scope.getDesignation(varId) << std::endl;
 	      }
 	    s << ")" << std::endl;
 	  }
-
 	s << std::endl;
       }
 }
@@ -666,39 +722,45 @@ bool Solver::solveSat(RefCountedEntries& p,
 	    RefCountedEntry& e = p.getEntry(i);
 	    if (e.ambiguous)
 	    continue;
-	    if (e.oldState != e.newState && e.oldState)
+	    if (e.oldState == e.newState)
 	      {
+	    e.ambiguous = 1;
+	    for(Sat::size_type s = 0;s < e.sat.size();++s)
+	      for(Clause::size_type c = 0;c < e.sat[s].size();++c)
+		if (e.sat[s][c].varId != e.varId)
+		  releasedReferenceCount++;
+	    continue;
+	      } //the package not changed;
 		for(Sat::size_type s = 0;s < e.sat.size();++s)
 		  {
 		    Clause::size_type c;
 		    for(c = 0;c < e.sat[s].size();++c)
 		      if (!e.sat[s][c].neg &&
+e.sat[s][c].varId != e.varId &&
+			  p.getEntry(e.sat[s][c].varId).oldState &&
 			  p.getEntry(e.sat[s][c].varId).newState)
 			break;
+
+		    if 	      (c >= e.sat[s].size())
+		      {
+		    for(c = 0;c < e.sat[s].size();++c)
+		      if (!e.sat[s][c].neg &&
+			  p.getEntry(e.sat[s][c].varId).newState &&
+			  p.getEntry(e.sat[s][c].varId).newState)
+			break;
+		      }
+
 		    if 	      (c < e.sat[s].size())
-		      for(c = 0;c < e.sat[s].size();++c)
-			if (e.sat[s][c].neg &&
-			    !e.sat[s][c].ambiguous)
+		      for(Clause::size_type c1 = 0;c1 < e.sat[s].size();++c1)
+			if (c1 != c &&
+e.sat[s][c1].varId != e.varId &&
+			    !e.sat[s][c1].ambiguous)
 			  {
-			    e.sat[s][c].ambiguous = 1;
+			    e.sat[s][c1].ambiguous = 1;
 			    releasedReferenceCount++;
 			  }
-		  }
-		continue;
-	      }
-	    if(e.oldState != e.newState)
-	      continue;
-
-	    e.ambiguous = 1;
-	    for(Sat::size_type s = 0;s < e.sat.size();++s)
-	      for(Clause::size_type c = 0;c < e.sat[s].size();++c)
-		if (e.sat[s][c].varId != e.varId)
-		  //		  {
-		  //		    const VarId varId = e.sat[s][c].varId;
-		  releasedReferenceCount++;
-	    //		  }
-	  }
-
+		  } //for(clauses);
+	  } //for(entries);
       logMsg(LOG_DEBUG, "solver:%zu references released", releasedReferenceCount);
       if (releasedReferenceCount == 0)
 return;

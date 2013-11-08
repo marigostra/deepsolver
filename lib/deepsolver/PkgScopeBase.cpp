@@ -75,6 +75,7 @@ std::string PkgScopeBase::getVersion(VarId varId, int epochMode) const
       res << pkg.epoch << ":";
       break;
     case EpochIfNonZero:
+      if (pkg.epoch > 0)
   res << pkg.epoch << ":";
   break;
     };
