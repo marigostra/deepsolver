@@ -53,6 +53,16 @@ namespace Deepsolver
       virtual ~RefCountedEntry() {}
 
     public:
+      void uninstallable()
+      {
+	sat.push_back(unitClause(Lit(varId, 1)));
+      }
+
+      void unremovable()
+      {
+	sat.push_back(unitClause(Lit(varId)));
+      }
+
       void onConflict(VarId v)
       {
 	assert(v != BadVarId);
@@ -312,6 +322,7 @@ namespace Deepsolver
       void dumpSat(const UserTask& userTask, std::ostream& s) const;
 
     private:
+      void doMainWork(SatBuilder& builder, const UserTask& userTask) const;
       bool solveSat(RefCountedEntries& p,
 			const VarIdSet& userTaskInstall,
 		    const VarIdSet& userTaskRemove,

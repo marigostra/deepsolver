@@ -18,8 +18,8 @@
 #include"deepsolver/deepsolver.h"
 #include"deepsolver/Solver.h"
 
-//Uncomment this if you'd like to get full tracing in log;
 //#define UNBOUNDED_LOG
+#define FILTER_SOLUTION
 
 DEEPSOLVER_BEGIN_SOLVER_NAMESPACE
 
@@ -44,7 +44,6 @@ public:
 
       void go(const VarIdVector& startFrom)
       {
-	const clock_t start = clock();
 	assert(!startFrom.empty());
 	for(VarIdVector::size_type i = 0;i < startFrom.size();++i)
 	  {
@@ -71,14 +70,43 @@ public:
 		    m_pending.push_back(v);
 		  }
 	  }
-	const double duration = (double)(clock() - start) / CLOCKS_PER_SEC;
-	logMsg(LOG_DEBUG, "solver:BFS completed in %f sec", duration);
       }
 
   private:
       RefCountedEntries& m_p;
       VarIdVector m_pending;
 }; //class Bfs;
+
+namespace 
+{
+  bool isInstallableReplacement(const RefCountedEntries& p, VarId varId) 
+  {
+    assert(varId != BadVarId && p.hasEntry(varId) && p.getEntry(varId).replacementFor != BadVarId);
+    const RefCountedEntry& e = p.getEntry(varId);
+    for(Sat::size_type s = 0;s < e.sat.size();++s)
+      {
+	Clause::size_type c;
+	for(c = 0;c < e.sat[s].size();++c)
+	  {
+	    const VarId v = e.sat[s][c].varId;
+	    const bool n = e.sat[s][c].neg;
+	    assert(p.hasEntry(v));
+	    if (v == varId && !n)//Actually shouldn'd happen;
+	      break;
+	    //Do not relay on uninstalled replacements;
+	    if (!p.getEntry(v).newState && p.getEntry(v).replacementFor != BadVarId)
+	      continue;
+	    if (!n && p.getEntry(v).newState)
+	      break;
+	    if (n && !p.getEntry(v).newState)
+	      break;
+	  }
+	if (c >= e.sat[s].size())
+	  return 0;
+      }
+    return 1;
+  }
+}
 
 void SatBuilder::build(const UserTask& userTask)
 {
@@ -94,6 +122,8 @@ void SatBuilder::build(const UserTask& userTask)
     m_debugReferences[i] = BadVarId;
 #endif //DEEPSOLVER_SOLVER_DEBUG;
   onUserTask(userTask);
+
+  //  m_userTaskInstall.insert(35853);
   //FIXME:Check user task collision;
   for(VarIdSet::const_iterator it = m_userTaskInstall.begin();it != m_userTaskInstall.end();++it)
     {
@@ -117,6 +147,23 @@ void SatBuilder::build(const UserTask& userTask)
     }
   logMsg(LOG_DEBUG, "solver:user task yields %zu pending packages", m_pending.size());
   onPending();
+  for(VarIdSet::iterator it = m_userTaskInstall.begin();it != m_userTaskInstall.end();)
+    {
+      VarIdSet::iterator tmpIt = it; 
+      ++it;
+      if (!p.hasEntry(*tmpIt))
+	m_userTaskInstall.erase(*tmpIt);
+    }
+
+  for(VarIdSet::iterator it = m_userTaskRemove.begin();it != m_userTaskRemove.end();)
+    {
+      VarIdSet::iterator tmpIt = it; 
+      ++it;
+      if (!p.hasEntry(*tmpIt))
+	m_userTaskRemove.erase(*tmpIt);
+    }
+
+
   const double duration = (double)(clock() - start) / CLOCKS_PER_SEC;
     logMsg(LOG_DEBUG, "solver:SAT construction completed in %f sec", duration);
   size_t installedGermCount = 0, uninstalledGermCount = 0;
@@ -322,8 +369,7 @@ void SatBuilder::toBeInstalled(VarId varId, VarId replacementFor)
 #ifdef UNBOUNDED_LOG
     logMsg(LOG_DEBUG, "to install %s", m_scope.getDesignation(varId).c_str());
 #endif //UNBOUNDED_LOG;
-  if (m_userTaskRemove.find(varId) != m_userTaskRemove.end())
-      return;
+    assert(m_userTaskRemove.find(varId) == m_userTaskRemove.end());
   RefCountedEntry& entry = p.ensureEntryExists(varId, 0);//0 means currently not installed;
   assert(!entry.oldState && !entry.newState);
   if (entry.germ)
@@ -332,14 +378,22 @@ void SatBuilder::toBeInstalled(VarId varId, VarId replacementFor)
       reconstruct(entry.reconstruct);
       entry.reconstruct.clear();
     }
+  if (replacementFor != BadVarId && entry.replacementFor == BadVarId)
+    entry.replacementFor = replacementFor;
   entry.sat.clear();
   //Blocking other versions of this package (FIXME:Not every package requires that);
   VarIdVector otherVer;
   m_scope.selectMatchingVarsRealNames(m_scope.pkgIdOfVarId(varId), otherVer);
   noDoubling(otherVer);
   for(VarIdVector::size_type i = 0;i < otherVer.size();++i)
-    if (otherVer[i] != varId)
+    if (otherVer[i] != varId && m_userTaskRemove.find(otherVer[i]) == m_userTaskRemove.end())
       {
+	if (m_userTaskInstall.find(otherVer[i]) != m_userTaskInstall.end())
+	  {
+	    entry.sat.clear();
+	    entry.uninstallable();
+	    return;
+	  }
 	if (!m_scope.isInstalled(otherVer[i]))
 	  {
 	    if (!useGermUninstalled(otherVer[i], varId))
@@ -369,13 +423,34 @@ void SatBuilder::toBeInstalled(VarId varId, VarId replacementFor)
       assert(0);//FIXME:Exception;
 	}
       noDoubling(alternatives);
+      size_t offset = 0;
+      for(VarIdVector::size_type k = 0;k < alternatives.size();++k)
+	if (m_userTaskRemove.find(alternatives[k]) != m_userTaskRemove.end())
+	  ++offset; else
+	  alternatives[k - offset] = alternatives[k];
+      assert(offset <= alternatives.size());
+      alternatives.resize(alternatives.size() - offset);
+      //The package is not installable as it has a require without installable alternatives;
+      if (alternatives.empty())
+	{
+	  entry.sat.clear();
+	  entry.uninstallable();//It looks slightly strange but it's the most proper way;
+return;
+	}
+      VarIdVector::size_type k;
+      for(k = 0;k < alternatives.size();++k)
+	//One of the alternatives will be installed anyway;
+	if (m_userTaskInstall.find(alternatives[k]) != m_userTaskInstall.end())
+	  break ;
+      if (k < alternatives.size())
+	continue;
 #ifdef UNBOUNDED_LOG
       logMsg(LOG_DEBUG, "require %s", m_scope.getDesignation(requires[i]).c_str());
-      for(VarIdVector::size_type k = 0;k < alternatives.size();++k)
+      for(k = 0;k < alternatives.size();++k)
       	logMsg(LOG_DEBUG, "matching %s", m_scope.getDesignation(alternatives[k]).c_str());
 #endif //UNBOUNDEDLOG;
       bool noGerms = 1;
-      for(VarIdVector::size_type k = 0;k < alternatives.size();++k)
+      for(k = 0;k < alternatives.size();++k)
 	{
 	  if (!m_scope.isInstalled(alternatives[k]))
 	    continue;
@@ -387,7 +462,7 @@ void SatBuilder::toBeInstalled(VarId varId, VarId replacementFor)
 #ifdef UNBOUNDED_LOG
       logMsg(LOG_DEBUG, "no germs found");
 #endif //UNBOUNDED_LOG;
-	for(VarIdVector::size_type k = 0;k < alternatives.size();++k)
+	for(k = 0;k < alternatives.size();++k)
 	  use(alternatives[k], varId);
       entry.onRequire(alternatives);
     }
@@ -406,8 +481,16 @@ void SatBuilder::toBeInstalled(VarId varId, VarId replacementFor)
       m_scope.selectMatchingVarsWithProvides(conflicts[i], vars);
       noDoubling(vars);
       for(VarIdVector::size_type k = 0;k < vars.size();++k)
-	if (vars[k] != varId)//Package may not conflict with itself;
+	if (vars[k] != varId &&//Package may not conflict with itself;
+	    m_userTaskRemove.find(vars[k]) == m_userTaskRemove.end())
 	  {
+	    //The package conflicts with the package that will be installed anyway, marking as uninstallabel;
+	    if (m_userTaskInstall.find(vars[i]) != m_userTaskInstall.end())
+	      {
+		entry.sat.clear();
+		entry.uninstallable();
+		return;
+	      }
 	if (!m_scope.isInstalled(vars[k]))
 	  {
 	    if (!useGermUninstalled(vars[k], varId))
@@ -426,6 +509,15 @@ void SatBuilder::toBeInstalled(VarId varId, VarId replacementFor)
   for(VarIdVector::size_type i = 0;i < vars.size();++i)
     {
       assert(m_scope.isInstalled(vars[i]));
+      //The package being checked will remain installed anyway, any conflicts are pointless;
+      if (m_userTaskInstall.find(vars[i]) != m_userTaskInstall.end())
+	{
+	  entry.sat.clear();
+	  entry.uninstallable();
+	  return;
+	}
+      if (m_userTaskRemove.find(vars[i]) == m_userTaskRemove.end())
+	continue;
       entry.onConflict(vars[i]);
       use(vars[i], varId);
     }
@@ -434,8 +526,7 @@ void SatBuilder::toBeInstalled(VarId varId, VarId replacementFor)
 void SatBuilder::toBeRemoved(VarId varId)
 {
   assert(varId != BadVarId && m_scope.isInstalled(varId));
-  if (m_userTaskInstall.find(varId) != m_userTaskInstall.end())
-      return;
+  assert(m_userTaskInstall.find(varId) == m_userTaskInstall.end());
   RefCountedEntry& entry = p.ensureEntryExists(varId, 1);//1 means currently installed;
   assert(entry.oldState && entry.newState);
   if (entry.germ)
@@ -451,19 +542,35 @@ void SatBuilder::toBeRemoved(VarId varId)
   assert(dependent.size() == rels.size());
   for(VarIdVector::size_type i = 0;i < dependent.size();++i)
     {
+      if (m_userTaskRemove.find(dependent[i]) != m_userTaskRemove.end())
+	continue;
+      if(m_userTaskInstall.find(dependent[i]) != m_userTaskInstall.end())
+	{
+	  entry.sat.clear();
+	  entry.unremovable();
+	  return;
+	}
       VarIdVector alternatives;
       m_scope.selectMatchingVarsWithProvides(rels[i], alternatives);
       noDoubling(alternatives);
+
+      size_t offset = 0;
       for(VarIdVector::size_type k = 0;k < alternatives.size();++k)
-	if (alternatives[k] == varId)
-	  {
-	    alternatives[k] = alternatives.back();
-	    alternatives.pop_back();
-	    break;
-	  }
+	if (alternatives[k] == varId || m_userTaskRemove.find(alternatives[k]) != m_userTaskRemove.end())
+	  ++offset; else
+	  alternatives[k - offset] = alternatives[k];
+      assert(offset <= alternatives.size());
+      alternatives.resize(alternatives.size() - offset);
+      //If one of the alternatives will be installed anyway we can safely skip this clause;
+      VarIdVector::size_type k;
+      for(k = 0;k < alternatives.size();++k)
+	if (m_userTaskInstall.find(alternatives[k]) != m_userTaskInstall.end())
+	  break;
+      if (k < alternatives.size())
+	continue;
       bool noGerms = 1;
-      VarIdVector reduced;
-      for(VarIdVector::size_type k = 0;k < alternatives.size();++k)
+      //      VarIdVector reduced;
+      for(k = 0;k < alternatives.size();++k)
 	{
 	  if (!m_scope.isInstalled(alternatives[k]))
 	    continue;
@@ -472,12 +579,11 @@ void SatBuilder::toBeRemoved(VarId varId)
 	}
       if (!noGerms)
 	continue;
-	for(VarIdVector::size_type k = 0;k < alternatives.size();++k)
+	for(k = 0;k < alternatives.size();++k)
 	  use(alternatives[k], varId);
       entry.onDependent(dependent[i], alternatives);
       use(dependent[i], varId);
     }
-  /*
   //What about a replacement with newer version?
   VarIdVector replacements;
   m_scope.selectMatchingVarsRealNames(m_scope.pkgIdOfVarId(varId), replacements);
@@ -495,7 +601,6 @@ void SatBuilder::toBeRemoved(VarId varId)
       assert(!replacements.empty());
       toBeInstalled(replacements.front(), varId);
     }
-  */
 }
 
 VarId SatBuilder::onUserItemToInstall(const UserTaskItemToInstall& item) const
@@ -570,64 +675,59 @@ VarId SatBuilder::byProvidesPrioritySorting(const VarIdVector& vars) const
   return v.back();
 }
 
+void Solver::doMainWork(SatBuilder& builder, const UserTask& userTask) const
+{
+  VarIdVector updates;
+  logMsg(LOG_INFO, "SAT constructing");
+  builder.build(userTask);
+  logMsg(LOG_INFO, "Initial SAT solving");
+  if (!solveSat(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), updates))
+    {
+      logMsg(LOG_INFO, "Initial SAT solving failed");
+      throw 0;//FIXME:
+    }
+#ifdef FILTER_SOLUTION
+  logMsg(LOG_INFO, "Initial solution filtering");
+  filterSolution(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), updates);
+#endif //FILTER_SOLUTION;
+  while(1)
+    {
+      logMsg(LOG_INFO, "Updates extending attempt");
+      VarIdVector newUpdates = updates;
+      for(size_t i = 0;i < builder.p.size();++i)
+	if (builder.p.hasEntry(i))
+	  {
+	    const RefCountedEntry& e = builder.p.getEntry(i);
+	    if (!e.newState && e.replacementFor != BadVarId &&
+		builder.p.getEntry(e.replacementFor).oldState &&
+		!builder.p.getEntry(e.replacementFor).newState &&
+		isInstallableReplacement(builder.p, i))
+	      newUpdates.push_back(e.varId);
+	  }
+      logMsg(LOG_DEBUG, "solver:%zu new updates found", newUpdates.size() - updates.size());
+      if (newUpdates.size() == updates.size())
+	break;
+      if (!solveSat(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), newUpdates))
+	break;
+#ifdef FILTER_SOLUTION
+      filterSolution(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), newUpdates);
+#endif //FILTER_SOLUTION;
+      updates = newUpdates;
+    }
+  logMsg(LOG_INFO, "Final solving");
+  const bool finalSatSolved = solveSat(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), updates);
+  assert(finalSatSolved);
+#ifdef FILTER_SOLUTION
+  filterSolution(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), updates);
+#endif //FILTER_SOLUTION;
+}
+
 void Solver::solve(const UserTask& userTask, 
 		   VarIdVector& install,
 		   VarIdVector& remove) const
 {
   SatBuilder builder(m_taskSolverData.backend, m_taskSolverData.scope, m_taskSolverData.providePriority);
-  builder.build(userTask);
-  VarIdVector fixedToInstall;
-  solveSat(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), fixedToInstall);
-#ifdef DEEPSOLVER_SOLVER_DEBUG
-  size_t remainInstalledCount = 0;
-  logMsg(LOG_DEBUG, "The following involved packages will stay in the system according by clear minisat solution:");
-  for(VarId i = 0;i < builder.p.size();++i)
-    if (builder.p.hasEntry(i))
-    {
-      const RefCountedEntry& e = builder.p.getEntry(i);
-      if (!e.oldState || !e.newState)
-	continue;
-      logMsg(LOG_DEBUG, "%s", m_scope.getPkgName(e.varId).c_str());
-      remainInstalledCount++;
-    }
-  logMsg(LOG_DEBUG, "%zu remain installed", remainInstalledCount);
-#endif //DEEPSOLVER_SOLVER_DEBUG;
-  filterSolution(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), fixedToInstall);
-#ifdef DEEPSOLVER_SOLVER_DEBUG
-  logMsg(LOG_DEBUG, "The following references to packages being removed cannot be optimized: (the list contains only valuable entries)");
-  for(VarId i = 0;i < builder.p.size();++i)
-    if (builder.p.hasEntry(i))
-      {
-	const RefCountedEntry& e = builder.p.getEntry(i);
-	if (e.ambiguous)
-	  continue;
-	for(Sat::size_type s = 0;s < e.sat.size();++s)
-	  for(Clause::size_type c = 0;c < e.sat[s].size();++c)
-	    if (e.sat[s][c].varId != e.varId &&
-		m_scope.pkgIdOfVarId(e.sat[s][c].varId) != m_scope.pkgIdOfVarId(e.varId) &&
-!e.sat[s][c].ambiguous &&
-		!builder.p.getEntry(e.sat[s][c].varId).ambiguous &&
-		!builder.p.getEntry(e.sat[s][c].varId).newState)
-	    logMsg(LOG_DEBUG, "%s has reference from %s", m_scope.getDesignation(e.sat[s][c].varId).c_str(), m_scope.getDesignation(e.varId).c_str());
-      }
-#endif //DEEPSOLVER_SOLVER_DEBUG;
-
-
-  /*
-  for(size_t i = 0;i < builder.p.size();++i)
-    if (builder.p.hasEntry(i))
-      {
-	const RefCountedEntry& e = builder.p.getEntry(i);
-	if (!e.newState && e.replacementFor != BadVarId &&
-	    builder.p.getEntry(e.replacementFor).oldState &&
-	    !builder.p.getEntry(e.replacementFor).newState)
-	  fixedToInstall.push_back(e.varId);
-      }
-  logMsg(LOG_DEBUG, "solver:%zu gathered as fixed to install", fixedToInstall.size());
-  solveSat(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), fixedToInstall);
-  filterSolution(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), fixedToInstall);
-  */
-
+  doMainWork(builder, userTask);
   for(size_t i = 0;i < builder.p.size();++i)
     {
       if (!builder.p.hasEntry(i))
@@ -645,11 +745,7 @@ void Solver::solve(const UserTask& userTask,
 void Solver::dumpSat(const UserTask& userTask, std::ostream& s) const
 {
   SatBuilder builder(m_taskSolverData.backend, m_taskSolverData.scope, m_taskSolverData.providePriority);
-  builder.build(userTask);
-  VarIdVector fixedToInstall;
-  solveSat(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), fixedToInstall);
-  filterSolution(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), fixedToInstall);
-
+  doMainWork(builder, userTask);
   for(size_t i = 0;i < builder.p.size();++i)
     if (builder.p.hasEntry(i) && !builder.p.getEntry(i).germ)
       {
@@ -657,6 +753,8 @@ void Solver::dumpSat(const UserTask& userTask, std::ostream& s) const
 
 	s << "# " << m_scope.getDesignation(e.varId) << std::endl;
 	s << "# Installation: " << (e.oldState?"Yes":"No") << " -> " << (e.newState?"Yes":"No") << std::endl;
+	if (e.replacementFor != BadVarId)
+	  s << "# Replacement for: " << m_scope.getDesignation(e.replacementFor) << std::endl;
 	s << "# Ambiguous: " << (e.ambiguous?"yes":"no") << std::endl;
 	for(Sat::size_type ss = 0;ss < e.sat.size();++ss)
 	  {
@@ -666,13 +764,14 @@ void Solver::dumpSat(const UserTask& userTask, std::ostream& s) const
 		const VarId varId = e.sat[ss][c].varId;
 		const bool neg = e.sat[ss][c].neg;
 		const bool ambiguous = e.sat[ss][c].ambiguous;
-		if (e.ambiguous || ambiguous)
+		if (ambiguous)
 		  s << "#"; else
 		  s << " ";
 		if (neg)
 		  s << " !"; else
 		  s << "  ";
-		s << m_scope.getDesignation(varId) << std::endl;
+		s << m_scope.getDesignation(varId);
+		s << " # " << (builder.p.getEntry(varId).newState?"installed":"not installed") << std::endl;
 	      }
 	    s << ")" << std::endl;
 	  }
@@ -687,10 +786,13 @@ bool Solver::solveSat(RefCountedEntries& p,
 {
   AbstractSatSolver::Ptr satSolver = createDefaultSatSolver();
   for(VarIdSet::const_iterator it = userTaskInstall.begin();it != userTaskInstall.end();++it)
+    //    if (p.hasEntry(*it))//The variable could be optimized by SAT builder;
     satSolver->addClause(unitClause(Lit(*it)));
   for(VarIdVector::size_type i = 0;i < fixedToInstall.size();++i)
+    //    if (p.hasEntry(fixedToInstall[i]))//The variable could be optimized by SAT builder;
     satSolver->addClause(unitClause(Lit(fixedToInstall[i])));
   for(VarIdSet::const_iterator it = userTaskRemove.begin();it != userTaskRemove.end();++it)
+    //    if (p.hasEntry(*it))//The variable could be optimized by SAT builder;
     satSolver->addClause(unitClause(Lit(*it, 1)));
   for(VarId i = 0;i < p.size();++i)
     if (p.hasEntry(i))
@@ -701,17 +803,22 @@ bool Solver::solveSat(RefCountedEntries& p,
   if (!satSolver->solve(res, conflicts))
     return 0;
   for(VarIdToBoolMap::const_iterator it = res.begin();it != res.end();++it)
+    {
+      assert(it->first < m_scope.getPkgCount());
+      //      logMsg(LOG_DEBUG, "%s", m_scope.getDesignation(it->first).c_str());
+
+      assert(p.hasEntry(it->first));
     p.getEntry(it->first).newState = it->second;
+    }
   return 1;
 }
 
-  void Solver::filterSolution(RefCountedEntries& p,
-			      const VarIdSet& userTaskInstall,
-			      const VarIdSet& userTaskRemove,
-			      const VarIdVector& fixedToInstall) const
+void Solver::filterSolution(RefCountedEntries& p,
+			    const VarIdSet& userTaskInstall,
+			    const VarIdSet& userTaskRemove,
+			    const VarIdVector& fixedToInstall) const
 {
   p.clearAllMarks();
-
   while(1)
     {
       logMsg(LOG_DEBUG, "solver:new filtering pass");
@@ -721,49 +828,53 @@ bool Solver::solveSat(RefCountedEntries& p,
 	  {
 	    RefCountedEntry& e = p.getEntry(i);
 	    if (e.ambiguous)
-	    continue;
-	    if (e.oldState == e.newState)
+	      continue;
+	    if (e.oldState == e.newState &&
+		userTaskInstall.find(e.varId) == userTaskInstall.end() &&
+		userTaskRemove.find(e.varId) == userTaskRemove.end() 
+		)
 	      {
-	    e.ambiguous = 1;
-	    for(Sat::size_type s = 0;s < e.sat.size();++s)
-	      for(Clause::size_type c = 0;c < e.sat[s].size();++c)
-		if (e.sat[s][c].varId != e.varId)
-		  releasedReferenceCount++;
-	    continue;
-	      } //the package not changed;
+		e.ambiguous = 1;
 		for(Sat::size_type s = 0;s < e.sat.size();++s)
-		  {
-		    Clause::size_type c;
-		    for(c = 0;c < e.sat[s].size();++c)
-		      if (!e.sat[s][c].neg &&
-e.sat[s][c].varId != e.varId &&
-			  p.getEntry(e.sat[s][c].varId).oldState &&
-			  p.getEntry(e.sat[s][c].varId).newState)
-			break;
-
-		    if 	      (c >= e.sat[s].size())
+		  for(Clause::size_type c = 0;c < e.sat[s].size();++c)
+		    if (e.sat[s][c].varId != e.varId)
 		      {
+			e.sat[s][c].ambiguous = 1;
+			releasedReferenceCount++;
+		      }
+		continue;
+	      } //the package not changed;
+	    for(Sat::size_type s = 0;s < e.sat.size();++s)
+	      {
+		Clause::size_type c;
+		for(c = 0;c < e.sat[s].size();++c)
+		  if (!e.sat[s][c].neg &&
+		      e.sat[s][c].varId != e.varId &&
+		      p.getEntry(e.sat[s][c].varId).oldState &&
+		      p.getEntry(e.sat[s][c].varId).newState)
+		    break;
+		if 	      (c >= e.sat[s].size())
+		  {
 		    for(c = 0;c < e.sat[s].size();++c)
 		      if (!e.sat[s][c].neg &&
 			  p.getEntry(e.sat[s][c].varId).newState &&
 			  p.getEntry(e.sat[s][c].varId).newState)
 			break;
+		  }
+		if 	      (c < e.sat[s].size())
+		  for(Clause::size_type c1 = 0;c1 < e.sat[s].size();++c1)
+		    if (c1 != c &&
+			e.sat[s][c1].varId != e.varId &&
+			!e.sat[s][c1].ambiguous)
+		      {
+			e.sat[s][c1].ambiguous = 1;
+			releasedReferenceCount++;
 		      }
-
-		    if 	      (c < e.sat[s].size())
-		      for(Clause::size_type c1 = 0;c1 < e.sat[s].size();++c1)
-			if (c1 != c &&
-e.sat[s][c1].varId != e.varId &&
-			    !e.sat[s][c1].ambiguous)
-			  {
-			    e.sat[s][c1].ambiguous = 1;
-			    releasedReferenceCount++;
-			  }
-		  } //for(clauses);
+	      } //for(clauses);
 	  } //for(entries);
       logMsg(LOG_DEBUG, "solver:%zu references released", releasedReferenceCount);
       if (releasedReferenceCount == 0)
-return;
+	return;
 
       p.clearBfsMarks();
       VarIdVector bfsSeed;
@@ -778,14 +889,14 @@ return;
       size_t rolledBackCount = 0;
       for(VarId i = 0;i < p.size();++i)
 	if (p.hasEntry(i))
-	{
+	  {
 	    RefCountedEntry& e = p.getEntry(i);
 	    if (!e.bfsMark && e.oldState != e.newState)
 	      {
 		e.newState = e.oldState;
 		rolledBackCount++;
 	      }
-	}
+	  }
       logMsg(LOG_DEBUG, "solver:%zu packages have been rolled back", rolledBackCount);
       if (rolledBackCount == 0)
 	return;
