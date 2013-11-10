@@ -20,6 +20,7 @@
 
 //#define UNBOUNDED_LOG
 #define FILTER_SOLUTION
+#define UPDATES_ITERATIONS
 
 DEEPSOLVER_BEGIN_SOLVER_NAMESPACE
 
@@ -124,6 +125,8 @@ void SatBuilder::build(const UserTask& userTask)
   onUserTask(userTask);
 
   //  m_userTaskInstall.insert(35853);
+  //  m_userTaskInstall.insert(36700);
+
   //FIXME:Check user task collision;
   for(VarIdSet::const_iterator it = m_userTaskInstall.begin();it != m_userTaskInstall.end();++it)
     {
@@ -686,10 +689,13 @@ void Solver::doMainWork(SatBuilder& builder, const UserTask& userTask) const
       logMsg(LOG_INFO, "Initial SAT solving failed");
       throw 0;//FIXME:
     }
+  assert(builder.p.newStatesValid());
 #ifdef FILTER_SOLUTION
   logMsg(LOG_INFO, "Initial solution filtering");
   filterSolution(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), updates);
+  assert(builder.p.newStatesValid());
 #endif //FILTER_SOLUTION;
+#ifdef UPDATES_ITERATIONS
   while(1)
     {
       logMsg(LOG_INFO, "Updates extending attempt");
@@ -711,6 +717,7 @@ void Solver::doMainWork(SatBuilder& builder, const UserTask& userTask) const
 	break;
 #ifdef FILTER_SOLUTION
       filterSolution(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), newUpdates);
+  assert(builder.p.newStatesValid());
 #endif //FILTER_SOLUTION;
       updates = newUpdates;
     }
@@ -720,6 +727,8 @@ void Solver::doMainWork(SatBuilder& builder, const UserTask& userTask) const
 #ifdef FILTER_SOLUTION
   filterSolution(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), updates);
 #endif //FILTER_SOLUTION;
+#endif //UPDATES_ITERATIONS;
+  assert(builder.p.newStatesValid());
 }
 
 void Solver::solve(const UserTask& userTask, 
@@ -847,6 +856,15 @@ void Solver::filterSolution(RefCountedEntries& p,
 	    for(Sat::size_type s = 0;s < e.sat.size();++s)
 	      {
 		Clause::size_type c;
+		//The clause should be without ambiguous literals;
+		for(c = 0;c < e.sat[s].size();++c)
+		  if (e.sat[s][c].ambiguous)
+		    break;
+		if (c < e.sat[s].size())
+		  continue;
+
+		bool atLeastOneChanged = 0;
+
 		for(c = 0;c < e.sat[s].size();++c)
 		  if (!e.sat[s][c].neg &&
 		      e.sat[s][c].varId != e.varId &&
@@ -869,7 +887,29 @@ void Solver::filterSolution(RefCountedEntries& p,
 		      {
 			e.sat[s][c1].ambiguous = 1;
 			releasedReferenceCount++;
+			atLeastOneChanged = 1;
 		      }
+
+		if (atLeastOneChanged)
+		  continue;
+		//Only for removed packages;
+		if (e.newState)
+		  continue;
+
+		for(c = 0;c < e.sat[s].size();++c)
+		  if (		      e.sat[s][c].varId != e.varId && //Actually shouldn't happen;
+e.sat[s][c].neg &&
+		      !p.getEntry(e.sat[s][c].varId).newState)
+		    break;
+		if 	      (c < e.sat[s].size())
+		  for(Clause::size_type c1 = 0;c1 < e.sat[s].size();++c1)
+		    if (c1 != c &&
+			e.sat[s][c1].varId != e.varId)
+		      {
+			e.sat[s][c1].ambiguous = 1;
+			releasedReferenceCount++;
+		      }
+
 	      } //for(clauses);
 	  } //for(entries);
       logMsg(LOG_DEBUG, "solver:%zu references released", releasedReferenceCount);

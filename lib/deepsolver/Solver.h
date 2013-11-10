@@ -183,6 +183,36 @@ namespace Deepsolver
 	    m_entries[i]->clearAllMarks();
       }
 
+      bool newStatesValid() const
+      {
+	size_t count = 0;
+	for(VarId i = 0;i < m_entries.size();++i)
+	  if (m_entries[i] != NULL)
+	    {
+	      const RefCountedEntry& e = *m_entries[i];
+	      for(Sat::size_type s = 0;s < e.sat.size();++s)
+		{
+		  Clause::size_type c;
+		  for(c = 0;c < e.sat[s].size();++c)
+		    {
+		      const VarId v = e.sat[s][c].varId;
+		      const bool n = e.sat[s][c].neg;
+		      assert(hasEntry(v));
+		      if (!n && getEntry(v).newState)
+			break;
+		      if (n && !getEntry(v).newState)
+			break;
+		    }
+		  if (c >= e.sat[s].size())
+		    return 0;
+		}
+	      count += e.sat.size();
+	    } //if(entry exists);
+	logMsg(LOG_DEBUG, "solver:%zu clauses are checked and OK!", count);
+	return 1;
+      }
+
+
       size_t size() const
       {
 	return m_entries.size();
