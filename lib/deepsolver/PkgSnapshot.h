@@ -152,7 +152,7 @@ namespace Deepsolver
 		     VarId& toPos );
 
     void enhance(Snapshot& snapshot,
-		 const Deepsolver::PkgVector& enhanceWith,
+		 const ::Deepsolver::PkgVector& enhanceWith,
 		 int flags,
 		 ConstCharVector& strings);
 
@@ -176,7 +176,7 @@ namespace Deepsolver
 		      std::ostream& s);
 
     size_t getScore(const Snapshot& snapshot);
-    bool theSameVersion(const Deepsolver::Pkg& p1, const Deepsolver::PkgSnapshot::Pkg& p2);
+    bool theSameVersion(const ::Deepsolver::Pkg& p1, const PkgSnapshot::Pkg& p2);
 
     class PkgRecipientAdapter: public AbstractPkgRecipient
     {

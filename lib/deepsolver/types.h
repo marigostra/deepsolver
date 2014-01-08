@@ -76,13 +76,19 @@ namespace Deepsolver
       : type(VerNone) {}
 
     VersionCond(const std::string& v)
-      : version(v), type(VerEquals) {}
+      : version(v),
+	type(VerEquals) {}
 
     VersionCond(const std::string& v, VerDirection t)
-      : version(v), type(t) {}
+      : version(v),
+	type(t) {}
 
-    VersionCond(const std::string& v, bool l, bool e, bool g)
-      : version(v), type(0)
+    VersionCond(const std::string& v,
+		bool l,
+		bool e,
+		bool g)
+      : version(v),
+	type(0)
     {
       assert(!l || !g);
       if (l)
@@ -161,8 +167,6 @@ namespace Deepsolver
     UserTaskItemToInstall(const std::string& n, VerDirection d, const std::string& v)
       : pkgName(n), verDir(d), version(v) {}
 
-    virtual ~UserTaskItemToInstall() {}
-
   public:
     std::string toString() const
     {
@@ -199,6 +203,13 @@ namespace Deepsolver
     StringSet urlsToInstall;
     StringSet namesToRemove;
   }; //class UserTask;
+
+  struct DateTime
+  {
+    unsigned short year;
+    unsigned char month, day, hour, minute, second;
+  }; //struct DateTime;
+
 } ///namespace Deepsolver;
 
 #endif //DEEPSOLVER_TYPES_H;

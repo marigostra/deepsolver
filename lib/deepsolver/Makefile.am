@@ -14,6 +14,8 @@ ConfigCenter.cpp \
 ConfigFile.cpp \
 CurlInterface.cpp \
 Directory.cpp \
+ExceptionMessagesEn.cpp \
+exceptions.cpp \
 File.cpp \
 FilesFetch.cpp \
 GzipInterface.cpp \
@@ -24,6 +26,7 @@ logging.cpp \
 Md5.cpp \
 Md5File.cpp \
 OperationCore.cpp \
+OsIntegrity.cpp \
 Pkg.cpp \
 PkgScopeBase.cpp \
 PkgScope.cpp \
@@ -45,7 +48,7 @@ Solver.cpp \
 StringUtils.cpp \
 TextFormatSectionReader.cpp \
 TinyFileDownload.cpp \
-TransactionIterator.cpp 
+TransactionIterator.cpp
 
 libdeepsolver_la_HEADERS = \
 AbstractContinueRequest.h \
@@ -53,6 +56,7 @@ AbstractFetchListener.h \
 AbstractPkgBackEnd.h \
 AbstractPkgRecipient.h \
 AbstractTaskSolver.h \
+AbstractTransactionListener.h \
 AutoReleaseStrings.h \
 ConfigAdapter.h \
 ConfigCenter.h \
@@ -60,11 +64,9 @@ ConfigData.h \
 ConfigFile.h \
 config.h \
 CurlInterface.h \
-DateTime.h \
 deepsolver.h \
-Dichotomy.h \
 Directory.h \
-doubling.h \
+ExceptionMessagesEn.h \
 exceptions.h \
 File.h \
 FilesFetch.h \
@@ -77,6 +79,7 @@ logging.h \
 Md5File.h \
 Md5.h \
 OperationCore.h \
+OsIntegrity.h \
 Pkg.h \
 PkgInfoProcessor.h \
 PkgScopeBase.h \
@@ -102,4 +105,5 @@ system.h \
 TextFormatSectionReader.h \
 TinyFileDownload.h \
 TransactionIterator.h \
-types.h
+types.h \
+utils.h

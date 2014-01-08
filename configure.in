@@ -34,6 +34,9 @@ AC_CONFIG_FILES([
   lib/Makefile
 lib/deepsolver/Makefile
   programs/Makefile
+  tests/Makefile
+  tests/messages/Makefile
+  tests/system-imitation/Makefile
 ])
 
 AC_OUTPUT

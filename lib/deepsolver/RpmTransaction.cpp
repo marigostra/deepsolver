@@ -27,7 +27,7 @@ void RpmTransaction::init()
     return;
   rpmReadConfigFiles(NULL, NULL);
   if (rpmdbOpen("", &m_db, O_RDWR, 0644) != 0)//FIXME:root directory;
-    throw PackageBackEndException("rpmdbOpen()");
+    throw PkgBackEndException("rpmdbOpen()");
   m_ts = rpmtransCreateSet(m_db, "");//FIXME:root directory;
   m_initialized = 1;
 }
@@ -100,14 +100,14 @@ void RpmTransaction::addToTransactionInstall(const StringVector& files)
     {
       FD_t fd = Fopen(files[i].c_str(), "r.ufdio");
       if (fd == NULL)
-	throw PackageBackEndException("Fopen(" + files[i] + ")");
+	throw PkgBackEndException("Fopen(" + files[i] + ")");
       Header hdr;
       int rc = rpmReadPackageHeader(fd, &hdr, 0, NULL, NULL);
       if (rc != 0)
-	throw PackageBackEndException("rpmReadPackageHeader()");
+	throw PkgBackEndException("rpmReadPackageHeader()");
       rc = rpmtransAddPackage(m_ts, hdr, NULL, files[i].c_str(), 0, 0);
       if (rc != 0)
-	throw PackageBackEndException("rpmtransAddPackage()");
+	throw PkgBackEndException("rpmtransAddPackage()");
       headerFree(hdr);
       Fclose(fd);
     }
@@ -119,14 +119,14 @@ void RpmTransaction::addToTransactionUpgrade(const StringToStringMap& files)
     {
       FD_t fd = Fopen(it->second.c_str(), "r.ufdio");
       if (fd == NULL)
-	throw PackageBackEndException("Fopen(" + it->second + ")");
+	throw PkgBackEndException("Fopen(" + it->second + ")");
       Header hdr;
       int rc = rpmReadPackageHeader(fd, &hdr, 0, NULL, NULL);
       if (rc != 0)
-	throw PackageBackEndException("rpmReadPackageHeader()");
+	throw PkgBackEndException("rpmReadPackageHeader()");
       rc = rpmtransAddPackage(m_ts, hdr, NULL, it->second.c_str(), 1, 0);
       if (rc != 0)
-	throw PackageBackEndException("rpmtransAddPackage()");
+	throw PkgBackEndException("rpmtransAddPackage()");
       headerFree(hdr);
       Fclose(fd);
     }
@@ -146,7 +146,7 @@ void RpmTransaction::addToTransactionRemove(const StringVector& files)
 	    {
 	      const int rc = rpmtransRemovePackage(m_ts, recOffset);
 if (rc != 0)
-  throw PackageBackEndException("rpmtransRemovePackage()");
+  throw PkgBackEndException("rpmtransRemovePackage()");
 	    }
 	}
       MI = rpmdbFreeIterator(MI);

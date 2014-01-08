@@ -64,7 +64,7 @@ public:
     assert(!fileName.empty());
     m_stream.open(fileName.c_str());
     if (!m_stream.is_open())
-      throw IndexCoreException(IndexCoreException::InternalIOProblem);
+      throw 0;//FIXME:InternalProblem;;
     logMsg(LOG_DEBUG, "index:std file output for \'%s\' is opened", fileName.c_str());
   }
 
@@ -327,7 +327,7 @@ void IndexCore::buildIndex(const RepoParams& params)
       m_listener.onProvidesCleaning();
       std::ifstream is(pkgCompleteFileName.c_str());
       if (!is.is_open())
-	throw IndexCoreException(IndexCoreException::InternalIOProblem);
+	throw 0;//FIXME:InternalProblem;
       while(1)
 	{
 	  std::string line;
@@ -422,7 +422,7 @@ void IndexCore::rebuildIndex(const RepoParams& params, const StringVector& toAdd
     {
       const std::string fileName = PkgSection::getPkgFileName(sect);
           if(fileName.empty())
-	    throw IndexCoreException(IndexCoreException::InternalIOProblem);
+	    throw 0;//FIXME:InternalProblem;
       for(PkgFileVector::size_type i = 0;i < pkgs.size();i++)
 	{
 	  if (fileName != pkgs[i].fileName)
@@ -465,7 +465,7 @@ void IndexCore::rebuildIndex(const RepoParams& params, const StringVector& toAdd
     {
       const std::string fileName = PkgSection::getPkgFileName(sect);
       if(fileName.empty())
-	throw IndexCoreException(IndexCoreException::InternalIOProblem);
+	throw 0;//FIXME:InternalProblem;
       for(PkgFileVector::size_type i = 0;i < pkgs.size();i++)
 	{
 	  if (fileName != pkgs[i].fileName)
@@ -508,7 +508,7 @@ void IndexCore::rebuildIndex(const RepoParams& params, const StringVector& toAdd
     {
       const std::string fileName = PkgSection::getPkgFileName(sect);
       if(fileName.empty())
-	throw IndexCoreException(IndexCoreException::InternalIOProblem);
+	throw 0;//FIXME:InternalProblem;
       for(PkgFileVector::size_type i = 0;i < pkgs.size();i++)
 	{
 	  if (fileName != pkgs[i].fileName)
@@ -551,7 +551,7 @@ void IndexCore::rebuildIndex(const RepoParams& params, const StringVector& toAdd
     {
       const std::string fileName = PkgSection::getPkgFileName(sect);
       if(fileName.empty())
-	throw IndexCoreException(IndexCoreException::InternalIOProblem);
+	throw 0;//FIXME:InternalProblem;
       for(PkgFileVector::size_type i = 0;i < pkgs.size();i++)
 	{
 	  if (fileName != pkgs[i].fileName)
@@ -594,7 +594,7 @@ void IndexCore::rebuildIndex(const RepoParams& params, const StringVector& toAdd
     {
       const std::string fileName = PkgSection::getPkgFileName(sect);
       if(fileName.empty())
-	throw IndexCoreException(IndexCoreException::InternalIOProblem);
+	throw 0;//FIXME:INternalProblem;
       for(PkgFileVector::size_type i = 0;i < pkgs.size();i++)
 	{
 	  if (fileName != pkgs[i].fileName)
@@ -637,7 +637,7 @@ void IndexCore::rebuildIndex(const RepoParams& params, const StringVector& toAdd
     {
       const std::string fileName = PkgSection::getPkgFileName(sect);
       if(fileName.empty())
-	throw IndexCoreException(IndexCoreException::InternalIOProblem);
+	throw 0;//FIXME:InternalProblem;
       for(PkgFileVector::size_type i = 0;i < pkgs.size();i++)
 	{
 	  if (fileName != pkgs[i].fileName)
@@ -736,7 +736,7 @@ void IndexCore::refilterProvides(const RepoParams& params)
   UnifiedOutput::Ptr pkgFile = createRebuildWriter(pkgFileName, params);
   std::ifstream is(pkgCompleteFileName.c_str());
   if (!is.is_open())
-    throw IndexCoreException(IndexCoreException::InternalIOProblem);
+    throw 0;//FIXME:InternalProblem;
   while(1)
     {
       std::string line;
@@ -799,7 +799,7 @@ void IndexCore::collectRefs(const std::string& dirName, StringSet& res)
     logMsg(LOG_DEBUG, "We successfully read references from repository index, references set contains %zu entries", res.size());
     return;
   }
-  catch (const DeepsolverException& e)
+  catch (const AbstractException& e)
     {
       //Repository index reading failed, nothing sad, just making the log report;
       logMsg(LOG_INFO, "Directory \'%s\' does not contain a valid repo index:%s error:%s", dirName.c_str(), e.getType().c_str(), e.getMessage().c_str());

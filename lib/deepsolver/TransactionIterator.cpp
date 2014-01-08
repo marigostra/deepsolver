@@ -53,13 +53,13 @@ void TransactionIterator::fetchPackages(AbstractFetchListener& listener,
       if (trim(installUrls[i]).empty())
 	{
 	  logMsg(LOG_ERR, "transaction:package \'%s\' to install has no proper URL to fetch from", m_install[i].name.c_str());
-      throw OperationException(OperationException::InternalIOProblem);
+	  throw 0;//FIXME:InternalProblem;
 	}
       installFileNames[i] = File::baseNameFromUrl(installUrls[i]);
       if (trim(installFileNames[i]).empty())
 	{
 	  logMsg(LOG_ERR, "transaction:URL \'%s\' is invalid because it has no file name", installUrls[i].c_str());
-      throw OperationException(OperationException::InternalIOProblem);
+	  throw 0;//FIXME:InternalProblem;
 	}
     }
   for(StringVector::size_type i = 0;i < upgradeUrls.size();i++)
@@ -67,13 +67,13 @@ void TransactionIterator::fetchPackages(AbstractFetchListener& listener,
       if (trim(upgradeUrls[i]).empty())
 	{
 	  logMsg(LOG_ERR, "transaction:package \'%s\' to upgrade to has no proper URL to fetch from", m_upgradeTo[i].name.c_str());
-      throw OperationException(OperationException::InternalIOProblem);
+	  throw 0;//FIXME:InternalProblem;
 	}
       upgradeFileNames[i] = File::baseNameFromUrl(upgradeUrls[i]);
       if (trim(upgradeFileNames[i]).empty())
 	{
 	  logMsg(LOG_ERR, "transaction:URL \'%s\' is invalid because it has no file name", upgradeUrls[i].c_str());
-      throw OperationException(OperationException::InternalIOProblem);
+	  throw 0;//FIXME:InternalProblem;
 	}
     }
   for(StringVector::size_type i = 0;i < downgradeUrls.size();i++)
@@ -81,13 +81,13 @@ void TransactionIterator::fetchPackages(AbstractFetchListener& listener,
       if (trim(downgradeUrls[i]).empty())
 	{
 	  logMsg(LOG_ERR, "transaction:package \'%s\' to downgrade to has no proper URL to fetch from", m_downgradeTo[i].name.c_str());
-      throw OperationException(OperationException::InternalIOProblem);
+	  throw 0;//FIXME:InternalProblem;
 	}
       downgradeFileNames[i] = File::baseNameFromUrl(downgradeUrls[i]);
       if (trim(downgradeFileNames[i]).empty())
 	{
 	  logMsg(LOG_ERR, "transaction:URL \'%s\' is invalid because it has no file name", downgradeUrls[i].c_str());
-      throw OperationException(OperationException::InternalIOProblem);
+	  throw 0;//FIXME:InternalProblem;
 	}
     }
   logMsg(LOG_DEBUG, "transaction:preparing directory \'%s\'", dir.c_str());

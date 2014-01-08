@@ -37,7 +37,7 @@ size_t TinyFileDownload::onNewDataBlock(const void* buf, size_t bufSize)
   if (m_dataSizeLimit > 0 && m_content.size() + bufSize > m_dataSizeLimit)
     {
       logMsg(LOG_ERR, "tiny:file size limit exceeded, already downloded bytes=%zu, new block size=%zu, limit=%zu", m_content.size(), bufSize, m_dataSizeLimit);
-      throw OperationException(OperationException::LimitExceeded);
+      throw OperationCoreException(OperationCoreException::LimitExceeded);
     }
   const char* c = (const char*)buf;
   std::string s;

@@ -20,151 +20,156 @@
 
 namespace Deepsolver
 {
-  /**\brief The wrapper for directory operations
+  /**\brief The wrapper for file system directory operations
    *
-   * This class wraps mostly often used operations with directories in
-   * files system. Its generally purposed to take care over the error code
-   * returned by system calls and throw SystemException in case of
-   * problems.
+   * This class wraps the most popular operations with directories in
+   * files system. Its generally purposed for automatic verifying the error code
+   * returned by system calls and throwing SystemException instances on failures.
    *
    * \sa File SystemException
    */
   class Directory
   {
   public:
-    /**\brief The iterator over the files and subdirectories
-     *
-     * This class returns all items in some directory. Each item can be
-     * examined both as just the name of a file and as the name with parent
-     * directories.
-     *
-     * The iterator is created pointed before the first item. So the user
-     * have to call moveNext() method at least once to be able use methods to
-     * get name of files.
-     */
-    class Iterator
-    {
-    public:
-      typedef std::shared_ptr<Iterator> Ptr;
-
-    public:
-      /**\brief The constructor 
-       *
-       * This is the main constructor. It takes the name of directory it
-       * enumerates and the opened handle to directory. It is strongly
-       * recommended to use enumerate() method of Directory class, however the
-       * user can create this iterator explicitly.
-       *
-       * \param [in] path The name of directory used in file names construction
-       * \param [in] dir The valid handle to the directory to read data from
-       */
-    Iterator(const std::string& path, DIR* dir)
-      : m_path(path), m_dir(dir) {}
-
-      /**\brief The destructor*/
-      virtual ~Iterator()
-	{
-	  if (m_dir)
-	    closedir(m_dir);
-	}
-
-    public:
-      /**\brief Moves the iterator to next item 
-       *
-       * This method moves the iterator to the first item on its first
-       * invocation or to the next on each consequent. The method returns zero
-       * if next item does not exist. If method returns zero on first call it
-       * means the directory is empty.
-       *
-       * \return Non-zero if next item exists or zero if there is no next item or directory is empty
-       */
-      bool moveNext();
-
-      /**\brief Returns the name of directory item this iterator is pointing to
-       *
-       * This method returns the name of a file or directory the iterator is
-       * pointing to without path of the parent directory. If method is called
-       * before the first invocation of moveNext() or after it has already
-       * returned zero this method behaviour is undefined.
-       *
-       * \return The name of item the iterator is pointing to without parent directory
-       */
-      std::string name() const;
-
-      /**\brief Returns the name of directory item this iterator is pointing to with parent directory
-       *
-       * This method returns the name of a file or directory the iterator is
-       * pointing to with path of the parent directory. If method is called
-       * before the first invocation of moveNext() or after it has already
-       * returned zero this method behaviour is undefined.
-       *
-       * \return The name of item the iterator is pointing to with parent directory
-       */
-      std::string fullPath() const;
-
-    private:
-      std::string m_path;
-      DIR* m_dir;
-      std::string m_currentName;
-    }; //class Iterator;
+    class Iterator;
 
   public:
     /**\brief Checks if the directory exists 
      *
-     * This method checks if the file system has the required entry and it is
-     * a directory by calling stat() system call. It never throes
-     * SystemException. This method returns zero even in case the directory
-     * is actually present but it existence cannot be checked due to wrong
-     * permissions.
+     * \param [in] path The path of the directory to check
      *
-     * \return Non-zero if the directory is present and zero otherwise
+     * \return Non-zero if the directory exists and zero otherwise
      */
-    static bool isExist(const std::string& path);
+    static bool exists(const std::string& path);
 
-    /**\brief Checks if the directory is exist and creates it it otherwise
+    /**\brief Creates new directory if it does not exist
      *
-     * This method checks if the directory is exist and in case it isn't it
-     * will be created. The method throws SystemException if there are
-     * problems to check the directory or create it.
+     * \param [in path The path of the directory to create]
      */
     static void ensureExists(const std::string& path);
 
-    /**\brief Creates directory and/or makes it empty
+    /**\brief Prepares an empty directory
      *
-     * \return Non-zero if directory is empty, with eraseContent set to 1 always returns non-zero
+     * This method helps to get an empty directory at specified path. It can
+     * do in two modes depending on the action performed in case when the
+     * directory already exists. In first mode this method always erases
+     * directory content, in second it only checks is existing directory
+     * empty or not but never touches its contents. The result of checking in
+     * second mode is returned through the return value.
+     *
+     * \param [in] path The path of the directory to get empty
+     * \param [in] needEraseContent Allows to delete all subdirectories and files if the directory exists and not empty
+     *
+     * \return Non-zero if the directory is empty and zero if it is not empty and we may not delete its content
      */
     static bool ensureExistsAndEmpty(const std::string& name, bool needEraseContent = 0);
 
-    static void eraseContent(const std::string& name);
+    /**\brief Removes any content of the directory
+     *
+     * \param [in] path The path of the directory to erase content in
+     */
+    static void eraseContent(const std::string& path);
 
-    /**\brief FIXME*/
+    /**\brief Checks if the directory is empty
+     *
+     * Note, if the directory does not exists this method 
+     * signales that through SystemException and returns nothing.
+     * 
+     * \param [in] path The path of the directory to check
+     *
+     * \return Non-zero if the directory is empty and zero otherwise  
+     */
     static bool empty(const std::string& path);
 
-    /**\brief Removes an empty directory
+    /**\brief Removes the empty directory
      *
-     * FIXME
+     * \param [in] path The path of the directory to remove
      */
-    static void remove(const std::string& name);
+    static void remove(const std::string& path);
 
-    /**\brief Combines two parts of UNIX path
+    /**\brief Combines two parts of the UNIX path
      *
-     * FIXME 
+     * This method just takes care of the double slashes absence in constructed name.
+     *
+     * \param [in] part1 The first part of the path to construct
+     * \param [in] part2 The second part of the path to construct
+     *
+     * \return The constructed path
      */
     static std::string mixNameComponents(const std::string& part1, const std::string& part2);
 
-    /**\brief Creates the iterator over the files in the directory
+    /**\brief Creates the iterator over the entries in the directory
      *
-     * This method creates the iterator prepared for enumeration of all files
-     * and directories inside of the directory given by path. If the
+     * This method creates the iterator prepared to enumerate all files
+     * and subdirectories inside of the directory given by path. If the
      * directory is inaccessible for reading the SystemException will be
      * thrown.
      *
-     * \param [in] path The name of the directory to enumerate files in
+     * \param [in] path The path of the directory to enumerate files in
      *
-     * \return The Iterator::Ptr to the prepared iterator
+     * \return The prepared iterator
      */
-    static Iterator::Ptr enumerate(const std::string& path);
+    static std::shared_ptr<Iterator> enumerate(const std::string& path);
   }; //class Directory;
+
+  /**\brief The iterator over the files and subdirectories
+   *
+   * This class enumerates all items in the directory. Each item can be
+   * examined both as just the name of a file and as a full path with all parent
+   * directories.
+   *
+   * The iterator is created pointed before the first item. Hence, a user
+   * has to call moveNext() method at least once to be able call methods providing item information.
+   */
+  class Directory::Iterator
+  {
+  public:
+    typedef std::shared_ptr<Iterator> Ptr;
+
+  public:
+    /**\brief The constructor 
+     *
+     * \param [in] path The name of the directory to be used for proper full path construction
+     * \param [in] dir The valid directory handle to read data from
+     */
+    Iterator(const std::string& path, DIR* dir)
+      : m_path(path),
+	m_dir(dir) {}
+
+    /**\brief The destructor*/
+    virtual ~Iterator()
+    {
+      if (m_dir)
+	closedir(m_dir);
+    }
+
+  public:
+    /**\brief Moves the iterator to next item 
+     *
+     * This method moves the iterator to the first item on its first
+     * invocation or to the next on each consequent. The method returns zero
+     * if next item does not exist. If method returns zero on first call that
+     * means the directory is empty.
+     *
+     * \return Non-zero if next item exists or zero otherwise
+     */
+    bool moveNext();
+
+    /**\brief Returns the name of the directory item this iterator is pointing to
+     * \return The name of the item the iterator is pointing
+     */
+    std::string name() const;
+
+    /**\brief Returns the name of the directory item this iterator is pointing to with all parent directories
+     * \return The full path of the item this iterator is pointing to
+     */
+    std::string fullPath() const;
+
+  private:
+    const std::string m_path;
+    DIR* m_dir;
+    std::string m_currentName;
+  }; //class Directory::Iterator;
 } //namespace Deepsolver;
 
 #endif //DEEPSOLVER_DIRECTORY_H;

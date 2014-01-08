@@ -33,23 +33,13 @@ public:
       virtual ~Bfs() {}
 
   public:
-  void go(const VarIdSet startSet1, const VarIdSet& startSet2)
-  {
-    VarIdVector startFrom;
-    for(VarIdSet::const_iterator it = startSet1.begin();it != startSet1.end();++it)
-      startFrom.push_back(*it);
-    for(VarIdSet::const_iterator it = startSet2.begin();it != startSet2.end();++it)
-      startFrom.push_back(*it);
-    go(startFrom);
-  }
-
-      void go(const VarIdVector& startFrom)
+      void go(const VarIdSet& startFrom)
       {
 	assert(!startFrom.empty());
-	for(VarIdVector::size_type i = 0;i < startFrom.size();++i)
+	for(VarIdSet::const_iterator i = startFrom.begin();i != startFrom.end();++i)
 	  {
-	    assert(!m_p.getEntry(startFrom[i]).ambiguous);
-	  m_pending.push_back(startFrom[i]);
+	    assert(!m_p.getEntry(*i).ambiguous);
+	    m_pending.push_back(*i);
 	  }
 	while(!m_pending.empty())
 	  {
@@ -613,7 +603,7 @@ VarId SatBuilder::onUserItemToInstall(const UserTaskItemToInstall& item) const
   const bool hasVersion = item.verDir != VerNone;
   assert(!hasVersion || !item.version.empty());
   if (!m_scope.knownPkgName(item.pkgName))
-    throw TaskException(TaskException::UnknownPackageName, item.pkgName);
+    throw TaskException(TaskException::UnknownPkg, item.pkgName);
   const PkgId pkgId = m_scope.strToPkgId(item.pkgName);
   assert(pkgId != BadPkgId);
   VarIdVector vars;
@@ -646,7 +636,7 @@ VarId SatBuilder::onUserItemToInstall(const UserTaskItemToInstall& item) const
     } else
     m_scope.selectMatchingVarsProvidesOnly(pkgId, vars);
   if (vars.empty())//No appropriate packages at all;
-    throw TaskException(TaskException::NoRequestedPackage, item.toString());
+    throw TaskException(TaskException::UnknownPkg, item.toString());
   if (hasVersion || m_scope.allProvidesHaveTheVersion(vars, pkgId))
     {
       const VarId res = m_providePriority.byProvidesPriorityList(vars, pkgId);
@@ -681,24 +671,24 @@ VarId SatBuilder::byProvidesPrioritySorting(const VarIdVector& vars) const
 void Solver::doMainWork(SatBuilder& builder, const UserTask& userTask) const
 {
   VarIdVector updates;
-  logMsg(LOG_INFO, "SAT constructing");
+  logMsg(LOG_DEBUG, "SAT constructing");
   builder.build(userTask);
-  logMsg(LOG_INFO, "Initial SAT solving");
+  logMsg(LOG_DEBUG, "Initial SAT solving");
   if (!solveSat(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), updates))
     {
-      logMsg(LOG_INFO, "Initial SAT solving failed");
+      logMsg(LOG_DEBUG, "Initial SAT solving failed");
       throw 0;//FIXME:
     }
   assert(builder.p.newStatesValid());
 #ifdef FILTER_SOLUTION
-  logMsg(LOG_INFO, "Initial solution filtering");
+  logMsg(LOG_DEBUG, "Initial solution filtering");
   filterSolution(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), updates);
   assert(builder.p.newStatesValid());
 #endif //FILTER_SOLUTION;
 #ifdef UPDATES_ITERATIONS
   while(1)
     {
-      logMsg(LOG_INFO, "Updates extending attempt");
+      logMsg(LOG_DEBUG, "Updates extending attempt");
       VarIdVector newUpdates = updates;
       for(size_t i = 0;i < builder.p.size();++i)
 	if (builder.p.hasEntry(i))
@@ -721,7 +711,7 @@ void Solver::doMainWork(SatBuilder& builder, const UserTask& userTask) const
 #endif //FILTER_SOLUTION;
       updates = newUpdates;
     }
-  logMsg(LOG_INFO, "Final solving");
+  logMsg(LOG_DEBUG, "Final solving");
   const bool finalSatSolved = solveSat(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), updates);
   assert(finalSatSolved);
 #ifdef FILTER_SOLUTION
@@ -828,104 +818,27 @@ void Solver::filterSolution(RefCountedEntries& p,
 			    const VarIdVector& fixedToInstall) const
 {
   p.clearAllMarks();
+
+  VarIdSet seed;
+  for(VarIdSet::const_iterator it = userTaskInstall.begin();it != userTaskInstall.end();++it)
+    seed.insert(*it);
+  for(VarIdSet::const_iterator it = userTaskRemove.begin();it != userTaskRemove.end();++it)
+    seed.insert(*it);
+  for(VarIdVector::size_type i = 0;i < fixedToInstall.size();++i)
+	seed.insert(fixedToInstall[i]);
+
   while(1)
     {
       logMsg(LOG_DEBUG, "solver:new filtering pass");
-      size_t releasedReferenceCount = 0;
+      size_t changedNum = 0;
       for(VarId i = 0;i < p.size();++i)
 	if (p.hasEntry(i))
-	  {
-	    RefCountedEntry& e = p.getEntry(i);
-	    if (e.ambiguous)
-	      continue;
-	    if (e.oldState == e.newState &&
-		userTaskInstall.find(e.varId) == userTaskInstall.end() &&
-		userTaskRemove.find(e.varId) == userTaskRemove.end() 
-		)
-	      {
-		e.ambiguous = 1;
-		for(Sat::size_type s = 0;s < e.sat.size();++s)
-		  for(Clause::size_type c = 0;c < e.sat[s].size();++c)
-		    if (e.sat[s][c].varId != e.varId)
-		      {
-			e.sat[s][c].ambiguous = 1;
-			releasedReferenceCount++;
-		      }
-		continue;
-	      } //the package not changed;
-	    for(Sat::size_type s = 0;s < e.sat.size();++s)
-	      {
-		Clause::size_type c;
-		//The clause should be without ambiguous literals;
-		for(c = 0;c < e.sat[s].size();++c)
-		  if (e.sat[s][c].ambiguous)
-		    break;
-		if (c < e.sat[s].size())
-		  continue;
-
-		bool atLeastOneChanged = 0;
-
-		for(c = 0;c < e.sat[s].size();++c)
-		  if (!e.sat[s][c].neg &&
-		      e.sat[s][c].varId != e.varId &&
-		      p.getEntry(e.sat[s][c].varId).oldState &&
-		      p.getEntry(e.sat[s][c].varId).newState)
-		    break;
-		if 	      (c >= e.sat[s].size())
-		  {
-		    for(c = 0;c < e.sat[s].size();++c)
-		      if (!e.sat[s][c].neg &&
-			  p.getEntry(e.sat[s][c].varId).newState &&
-			  p.getEntry(e.sat[s][c].varId).newState)
-			break;
-		  }
-		if 	      (c < e.sat[s].size())
-		  for(Clause::size_type c1 = 0;c1 < e.sat[s].size();++c1)
-		    if (c1 != c &&
-			e.sat[s][c1].varId != e.varId &&
-			!e.sat[s][c1].ambiguous)
-		      {
-			e.sat[s][c1].ambiguous = 1;
-			releasedReferenceCount++;
-			atLeastOneChanged = 1;
-		      }
-
-		if (atLeastOneChanged)
-		  continue;
-		//Only for removed packages;
-		if (e.newState)
-		  continue;
-
-		for(c = 0;c < e.sat[s].size();++c)
-		  if (		      e.sat[s][c].varId != e.varId && //Actually shouldn't happen;
-e.sat[s][c].neg &&
-		      !p.getEntry(e.sat[s][c].varId).newState)
-		    break;
-		if 	      (c < e.sat[s].size())
-		  for(Clause::size_type c1 = 0;c1 < e.sat[s].size();++c1)
-		    if (c1 != c &&
-			e.sat[s][c1].varId != e.varId)
-		      {
-			e.sat[s][c1].ambiguous = 1;
-			releasedReferenceCount++;
-		      }
-
-	      } //for(clauses);
-	  } //for(entries);
-      logMsg(LOG_DEBUG, "solver:%zu references released", releasedReferenceCount);
-      if (releasedReferenceCount == 0)
+	  makeAmbiguousMarks(p, seed, p.getEntry(i), changedNum);
+      logMsg(LOG_DEBUG, "solver:%zu references released", changedNum);
+      if (changedNum == 0)
 	return;
-
       p.clearBfsMarks();
-      VarIdVector bfsSeed;
-      for(VarIdSet::const_iterator it = userTaskInstall.begin();it != userTaskInstall.end();++it)
-	bfsSeed.push_back(*it);
-      for(VarIdSet::const_iterator it = userTaskRemove.begin();it != userTaskRemove.end();++it)
-	bfsSeed.push_back(*it);
-      for(VarIdVector::size_type i = 0;i < fixedToInstall.size();++i)
-	bfsSeed.push_back(fixedToInstall[i]);
-      Bfs(p).go(bfsSeed);
-
+      Bfs(p).go(seed);
       size_t rolledBackCount = 0;
       for(VarId i = 0;i < p.size();++i)
 	if (p.hasEntry(i))
@@ -941,6 +854,88 @@ e.sat[s][c].neg &&
       if (rolledBackCount == 0)
 	return;
     }
+}
+
+void Solver::makeAmbiguousMarks(const RefCountedEntries& p, 
+				const VarIdSet& seed,
+				RefCountedEntry& e,
+				size_t& changedNum) const
+{
+  if (e.ambiguous)
+    return;
+  if (e.oldState == e.newState &&
+      seed.find(e.varId) == seed.end())
+    {
+      e.ambiguous = 1;
+      for(Sat::size_type s = 0;s < e.sat.size();++s)
+	for(Clause::size_type c = 0;c < e.sat[s].size();++c)
+	  if (e.sat[s][c].varId != e.varId &&
+	      !e.sat[s][c].ambiguous)
+	    {
+	      e.sat[s][c].ambiguous = 1;
+	      changedNum++;
+	    }
+      return;
+    } //the package not changed;
+  //all cases when oldState != newState;
+  for(Sat::size_type s = 0;s < e.sat.size();++s)
+    {
+      Clause::size_type c;
+      //The clause should be without ambiguous literals;
+      for(c = 0;c < e.sat[s].size();++c)
+	if (e.sat[s][c].ambiguous)
+	  break;
+      if (c < e.sat[s].size())
+	//Going to next clause;
+	continue;
+
+      bool atLeastOneChanged = 0;
+      for(c = 0;c < e.sat[s].size();++c)
+	//Preferably we need the package that was installed and remains installed; 
+	if (e.sat[s][c].varId != e.varId &&
+	    !e.sat[s][c].neg &&
+		      p.getEntry(e.sat[s][c].varId).oldState &&
+	    p.getEntry(e.sat[s][c].varId).newState)
+	  break;
+      //If there is no preferable choice we take any installed variable;
+      if 	      (c >= e.sat[s].size())
+	{
+	  for(c = 0;c < e.sat[s].size();++c)
+	    if (e.sat[s][c].varId != e.varId  &&
+		!e.sat[s][c].neg &&
+		p.getEntry(e.sat[s][c].varId).newState)
+	      break;
+	}
+      if 	      (c < e.sat[s].size())
+	for(Clause::size_type c1 = 0;c1 < e.sat[s].size();++c1)
+	  if (			e.sat[s][c1].varId != e.varId &&
+				c1 != c)
+	    {
+	      e.sat[s][c1].ambiguous = 1;
+	      changedNum ++;
+	      atLeastOneChanged = 1;
+	    }
+      if (atLeastOneChanged)
+	continue;//Going to next clause;
+
+		//Only for the packages that was installed but removed now;
+      if (e.newState)
+	continue;
+
+      for(c = 0;c < e.sat[s].size();++c)
+	if (		      e.sat[s][c].varId != e.varId && //Actually shouldn't happen;
+			      e.sat[s][c].neg &&
+			      !p.getEntry(e.sat[s][c].varId).newState)
+	  break;
+      if 	      (c < e.sat[s].size())
+	for(Clause::size_type c1 = 0;c1 < e.sat[s].size();++c1)
+	  if (e.sat[s][c1].varId != e.varId &&
+	      c1 != c)
+	    {
+	      e.sat[s][c1].ambiguous = 1;
+	      changedNum++;
+	    }
+    } //for(clauses);
 }
 
 DEEPSOLVER_END_SOLVER_NAMESPACE

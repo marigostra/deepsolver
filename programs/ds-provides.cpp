@@ -197,7 +197,7 @@ int main(int argc, char* argv[])
     IndexCore indexCore(listener);
     indexCore.refilterProvides(params);
   }
-  catch(const DeepsolverException& e)
+  catch(const AbstractException& e)
     {
       logMsg(LOG_CRIT, "%s error:%s", e.getType().c_str(), e.getMessage().c_str());
       if (!cliParser.wasKeyUsed("--log"))

@@ -22,10 +22,9 @@ namespace Deepsolver
 {
   /**\brief The wrapper for file operations
    *
-   * This class wraps mostly often used operations with files. It is
+   * This class simplifies the mostly popular operations with files. It is
    * generally purposed to take care over the error code
-   * returned by system calls and throw SystemException in case of
-   * problems.
+   * returned by system calls and throw SystemException if there are any problems.
    *
    * \sa Directory SystemException
    */
@@ -45,34 +44,20 @@ namespace Deepsolver
   public:
     /**\brief Opens existing file in read/write mode
      *
-     * This method opens an existing file and associates the current object
-     * with handle of opened file. In case the ::open() system call had
-     * returned an error value the SystemException is thrown with
-     * corresponding information.
-     *
-     * \param [in] fileName The name of file to open
+     * \param [in] fileName The name of the file to open
      */ 
     void open(const std::string fileName);
 
     /**\brief Opens existing file in read-only mode
      *
-     * This method opens an existing file in read-only mode and associates the current object
-     * with handle of opened file. In case the ::open() system call had
-     * returned an error value the SystemException is thrown with
-     * corresponding information.
-     *
-     * \param [in] fileName The name of file to open
+     * \param [in] fileName The name of the file to open
      */ 
     void openReadOnly(const std::string& fileName);
 
-    /**\brief Creates new file in file system
+    /**\brief Creates a new file in file system
      *
-     * This method creates new file with specified name. The directory the
-     * new file should be placed in must exist. The new file is created with
-     * flags O_RDWR | O_CREAT | O_TRUNC and 0666 mode. If something is wrong and new file cannot be
-     * created the SystemException is thrown with corresponding information.
      *
-     * \param [in] fileName The name of a file to create
+     * \param [in] fileName The name of the file to create
      */
     void create(const std::string& fileName);
 
@@ -80,12 +65,14 @@ namespace Deepsolver
      *
      * This method closes previously opened file. If file is already closed
      * or never be opened it is not an error, in this case nothing is
-     * done. This method is always called automatically on object
+     * done at all. This method is always called automatically on object
      * destruction.
      */
     void close();
 
-    /**\brief FIXME*/
+    /**\brief Returns the opening state of  this object
+     * \return Non-zero if current object is associated with opened file or zero otherwise
+     */
     bool opened() const
     {
       return m_fd != -1;
@@ -93,41 +80,33 @@ namespace Deepsolver
 
     /**\brief Reads data from an opened file
      *
-     * Length of the buffer is not limited. In case of large buffer this
-     * method produces several subsequent calls of corresponding system
-     * function. In addition this method takes care to be sure the operation
+     * The length of the buffer is not limited. In case of providing the large buffer this
+     * method makes several reading attempts of smaller size. In addition this method takes care to be sure the operation
      * is performed completely until entire requested data is read or error
      * occurred.
      *
      * \param [out] buf The buffer to save read data to
-     * \param [in] bufSize The size of provided buffer
+     * \param [in] bufSize The size of the provided buffer
      *
-     * \return The number of read bytes, can be less then bufSize only in case of reading near the end of file
+     * \return The number of read bytes, can be less then bufSize only if reading near the end of file
      */
     size_t read(void* buf, size_t bufSize);
 
     /**\brief Writes data to an opened file
      *
-     * Length of the buffer is not limited. In case of large buffer this
-     * method produces several subsequent calls of corresponding system
-     * function. In addition this method takes care to be sure the operation
-     * is performed completely until entire buffer content is written or error
+     * The length of the buffer is not limited. In case of providing the large buffer this
+     * method makes several writing attempts of smaller size. In addition this method takes care to be sure the operation
+     * is performed completely until entire requested data is written or error
      * occurred.
      *
-     * \param [in] buf The buffer with the data  to write
-     * \param [in] bufSize The size of provided data
-     *
-     * \return The number of successfully written bytes
+     * \param [in] buf The buffer to write data from
+     * \param [in] bufSize The size of the provided buffer
+     * \return The number of the successfully written bytes
      */
     size_t write(const void* buf, size_t bufSize);
 
     /**\brief Returns the handle of an opened file
-     *
-     * This method returns the handle of opened file provided by operating
-     * system. It should never be called for closed file or for files never
-     * be opened.
-     *
-     * \return The handle of opened file
+     * \return The handle of the opened file
      */
     int getFd() const
     {
@@ -135,16 +114,18 @@ namespace Deepsolver
       return m_fd;
     }
 
-    /**\brief FIXME*/
+    /**\brief Reads the file as a text file and saves lines in a string vector
+     *
+     * \param [out] lines The reference to a string vector to save lines to
+     */
     void readTextFile(StringVector& lines);
 
-    /**\brief FIXME*/
+    /**\brief Reads the file as a text file and saves lines as one long string value
+     * \param [out] text The reference to a string object to save read data to
+     */
     void readTextFile(std::string& text);
 
     /**\brief Returns the file name without parent directories
-     *
-     * This method returns the provided string from the last slash character
-     * until the its end or the string itself if there are no slashes.
      *
      * \param [in] The file name to take base part from
      *
@@ -152,39 +133,56 @@ namespace Deepsolver
      */
     static std::string baseName(const std::string& fileName);
 
-    static std::string baseNameFromUrl(const std::string& fileName);
-
-    /**\brief Removes the file or remove the hard link if there are more than one
+    /**\brief Extracts the file name of  a URL
      *
-     * This method removes the hard link to the file. Usually the file has
-     * only one hard link and it means the file will be removed at all.
+     * 
+     * \param [in url The URL value to extract file name from
+     *
+     * \return The extracted file name
+     */
+    static std::string baseNameFromUrl(const std::string& url);
+
+    /**\brief Removes the file or remove the hard link
      *
      * \param [in] fileName The name of the file to remove hard link to
      */
     static void unlink(const std::string& fileName);
 
-    /**\brief FIXME*/
-    static void move(const std::string& oldFileName, const std::string& newFileName);
-
-    /**\brief Checks if file is a regular file
+    /**\brief Moves (renames) file inside of the same file system
      *
-     * FIXME
+     * \param [in oldFileName The path to move file from
+     * \param [in]] newFileName The path to move file to
+     */
+  static void move(const std::string& oldFileName, const std::string& newFileName);
+
+    /**\brief Checks if the file is a regular file
+     *
+     * \param [in] fileName The name of the file to check
+     *
+     * \return Non-zero if the file is a regular file (not a directory, not a symlink etc) or zero otherwise
      */
     static bool isRegFile(const std::string& fileName);
 
-    /**\brief Checks if file is a directory
+    /**\brief Checks if the file is a directory
      *
-     * FIXME
+     * \param [in] fileName The name of the file to check
+     *
+     * \return Non-zero if the file is a directory or zero otherwise
      */
     static bool isDir(const std::string& fileName);
 
-    /**\brief Checks if file is a symlink
+    /**\brief Checks if the file is a symlink
      *
-     * FIXME
+     * \param [in] fileName The name of the file to check
+     *
+     * \return Non-zero if the file is a symlink or zero otherwise
      */
     static bool isSymLink(const std::string& fileName);
 
-    /**\brief FIXME*/
+    /**\brief Loads file content into file system cache
+     *
+     * \param [in] fileName The path of the file to load data from
+     */
     static void readAhead(const std::string& fileName);
 
   protected:

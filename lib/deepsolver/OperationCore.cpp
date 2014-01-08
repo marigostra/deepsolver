@@ -45,7 +45,7 @@ namespace
 	if (!pkg.valid())
 	  {
 	    if (stopOnInvalidPkg)
-	      throw OperationException(OperationException::InvalidInstalledPkg); else //FIXME:Add package designation here;
+	      throw OperationCoreException(OperationCoreException::InvalidInstalledPkg); else //FIXME:Add package designation here;
 	      logMsg(LOG_WARNING, "OS has an invalid package: %s", pkg.designation().c_str());
 	  }
 	installedCount++;
@@ -73,7 +73,7 @@ namespace
 	if (!found)
 	  toInhanceWith.push_back(pkg);
       } //while(installed packages);
-    logMsg(LOG_DEBUG, "utils:the system has %zu installed packages, %zu of them should be added to the existing snapshot", installedCount, toInhanceWith.size());
+    logMsg(LOG_DEBUG, "operation:the system has %zu installed packages, %zu of them should be added to the existing snapshot", installedCount, toInhanceWith.size());
     PkgSnapshot::enhance(snapshot, toInhanceWith, PkgFlagInstalled, strings);
   }
 
@@ -147,89 +147,6 @@ namespace
   }
 }
 
-
-void OperationCore::fetchIndices(AbstractFetchListener& listener,
-				 const AbstractOperationContinueRequest& continueRequest)
-{
-  const ConfRoot& root = m_conf.root();
-  const std::string tmpDir = Directory::mixNameComponents(root.dir.pkgData, PKG_DATA_FETCH_DIR);
-  logMsg(LOG_DEBUG, "operation:package data updating begin: pkgdatadir=\'%s\', tmpdir=\'%s\'", root.dir.pkgData.c_str(), tmpDir.c_str());
-  freeAutoReleaseStrings();
-  listener.onHeadersFetch();
-  //FIXME:file lock;
-  RepositoryVector repo;
-  for(ConfRepoVector::size_type i = 0;i < root.repo.size();i++)
-    {
-      if (!root.repo[i].enabled)
-	continue;
-      if (root.repo[i].takeSources)//FIXME:
-	throw NotImplementedException("Source packages support");
-      if (root.repo[i].takeDescr)//FIXME:
-	throw NotImplementedException("Package descriptions support");
-      if (root.repo[i].takeFileList)//FIXME:
-	throw NotImplementedException("Package file lists support");
-      for(StringVector::size_type k = 0;k < root.repo[i].arch.size();k++)
-	for(StringVector::size_type j = 0;j < root.repo[i].components.size();j++)
-	  {
-	    const std::string& arch = root.repo[i].arch[k];
-	    const std::string& component = root.repo[i].components[j];
-	    logMsg(LOG_DEBUG, "operation:registering repo \'%s\' for index update (\'%s\', %s, %s)", root.repo[i].name.c_str(), root.repo[i].url.c_str(), arch.c_str(), component.c_str());
-	    repo.push_back(Repository(root.stopOnInvalidRepoPkg, root.tinyFileSizeLimit, root.repo[i], arch, component));
-	  }
-    }
-  StringToStringMap files;
-  for(RepositoryVector::size_type i = 0;i < repo.size();i++)
-    {
-      repo[i].fetchInfoAndChecksum();
-      repo[i].addIndexFilesForFetch(files);
-    }
-  buildTemporaryIndexFileNames(files, tmpDir);
-  logMsg(LOG_DEBUG, "operation:list of index files to download consists of %zu entries:", files.size());
-  for(StringToStringMap::const_iterator it = files.begin();it != files.end();it++)
-    logMsg(LOG_DEBUG, "operation:download entry: \'%s\' -> \'%s\'", it->first.c_str(), it->second.c_str());
-  if (Directory::isExist(tmpDir))
-    logMsg(LOG_WARNING, "operation:directory \'%s\' already exists, probably unfinished previous transaction", tmpDir.c_str());
-  StringToStringMap remoteFiles;
-  for(StringToStringMap::iterator it = files.begin();it != files.end();it++)
-    {
-      std::string localFileName;
-      if (!FilesFetch::isLocalFileUrl(it->first, localFileName))
-	remoteFiles.insert(StringToStringMap::value_type(it->first, it->second)); else
-	it->second = localFileName;
-    }
-  Directory::ensureExistsAndEmpty(tmpDir, 1);//1 means erase any content;
-  if (!remoteFiles.empty())
-    {
-      logMsg(LOG_DEBUG, "operation:need to fetch %zu remote files", remoteFiles.size());
-  listener.onFetchBegin();
-      FilesFetch fetch(listener, continueRequest);
-      fetch.fetch(remoteFiles);
-      listener.onFetchIsCompleted();
-    }
-  listener.onFilesReading();
-  PkgSnapshot::Snapshot snapshot;
-  StringToPkgIdMap stringToPkgIdMap;
-  PkgSnapshot::PkgRecipientAdapter snapshotAdapter(snapshot, m_autoReleaseStrings, stringToPkgIdMap);
-  PkgUrlsFile urlsFile(m_conf);
-  PkgInfoProcessor infoProcessor;
-  urlsFile.open();
-  for(RepositoryVector::size_type i = 0; i < repo.size();i++)
-    repo[i].loadPackageData(files, snapshotAdapter, urlsFile, infoProcessor);
-  PkgSnapshot::rearrangeNames(snapshot);
-  std::sort(snapshot.pkgs.begin(), snapshot.pkgs.end());
-  const std::string outputFileName = Directory::mixNameComponents(root.dir.pkgData, PKG_DATA_FILE_NAME);
-  logMsg(LOG_DEBUG, "operation:saving constructed data to \'%s\', score is %zu", outputFileName.c_str(), PkgSnapshot::getScore(snapshot));
-  PkgSnapshot::saveToFile(snapshot, outputFileName, m_autoReleaseStrings);
-  urlsFile.close();
-  freeAutoReleaseStrings();
-  //FIXME:The current code is working but it should create temporary file elsewhere and then replace with it already existing outputFileName;
-  logMsg(LOG_DEBUG, "operation:clearing and removing \'%s\'", tmpDir.c_str());
-  Directory::eraseContent(tmpDir);
-  Directory::remove(tmpDir);
-  logMsg(LOG_INFO, "Repository index updating finished!");
-  //FIXME:remove file lock;
-}
-
 TransactionIterator::Ptr OperationCore::transaction(AbstractTransactionListener& listener, const UserTask& userTask)
 {
   const ConfRoot& root = m_conf.root();
@@ -287,6 +204,117 @@ TransactionIterator::Ptr OperationCore::transaction(AbstractTransactionListener&
 								    pkgInstall, pkgRemove,
 								    pkgUpgradeFrom, pkgUpgradeTo,
 								    pkgDowngradeFrom, pkgDowngradeTo));
+}
+
+void OperationCore::closure(const UserTaskItemToInstallVector& toInstall, PkgVector& res)
+{
+  const ConfRoot& root = m_conf.root();
+  res.clear();
+  freeAutoReleaseStrings();
+  AbstractPkgBackEnd::Ptr backend = CREATE_PKG_BACKEND;
+  backend->initialize();
+  PkgSnapshot::Snapshot snapshot;
+  PkgSnapshot::loadFromFile(snapshot, Directory::mixNameComponents(root.dir.pkgData, PKG_DATA_FILE_NAME), m_autoReleaseStrings);
+  if (snapshot.pkgs.empty() && toInstall.empty())
+    return;
+  UserTask task;
+  task.itemsToInstall = toInstall;
+  PkgScope scope(*backend.get(), snapshot);
+  scope.initMetadata();
+  TaskSolverData taskSolverData(*backend.get(), scope, m_conf);
+  AbstractTaskSolver::Ptr solver = createTaskSolver(taskSolverData);
+  VarIdVector install, remove;
+  solver->solve(task, install, remove);
+  assert(remove.empty());
+  for(VarIdVector::size_type i = 0;i < install.size();i++)
+    {
+      Pkg pkg;
+      scope.fullPkgData(install[i], pkg);
+      res.push_back(pkg);
+    }
+  freeAutoReleaseStrings();
+}
+
+void OperationCore::fetchMetadata(AbstractFetchListener& listener,
+				 const AbstractOperationContinueRequest& continueRequest)
+{
+  const ConfRoot& root = m_conf.root();
+  const std::string tmpDir = Directory::mixNameComponents(root.dir.pkgData, PKG_DATA_FETCH_DIR);
+  logMsg(LOG_DEBUG, "operation:package data updating begin: pkgdatadir=\'%s\', tmpdir=\'%s\'", root.dir.pkgData.c_str(), tmpDir.c_str());
+  freeAutoReleaseStrings();
+  listener.onHeadersFetch();
+  //FIXME:file lock;
+  RepositoryVector repo;
+  for(ConfRepoVector::size_type i = 0;i < root.repo.size();i++)
+    {
+      if (!root.repo[i].enabled)
+	continue;
+      if (root.repo[i].takeSources)//FIXME:
+	throw NotImplementedException("Source packages support");
+      if (root.repo[i].takeDescr)//FIXME:
+	throw NotImplementedException("Package descriptions support");
+      if (root.repo[i].takeFileList)//FIXME:
+	throw NotImplementedException("Package file lists support");
+      for(StringVector::size_type k = 0;k < root.repo[i].arch.size();k++)
+	for(StringVector::size_type j = 0;j < root.repo[i].components.size();j++)
+	  {
+	    const std::string& arch = root.repo[i].arch[k];
+	    const std::string& component = root.repo[i].components[j];
+	    logMsg(LOG_DEBUG, "operation:registering repo \'%s\' for index update (\'%s\', %s, %s)", root.repo[i].name.c_str(), root.repo[i].url.c_str(), arch.c_str(), component.c_str());
+	    repo.push_back(Repository(root.stopOnInvalidRepoPkg, root.tinyFileSizeLimit, root.repo[i], arch, component));
+	  }
+    }
+  StringToStringMap files;
+  for(RepositoryVector::size_type i = 0;i < repo.size();i++)
+    {
+      repo[i].fetchInfoAndChecksum();
+      repo[i].addIndexFilesForFetch(files);
+    }
+  buildTemporaryIndexFileNames(files, tmpDir);
+  logMsg(LOG_DEBUG, "operation:list of index files to download consists of %zu entries:", files.size());
+  for(StringToStringMap::const_iterator it = files.begin();it != files.end();it++)
+    logMsg(LOG_DEBUG, "operation:download entry: \'%s\' -> \'%s\'", it->first.c_str(), it->second.c_str());
+  if (Directory::exists(tmpDir))
+    logMsg(LOG_WARNING, "operation:directory \'%s\' already exists, probably unfinished previous transaction", tmpDir.c_str());
+  StringToStringMap remoteFiles;
+  for(StringToStringMap::iterator it = files.begin();it != files.end();it++)
+    {
+      std::string localFileName;
+      if (!FilesFetch::isLocalFileUrl(it->first, localFileName))
+	remoteFiles.insert(StringToStringMap::value_type(it->first, it->second)); else
+	it->second = localFileName;
+    }
+  Directory::ensureExistsAndEmpty(tmpDir, 1);//1 means erase any content;
+  if (!remoteFiles.empty())
+    {
+      logMsg(LOG_DEBUG, "operation:need to fetch %zu remote files", remoteFiles.size());
+  listener.onFetchBegin();
+      FilesFetch fetch(listener, continueRequest);
+      fetch.fetch(remoteFiles);
+      listener.onFetchIsCompleted();
+    }
+  listener.onFilesReading();
+  PkgSnapshot::Snapshot snapshot;
+  StringToPkgIdMap stringToPkgIdMap;
+  PkgSnapshot::PkgRecipientAdapter snapshotAdapter(snapshot, m_autoReleaseStrings, stringToPkgIdMap);
+  PkgUrlsFile urlsFile(m_conf);
+  PkgInfoProcessor infoProcessor;
+  urlsFile.open();
+  for(RepositoryVector::size_type i = 0; i < repo.size();i++)
+    repo[i].loadPackageData(files, snapshotAdapter, urlsFile, infoProcessor);
+  PkgSnapshot::rearrangeNames(snapshot);
+  std::sort(snapshot.pkgs.begin(), snapshot.pkgs.end());
+  const std::string outputFileName = Directory::mixNameComponents(root.dir.pkgData, PKG_DATA_FILE_NAME);
+  logMsg(LOG_DEBUG, "operation:saving constructed data to \'%s\', score is %zu", outputFileName.c_str(), PkgSnapshot::getScore(snapshot));
+  PkgSnapshot::saveToFile(snapshot, outputFileName, m_autoReleaseStrings);
+  urlsFile.close();
+  freeAutoReleaseStrings();
+  //FIXME:The current code is working but it should create temporary file elsewhere and then replace with it already existing outputFileName;
+  logMsg(LOG_DEBUG, "operation:clearing and removing \'%s\'", tmpDir.c_str());
+  Directory::eraseContent(tmpDir);
+  Directory::remove(tmpDir);
+  logMsg(LOG_INFO, "Repository index updating finished!");
+  //FIXME:remove file lock;
 }
 
 void OperationCore::generateSat(AbstractTransactionListener& listener,
@@ -374,6 +402,29 @@ void OperationCore::printSnapshot(bool withInstalled,
   if (withInstalled)
     fillWithhInstalledPackages(*backEnd.get(), snapshot, m_autoReleaseStrings, root.stopOnInvalidInstalledPkg);
   PkgSnapshot::printContent(snapshot, withIds, s);
+  freeAutoReleaseStrings();
+}
+
+void OperationCore::getPkgNames(StringVector& res)
+{
+  const ConfRoot& root = m_conf.root();
+  freeAutoReleaseStrings();
+  for(StringVector::size_type i = 0;i < root.os.transactReadAhead.size();i++)
+    File::readAhead(root.os.transactReadAhead[i]);
+  AbstractPkgBackEnd::Ptr backend = CREATE_PKG_BACKEND;
+  backend->initialize();
+  PkgSnapshot::Snapshot snapshot;
+  PkgSnapshot::loadFromFile(snapshot, Directory::mixNameComponents(root.dir.pkgData, PKG_DATA_FILE_NAME), m_autoReleaseStrings);
+  fillWithhInstalledPackages(*backend.get(), snapshot, m_autoReleaseStrings, root.stopOnInvalidInstalledPkg);
+  StringSet names;
+  for(PkgSnapshot::PkgVector::size_type i = 0;i < snapshot.pkgs.size();++i)
+    {
+      assert(snapshot.pkgs[i].pkgId < snapshot.pkgNames.size());
+      names.insert(snapshot.pkgNames[snapshot.pkgs[i].pkgId]);
+    }
+  res.clear();
+  for(StringSet::const_iterator it = names.begin();it != names.end();++it)
+    res.push_back(*it);
   freeAutoReleaseStrings();
 }
 

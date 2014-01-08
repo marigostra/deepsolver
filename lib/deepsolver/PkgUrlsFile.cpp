@@ -29,7 +29,7 @@ void PkgUrlsFile::open()
   if (!m_stream.is_open())
     {
       logMsg(LOG_ERR, "pkg-urls:error opening file \'%s\' for writing", fileName.c_str());
-      throw OperationException(OperationException::InternalIOProblem); 
+      throw 0;//FIXME:
     }
 }
 
@@ -74,7 +74,7 @@ void PkgUrlsFile::readUrls(const PkgVector& pkgs, StringVector& urls) const
   if (!is.is_open())
     {
       logMsg(LOG_ERR, "pkg-urls:error opening file \'%s\' for reading", fileName.c_str());
-      throw OperationException(OperationException::InternalIOProblem); 
+      throw 0;//FIXME:InternalProblem;
     }
   while(1)
     {

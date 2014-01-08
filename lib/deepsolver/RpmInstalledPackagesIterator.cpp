@@ -24,7 +24,7 @@ DEEPSOLVER_BEGIN_NAMESPACE
 void RpmInstalledPkgIterator::openEnum()
 {
   if (rpmdbOpen( "", &m_db, O_RDONLY, 0644 ) != 0)//FIXME:root directory;
-    throw PackageBackEndException("rpmdbOpen()");
+    throw PkgBackEndException("rpmdbOpen()");
   m_it = rpmdbInitIterator(m_db, RPMDBI_PACKAGES, NULL, 0);
 }
 

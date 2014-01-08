@@ -353,15 +353,21 @@ namespace Deepsolver
 
     private:
       void doMainWork(SatBuilder& builder, const UserTask& userTask) const;
+
       bool solveSat(RefCountedEntries& p,
-			const VarIdSet& userTaskInstall,
+		    const VarIdSet& userTaskInstall,
 		    const VarIdSet& userTaskRemove,
-	const VarIdVector& fixedToInstall) const;
+		    const VarIdVector& fixedToInstall) const;
 
       void filterSolution(RefCountedEntries& p,
 			  const VarIdSet& userTaskInstall,
 			  const VarIdSet& userTaskRemove,
-const VarIdVector& fixedToInstall) const;
+			  const VarIdVector& fixedToInstall) const;
+
+      void makeAmbiguousMarks(const RefCountedEntries& p, 
+			      const VarIdSet& seed,
+			      RefCountedEntry& e,
+			      size_t& changedNum) const;
 
     private:
       const TaskSolverData& m_taskSolverData;

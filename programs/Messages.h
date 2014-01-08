@@ -20,14 +20,6 @@ namespace Deepsolver
     virtual ~Messages() {}
 
   public:
-    void onSystemError(const SystemException& e);
-    void onConfigSyntaxError(const ConfigFileException& e);
-    void onConfigError(const ConfigException& e);
-    void onCurlError(const CurlException& e);
-    void onPackageBackEndError(const PackageBackEndException& e);
-    void onOperationError(const OperationException& e);
-    void onTaskError(const TaskException& e);
-
     //Command line errors;
     void onMissedProgramName() const;
     void onMissedCommandLineArgument(const std::string& arg) const;

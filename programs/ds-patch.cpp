@@ -286,7 +286,7 @@ void parseCmdLine(int argc, char* argv[])
 	  assert(0);
 	} //switch();
     }
-  catch(const DeepsolverException& e)
+  catch(const AbstractException& e)
     {
       std::cerr << "ERROR:" << e.getMessage() << std::endl;
       exit(EXIT_FAILURE);
@@ -349,7 +349,7 @@ int main(int argc, char* argv[])
 	indexCore.refilterProvides(params);
       }
   }
-  catch(const DeepsolverException& e)
+  catch(const AbstractException& e)
     {
       logMsg(LOG_CRIT, "%s error:%s", e.getType().c_str(), e.getMessage().c_str());
       if (!cliParser.wasKeyUsed("--log"))

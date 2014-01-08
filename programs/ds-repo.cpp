@@ -296,7 +296,7 @@ int main(int argc, char* argv[])
     IndexCore indexCore(listener);
     indexCore.buildIndex(params);
   }
-  catch(const DeepsolverException& e)
+  catch(const AbstractException& e)
     {
       logMsg(LOG_CRIT, "%s error:%s", e.getType().c_str(), e.getMessage().c_str());
       if (!cliParser.wasKeyUsed("--log"))
@@ -310,5 +310,9 @@ int main(int argc, char* argv[])
 	std::cerr << "ERROR:No enough memory" << std::endl;
 	  return EXIT_FAILURE;
     }
+
+
+
+
   return EXIT_SUCCESS;
 }

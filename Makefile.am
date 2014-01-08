@@ -1,6 +1,7 @@
 
 SUBDIRS =  \
 lib \
-programs
+programs \
+tests
 
 ACLOCAL_AMFLAGS = -I m4

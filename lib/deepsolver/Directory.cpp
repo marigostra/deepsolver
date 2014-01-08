@@ -19,7 +19,7 @@
 
 DEEPSOLVER_BEGIN_NAMESPACE
 
-bool Directory::isExist(const std::string& path)
+bool Directory::exists(const std::string& path)
 {
   assert(!path.empty());
   struct stat s;
@@ -45,14 +45,14 @@ void Directory::ensureExists(const std::string& path)
 	    }
 	  if (s[s.length() - 1] == '/')//No double slashes processing;
 	    continue;
-	  if (!isExist(s))
+	  if (!exists(s))
 	    TRY_SYS_CALL(mkdir(s.c_str(), NEW_FILE_MODE) == 0, "mkdir(" + s + ")");
 	  s += '/';
 	  continue;
 	}
       s += path[i];
     }
-	  if (!isExist(s))
+	  if (!exists(s))
 	    TRY_SYS_CALL(mkdir(s.c_str(), NEW_FILE_MODE) == 0, "mkdir(" + s + ")");
 }
 
@@ -155,6 +155,5 @@ bool Directory::empty(const std::string& path)
     }
   return 1;
 }
-
 
 DEEPSOLVER_END_NAMESPACE

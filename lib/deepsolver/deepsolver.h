@@ -28,8 +28,7 @@
 #include"deepsolver/StringUtils.h"
 #include"deepsolver/types.h"
 #include"deepsolver/Pkg.h"
-#include"deepsolver/doubling.h"
-#include"deepsolver/Dichotomy.h"
+#include"deepsolver/utils.h"
 
 #define DEEPSOLVER_BEGIN_NAMESPACE namespace Deepsolver {
 #define DEEPSOLVER_END_NAMESPACE }

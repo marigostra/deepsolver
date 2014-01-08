@@ -17,6 +17,7 @@
 
 #include"deepsolver/deepsolver.h"
 #include"deepsolver/OperationCore.h"
+#include"deepsolver/ExceptionMessagesEn.h"
 #include"TransactionProgress.h"
 #include"Messages.h"
 
@@ -100,39 +101,11 @@ int main(int argc, char* argv[])
     OperationCore core(conf);
     core.printPackagesByRequire(rel, std::cout);
   }
-  catch (const ConfigFileException& e)
+  catch(const AbstractException& e)
     {
-      Messages(std::cerr).onConfigSyntaxError(e);
-      return EXIT_FAILURE;
-    }
-  catch (const ConfigException& e)
-    {
-      Messages(std::cerr).onConfigError(e);
-      return EXIT_FAILURE;
-    }
-  catch(const OperationException& e)
-    {
-      Messages(std::cerr).onOperationError(e);
-      return EXIT_FAILURE;
-    }
-  catch(const CurlException& e)
-    {
-      Messages(std::cerr).onCurlError(e);
-      return EXIT_FAILURE;
-    }
-  catch(const PackageBackEndException& e)
-    {
-      Messages(std::cerr).onPackageBackEndError(e);
-      return EXIT_FAILURE;
-    }
-  catch(const SystemException& e)
-    {
-      Messages(std::cerr).onSystemError(e);
-      return EXIT_FAILURE;
-    }
-  catch(const NotImplementedException& e)
-    {
-      std::cerr << "Feature not implemented:" << e.getMessage() << std::endl;
+      ExceptionMessagesEn messages;
+      e.accept(messages);
+      std::cerr << messages.getMsg();
       return EXIT_FAILURE;
     }
   return EXIT_SUCCESS;

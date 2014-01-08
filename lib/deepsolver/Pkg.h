@@ -22,35 +22,55 @@ namespace Deepsolver
 {
   typedef unsigned short Epoch;
 
-  /**\brief The relation between two packages with package specifications by name
+  /**\brief The relation between two packages with the package reference by name
    *
-   * This class contains information about one relaytion between two
-   * packages. Relation data includes version specification and relation
-   * type with values from the list "less", "less or equals", "equals",
-   * "greater or equals", "greater". One package from the relation defined
-   * explicitly by its name in this class, the second one defined
-   * implicitly by the owner of this class instance. Package specification
-   * by its name is not the single way, since it can take a lot of memory
-   * to store package name strings. In some cases the better way to use
-   * package identifiers instead of real name strings. The usual purpose of
-   * this class is to save data about package provides, requires, conflicts
-   * or obsoletes entries.
+   * This class contains information about a relation between two
+   * packages. Relation data includes version restriction with version subset
+   * direction using values from the list "less", "less or equals", "equals",
+   * "greater or equals", "greater". The package reference 
+   * with this class is saved through its name (there can 
+   * also be a reference through index in some table).
+   *
+   * \sa IdPkgRel
    */
   class NamedPkgRel
   {
   public:
+    /**\brief The default constructor*/
     NamedPkgRel()
       : type(0) {}
 
+    /**\brief The constructor with package name
+     *
+     * \param [in] pName The name of the package to create reference to
+     */
     NamedPkgRel(const std::string& pName)
-      : pkgName(pName), type(0) {}
+      : pkgName(pName),
+	type(0) {}
 
-    NamedPkgRel(const std::string& pName, VerDirection t, const std::string& v)
-      : pkgName(pName), type(t), ver(v) {}
+    /**\brief The constructor with full relation specification
+     *
+     * \param [in] pName The name of the package to create reference to
+     * \param [in] t The version subset direction
+     * \param [in] v The version restriction value
+     */
+    NamedPkgRel(const std::string& pName,
+		VerDirection t,
+		const std::string& v)
+      : pkgName(pName),
+	type(t),
+	ver(v) {}
 
   public:
+    /**\brief Checks the relation is consistent
+     * \return Non-zero if there are no consistency breaks or zero otherwise
+     */
     bool valid() const
     {
+      if (type > VerLess + VerGreater + VerEquals)
+	return 0;
+      if ((type & VerLess) && (type & VerGreater))
+	return 0;
       if (pkgName.empty())
 	return 0;
       if (ver.empty() && type != VerNone)
@@ -58,6 +78,35 @@ namespace Deepsolver
       if (!ver.empty() && type == VerNone)
 	return 0;
       return 1;
+    }
+
+    /**\brief Checks if there is version restriction
+     * \return Non-zero if the version is restricted with this relation
+     */
+    bool verRestricted() const
+    {
+      assert(ver.empty() || type != VerNone);
+      assert(!ver.empty() || type == VerNone);
+      return type != VerNone;
+    }
+
+    /**\brief Constructs the string with this relation designation
+     * \return The string designation of the relation
+     */
+    std::string designation() const
+    {
+      if (!verRestricted())
+	return pkgName;
+      std::string res = pkgName;
+      res += " ";
+      if (type & VerLess)
+	res += "<";
+      if (type & VerGreater)
+	res += ">";
+      if (type & VerEquals)
+	res += "=";
+      res += " " + ver;
+      return res;
     }
 
   public:
@@ -184,6 +233,19 @@ namespace Deepsolver
       return 1;
     }
 
+    /**\brief Constructs the full version designation (epoch is always included)
+     * \return The full package version designation
+     */
+    std::string fullVersion() const
+    {
+      std::ostringstream ss;
+      ss << epoch << ":" << version << "-" << release;
+      return ss.str();
+    }
+
+    /**\brief Constructs string identifier of the package
+     * \return The string designating the package
+     */
     std::string designation() const
     {
       std::ostringstream ss;
@@ -192,7 +254,7 @@ namespace Deepsolver
 	ss << epoch << ":";
       if (!version.empty())
 	ss << version << "-"; else
-	ss << "NO_VERSION";
+	ss << "NO_VERSION-";
       if (!release.empty())
 	ss << release; else
 	ss << "NO_RELEASE";
@@ -209,17 +271,11 @@ namespace Deepsolver
 
   public:
     Epoch epoch;
-    std::string name;
-    std::string version;
-    std::string release;
+    std::string name, version, release;
     std::string arch;
-    std::string packager;
-    std::string group;
-    std::string url;
-    std::string license;
+    std::string summary, description;
+    std::string packager, group, url, license;
     std::string srcRpm;
-    std::string summary;
-    std::string description;
     time_t buildTime;
   }; //class PkgBase;
 

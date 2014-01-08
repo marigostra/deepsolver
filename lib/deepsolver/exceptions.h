@@ -23,74 +23,210 @@
 
 namespace Deepsolver
 {
-  /**\brief The main exception class for Deepsolver project
+  class AbstractException;
+  class SystemException;
+  class TaskException;
+  class OperationCoreException;
+  class IndexCoreException;
+  class ConfigFileException;
+  class ConfigException;
+  class InfoFileSyntaxException;
+  class InfoFileValueException;
+  class GzipException;
+  class CurlException;
+  class RegExpException;
+  class Md5FileException;
+  class PkgBackEndException;
+  class NotImplementedException;
+
+  /**\brief The class implementing the Visitor design pattern for project exceptions
    *
-   * The every exception class used for error indication in Deepsolver
-   * project must be a descendant (not exactly direct) of this
-   * DeepsolverException class. It is created to simplify error handling and
-   * make it unified. The main information this class must provide is the
-   * an error type and a single line error description.
+   * This class helps to create particular handler for each type of project
+   * exceptions. For example, it can be used for generating messages,
+   * describing occurred errors. ExceptionVisitor, according to its name,
+   * implements widely-known design pattern "visitor". Use accept() method
+   * of AbstractException class to invoke appropriate visit() variant. It
+   * is not necessary to implement all visit() methods, since there are
+   * empty bodies for them. You may safely override only their subset.
+   *
+   * \sa AbstractException
    */
-  class DeepsolverException
+  class ExceptionVisitor
   {
   public:
     /**\brief The default constructor*/
-    DeepsolverException() {}
+    ExceptionVisitor() {}
 
-    /**\brief the destructor*/
-    virtual ~DeepsolverException() {}
+    /**\brief The destructor*/
+    virtual ~ExceptionVisitor() {}
 
   public:
-    /**\brief Returns a string with error type
+    /**\brief The action for system call errors
+     *
+     * \param [in] e The reference to the exception object
+     */
+    virtual void visit(const SystemException& e) {}
+
+    /**\brief The action for user task processing errors
+     *
+     * \param [in] e The reference to the exception object
+     */
+    virtual void visit(const TaskException& e) {}
+
+    /**\brief The action for operation core errors
+     *
+     * \param [in] e The reference to the exception object
+     */
+    virtual void visit(const OperationCoreException& e) {}
+
+    /**\brief The action for index core errors
+     *
+     * \param [in] e The reference to the exception object
+     */
+    virtual void visit(const IndexCoreException& e) {}
+
+    /**\brief The action for configuration file syntax errors
+     *
+     * \param [in] e The reference to the exception object
+     */
+    virtual void visit(const ConfigFileException& e) {}
+
+    /**\brief The action for configuration errors
+     *
+     * \param [in] e The reference to the exception object
+     */
+    virtual void visit(const ConfigException& e) {}
+
+    /**\brief The action for the repository infor file syntax errors
+     *
+     * \param [in] e The reference to the exception object
+     */
+    virtual void visit(const InfoFileSyntaxException& e) {}
+
+    /**\brief The action for the repository info file value errors
+     *
+     * \param [in] e The reference to the exception object
+     */
+    virtual void visit(const InfoFileValueException& e) {}
+
+    /**\brief The action for GZip compression/decompression errors
+     *
+     * \param [in] e The reference to the exception object
+     */
+    virtual void visit(const GzipException& e) {}
+
+    /**\brief The action for downloading errors
+     *
+     * \param [in] e The reference to the exception object
+     */
+    virtual void visit(const CurlException& e) {}
+
+    /**\brief The action for regular expression processing errors
+     *
+     * \param [in] e The reference to the exception object
+     */
+    virtual void visit(const RegExpException& e) {}
+
+    /**\brief The action for MD5-file syntax errors
+     *
+     * \param [in] e The reference to the exception object
+     */
+    virtual void visit(const Md5FileException& e) {}
+
+    /**\brief The action for package back-end errors
+     *
+     * \param [in] e The reference to the exception object
+     */
+    virtual void visit(const PkgBackEndException& e) {}
+
+    /**\brief The action for invocation of non-implemented features
+     *
+     * \param [in] e The reference to the exception object
+     */
+    virtual void visit(const NotImplementedException& e) {}
+  }; //class ExceptionVisitor;
+
+  /**\brief The main exception class of the project
+   *
+   * Every exception class, used for error indication in Deepsolver
+   * project, must be a descendant (not exactly direct) of this
+   * AbstractException class. It is created to simplify and unify error handling.
+   * The main information provided by this class is the
+   * an error type designation and a single line description.
+   *
+   * \sa ExceptionVisitor
+   */
+  class AbstractException
+  {
+  public:
+    /**\brief The default constructor*/
+    AbstractException() {}
+
+    /**\brief the destructor*/
+    virtual ~AbstractException() {}
+
+  public:
+    /**\brief Returns a single line error description
+     *
+     * This method returns a single line string value with error
+     * description. Usually it is the value printed to user in the error
+     * message. The value should not include error type, since it can be obtained
+     * through getType() method.
+     *
+     * \return A single line error description
+     */
+    virtual std::string getMessage() const = 0;
+
+    /**\brief Returns a string with short error type designation
      *
      * This method returns a short string with one or two words describing
      * the error type. For example, this method can return values like
      * "system", "back-end" etc. A value returned by this method usually is used
      * for error message construction.
      *
-     * \return A short string with error type description
+     * \return A short string with error type designation
      */
     virtual std::string getType() const = 0;
 
-    /**\brief Returns a single line error description
+    /**\brief Calls appropriate visitor method
      *
-     * This method returns a single line string value with error
-     * description. Usually it is the value printed to user in error
-     * message. The value may not include error type since it can be obtained
-     * with getType() method.
-     *
-     * \return A single line error description
+     * This method performs invocation of corresponding visit() method of the
+     * visitor, provided by the reference. You should use it each time, when
+     * you want to make particular handling action for various exception
+     * types, as it suggested by design pattern "visitor". 
+     * 
+     * \param [in] visitor The reference  to the visitor
      */
-    virtual std::string getMessage() const = 0;
-  }; //class DeepsolverException;
+    virtual void accept(ExceptionVisitor& visitor) const = 0;
+  }; //class AbstractException;
 
   /**\brief The exception for system call errors
    *
    * This class is used for indication of errors caused by various system
-   * calls problems. It automatically analyzes value of system errno
-   * variable and can construct informative error description with text
+   * calls problems. It automatically analyzes the value of system errno
+   * variable and can construct informative error description with text,
    * provided by operating system. An error message
    * consists of two parts: the short string provided by developer with any
    * information he wants and the string given by a operating system. 
-   * Developer can save in string, for example, a name of failed system call
+   * Developer can save in this string, for example, a name of failed system call
    * with its arguments.
    */
-  class SystemException: public DeepsolverException
+  class SystemException: public AbstractException
   {
   public:
     /**\brief The default constructor
      *
-     * This constructor implies automatic errno analyzing but without
-     * developer string, so the getMessage() method will return only
-     * a single line description provided by operating system.
+     * This constructor implies automatic errno analyzing, but without
+     * developer-given string, so the getMessage() method will return only
+     * a single line description, provided by operating system.
      */
     SystemException()
       : m_code(errno) {}
 
-    /**\brief The constructor with automatic errno analyzing with developer comment
+    /**\brief The constructor with developer comment
      *
      * This constructor allows developer to give short comment of the error
-     * and automatically add string from operating system got through errno
+     * with automatic adding  a string from operating system, got through errno
      * variable.
      *
      * \param [in] comment A developer error comment
@@ -100,10 +236,10 @@ namespace Deepsolver
 
     /**\brief The constructor with error code specification
      *
-     * Using this constructor tdeveloper can provide error code by himself
-     * without any additional comment. The operating system will be requested
-     * for error description using provided error code. The developer must
-     * give the value usually got through errno variable.
+     * Using this constructor developer can provide any error code he wants 
+     * without any additional comments. The operating system will be requested
+     * for error description using provided value . The developer must
+     * give the value, normally obtained through errno variable.
      *
      * \param [in] code An error code
      */
@@ -118,44 +254,25 @@ namespace Deepsolver
      * errno variable.
      *
      * \param [in] code An error code
-     * \param [in] comment Developer error additional information
+     * \param [in] comment A developer error additional information
      */
     SystemException(int code, const std::string& comment)
-      : m_code(code), m_comment(comment) {}
+      : m_code(code), 
+	m_comment(comment) {}
 
     /**\brief The destructor*/
     virtual ~SystemException() {}
 
   public:
-    /**\brief Returns a type of an error
-     *
-     * This method always returns the "system" string. This string is used in
-     * error message construction and allows to distinguish the system errors
-     * from any other types of exceptions.
-     *
-     * \return The single word exception type ("system")
-     */
-    std::string getType() const
-    {
-      return "system";
-    }
-
     /**\brief Returns an error code
-     *
-     * This method returns the errno value got at exception throwing.
-     *
-     * \return An erno value of corresponding error
+     * \return An erno value of a corresponding error
      */
     int getCode() const
     {
       return m_code;
     }
 
-    /**\brief TA error description from the operating system
-     *
-     * This method returns the error description from an operating system
-     * got by an errno value with strerror[] array.
-     *
+    /**\brief Returns the OS-generated error description associated with set errno
      * \return A error description from the operating system
      */
     std::string getDescr() const
@@ -164,61 +281,70 @@ namespace Deepsolver
     }
 
     /**\brief Returns developer error comment
-     *
-     * This method returns an error comment provided by developer.
-     *
-     * \return A developer error description
+     * \return Developer error description
      */
     std::string getComment() const
     {
       return m_comment;
     }
 
-    std::string getMessage() const
+  public://AbstractException;
+    std::string getMessage() const;
+
+    std::string getType() const
     {
-      return getComment()+":"+getDescr();
+      return "system";
+    }
+
+    void accept(ExceptionVisitor& visitor) const
+    {
+      visitor.visit(*this);
     }
 
   private:
-    int m_code;
-    std::string m_comment;
+    const int m_code;
+    const std::string m_comment;
   }; //class SystemException;
 
-  /**\brief The exception class for indication user has asked an impossible transaction
+  /**\brief The exception class for notifications the user task is not solvable
    *
-   * This exception class indicates any error occurred during package lists
-   * for installation/removing calculation due to incorrect user
-   * request. It should not be confused with OperationException class which
-   * is used for errors irrelevant to an invalid user
-   * command. TaskException covers cases caused by invalid user input such
-   * as user has asked to install an unknown package or he has asked to
-   * install incompatible set of packages. This class contains optional
-   * string argument wich meaning depends on particular a error.
+   * This exception notifies there is a problem occurred during user task
+   * solving. The main its distinction is that problem can be caused only by
+   * impossible user request. That means there is no any other implied
+   * reasons, neither in package database nor in solver environment.
    *
-   * \sa OperationCore
+   * This exception can be one of the several types designating various
+   * invalid situations: an unknown package to install, the same package is
+   * considered to install and to remove simultaneously, no packages to
+   * satisfy a Require entry etc. An exception instance takes one string
+   * parameter with additional information, which purpose depends on
+   * exception type. For example, if the problem is an unknown package to
+   * install the parameter contains its name and so on.
+   *
+   * \sa OperationCoreException
    */
-  class TaskException: public DeepsolverException
+  class TaskException: public AbstractException
   {
   public:
     enum {
-      UnknownPackageName,
-      UnsolvableSat,
-      NoSatSolution,
-      Unmet,
-      NoRequestedPackage
+      UnknownPkg, //the parameter contains name of the unknown package;
+      Contradiction, //the parameter contains full package designation which is considered to install and remove simultaneously;
+      UnsolvableSat, //SAT equation has no solution, parameter is empty;
+      Unmet, //the parameter contains the unsatisfied require entry;
+CodeCount
     };
 
   public:
-    /**\brief The constructor with error type and string argument initialization
+    /**\brief The constructor with error type and string parameter
      *
      * \param [in] code An error code
-     * \param [in] arg A string argument value
+     * \param [in] param An additional string parameter
      */
-    TaskException(int code, const std::string& arg)
+    TaskException(int code, const std::string& param)
       : m_code(code), 
-	m_arg(arg) {}
+	m_param(param) {}
 
-    /**\brief The constructor with error type only initialization
+    /**\brief The constructor with error code only
      *
      * \param [in] code The error code
      */
@@ -229,108 +355,84 @@ namespace Deepsolver
     virtual ~TaskException() {}
 
   public:
-    /**\brief Returns an error type code
-     *
-     * Use this method to get code of an error occurred.
-     *
-     * \return Code of the error occurred
+    /**\brief Returns the error code
+     * \return The code of the error
      */
     int getCode() const
     {
       return m_code;
     }
 
-    /**\brief Returns optional error string argument
-     *
-     * Purpose of this argument depends on error code. It is optional, 
-     * so not every of the possible task errors must has non-empty string argument.
-     *
-     * \return String argument of the error occurred
+    /**\brief Returns an optional string parameter of the error
+     * \return The optional string parameter
      */
-    const std::string& getArg() const
+    const std::string& getParam() const
     {
-      return m_arg;
+      return m_param;
     }
+
+  public://AbstractException;
+    std::string getMessage() const;
 
     std::string getType() const
     {
       return "task";
     }
 
-    std::string getMessage() const
+    void accept(ExceptionVisitor& visitor) const
     {
-      switch(m_code)
-	{
-	case UnknownPackageName:
-	  return "Unknown package name \'" + m_arg + "\'";
-	case UnsolvableSat:
-	  return "Package \'" + m_arg + "\' involved in SAT simultaneously for installation and removing";
-	case NoSatSolution:
-	  return "Constructed SAT has no solutions";
-	case Unmet:
-	  return "No packages to resolve require entry \'" + m_arg + "\'";
-	case NoRequestedPackage:
-	  return "No packages to match \'" + m_arg + "\' request";
-	default:
-	  assert(0);
-	  return "";//Just to reduce warning 
-	}; //switch(m_code);
+      visitor.visit(*this);
     }
 
   private:
     const int m_code;
-    const std::string m_arg;
+    const std::string m_param;
   }; //class TaskException;
 
-  /**\brief The exception class for general operation problems
+  /**\brief exception for general operation problems
    *
    * This class is purposed for various general operation problems.
-   * The errors can be thrown only by the methods of
-   * OperationCore class covering transaction processing as well as index
-   * updating. General error types are checksum
+   * These errors can be thrown only by the methods of
+   * OperationCore class, covering transaction processing as well as index
+   * updating. General error types are a checksum
    * mismatch, invalid content of repo file and so on. Downloading problems
-   * have their own exception class called CurlException.
-   *
-   * \sa OperationCore CurlException System Exception PackageBackEndException
+   * have their own exception class name of CurlException.
    */
-  class OperationException
+  class OperationCoreException: public AbstractException
   {
   public:
     enum {
-      InvalidInfoFile,
-      InvalidChecksumData,
-      BrokenIndexFile,
-      InternalIOProblem,
-      LimitExceeded,
-      InvalidInstalledPkg,
-      InvalidRepoPkg
+      InvalidInfoFile, //with file name as a param;
+      InvalidChecksumData, //with checksum file name (e.g. md5sum.txt) as a param;
+      BrokenIndexFile, //with file name as a param;
+      LimitExceeded, //limited resource designation as a param;
+      InvalidInstalledPkg, //name of the package as a param;
+      InvalidRepoPkg, //name of the package as a param;
+      CodeCount
     };
 
   public:
-    /**\brief The constructor
+    /**\brief The constructor with error code specification
      *
      * \param [in] code The error code
      */
-    OperationException(int code) 
+    OperationCoreException(int code) 
       : m_code(code) {}
 
-    /**\brief The constructor
+    /**\brief The constructor with error code and optional parameter specification
      *
      * \param [in] code The error code
-     * \param [in] arg The optional string argument
+     * \param [in] param The optional string parameter
      */
-    OperationException(int code, const std::string& arg) 
+    OperationCoreException(int code, const std::string& param) 
       : m_code(code), 
-	m_arg(arg) {}
+	m_param(param) {}
 
     /**\brief The destructor*/
-    virtual ~OperationException() {}
+    virtual ~OperationCoreException() {}
 
   public:
     /**\brief Returns the error code
-     *
-     * Use this method to get error code.
-     *
      * \return The error code
      */
     int getCode() const
@@ -338,173 +440,154 @@ namespace Deepsolver
       return m_code;
     }
 
-    /**\brief Returns the optional string argument of the error occurred
-     *
-     * Argument meaning depends on error type.
-     *
-     * \return The optional string argument of the error
+    /**\brief Returns the optional string parameter of the error occurred
+     * \return The optional string parameter of the error
      */
-    std::string getArg() const
+    std::string getParam() const
     {
-      return m_arg;
+      return m_param;
     }
+
+  public://AbstractException;
+    std::string getMessage() const;
 
     std::string getType() const
     {
       return "operation";
     }
 
-    std::string getMessage() const
+    void accept(ExceptionVisitor& visitor) const
     {
-      switch (m_code)
-	{
-	case InvalidInfoFile:
-	  return "The repository info file from \'" + m_arg + "\' has an invalid content";
-	case InvalidChecksumData:
-	  return "Checksum data from \'" + m_arg + "\' has an invalid format";
-	case BrokenIndexFile:
-	  return "Repository index file downloaded from \'" + m_arg + "\' is corrupted according to checksum data";
-	case InternalIOProblem:
-	  return "Unexpected internal error during operation";
-	default:
-	  assert(0);
-	} //switch(m_code);
-      return "";
+      visitor.visit(*this);
     }
 
   private:
     const int m_code;
-    const std::string m_arg;
-  }; //class OperationException;
+    const std::string m_param;
+  }; //class OperationCoreException;
 
   /**\brief Indicates repository index manipulation problem
    *
    * The instance of this exception is thrown on some index creation or
-   * patching problems such as corrupted file, not empty target directory
-   * etc. This exception created in addition to general exception classes
-   * like SystemException, PackageBackEndException and so on which can be also thrown
+   * modifications problems such as corrupted file, not empty target directory etc.
+   * This exception created as an  addition to general exception classes,
+   * like SystemException, PkgBackEndException and so on, which can be also thrown
    * during index operations.
-   *
-   * \sa IndexCore SystemException PackageBackEndException Md5FileException
    */
-  class IndexCoreException: public DeepsolverException 
+  class IndexCoreException: public AbstractException 
   {
   public:
     enum {
-      InternalIOProblem = 0,
-      DirectoryNotEmpty = 1,
-      CorruptedFile = 2,
-      MissedChecksumFileName = 3
+      DirectoryNotEmpty,
+      CorruptedFile,
+      MissedChecksumFileName,
+      CodeCount
     };
 
   public:
     /**\brief The constructor with error code specification
      *
-     * \param [in] code The error code of error occurred
+     * \param [in] code The error code
      */
     IndexCoreException(int code)
       : m_code(code) {}
 
-    /**\brief The constructor with error code and string argument specification
+    /**\brief The constructor with error code and string parameter specification
      *
-     * \param [in] code The error code of problem occurred
-     * \param [in] arg The string argument for problem type
+     * \param [in] code The error code
+     * \param [in] arg The string parameter of the problem
      */
-    IndexCoreException(int code, const std::string& arg)
-      : m_code(code), m_arg(arg) {}
+    IndexCoreException(int code, const std::string& param)
+      : m_code(code),
+	m_param(param) {}
 
     /**\brief The destructor*/
     virtual ~IndexCoreException() {}
 
   public:
     /**\brief Returns the error code
-     *
-     * Use this method to get error code value.
-     *
-     * \return The error code value
+     * \return The error code
      */
     int getCode() const
     {
       return m_code;
     }
 
-    /**\brief Returns the additional string argument
-     *
-     * Use this method to get additional string argument of the problem occurred.
-     *
-     * \return The additional string argument
+    /**\brief Returns the optional string parameter
+     * \return The additional string parameter
      */
-    const std::string& getArg() const
+    const std::string& getParam() const
     {
-      return m_arg;
+      return m_param;
     }
+
+  public://AbstractException;
+    std::string getMessage() const;
 
     std::string getType() const
     {
-      return "index core";
+      return "index";
     }
 
-    std::string getMessage() const
+    void accept(ExceptionVisitor& visitor) const
     {
-      switch(m_code)
-	{
-	case InternalIOProblem:
-	  return "Internal I/O problem";
-	case DirectoryNotEmpty:
-	  return "Directory \'" + m_arg + "\' is not empty";
-	case CorruptedFile:
-	  return "File \'" + m_arg + "\' is corrupted (wrong checksum)";
-	case MissedChecksumFileName:
-	  return "No checksum file name in repository parameters";
-	default:
-	  assert(0);
-	} //switch(m_code);
-      return "";
+      visitor.visit(*this);
     }
 
   private:
     const int m_code;
-    const std::string m_arg;
+    const std::string m_param;
   }; //class IndexCoreException;
 
   /**\brief The exception class for config file syntax errors
    *
-   * This class instance is thrown when configuration file syntax error is
-   * encountered. The client application can access various information
-   * with it about the problem like file name, line number, character
-   * position, line content and error code. Be careful, character position
-   * is given in unibyte string representation and in case of using UTF-8
-   * sequences it require additional processing. Note, that this class does
-   * not provide any text descriptions. 
+   * This class instance is thrown when something is wrong with
+   * configuration file syntax. Through this class various information
+   * about the problem can be obtained, like file name, line number,
+   * character position, line content and error code. Be careful, character
+   * position is given in unibyte string representation, hence, if UTF-8
+   * sequences are present additional processing is needed to find real
+   * character number. This class does not provide any text descriptions. 
    *
-   * \sa ConfigException AbstractConfigFileHandler ConfigFile
+   * \sa ConfigException
    */
-  class ConfigFileException: public DeepsolverException
+  class ConfigFileException: public AbstractException
   {
   public:
     enum {
-      SectionInvalidType = 0,
-      SectionWaitingOpenBracket = 1,
-      SectionWaitingName = 2,
-      SectionInvalidNameChar = 3,
-      SectionWaitingCloseBracketOrArg = 4,
-      SectionUnexpectedArgEnd = 5,
-      SectionWaitingCloseBracket = 6,
-      ValueWaitingName = 7,
-      ValueInvalidNameChar = 8,
-      ValueWaitingAssignOrNewName = 9,
-      ValueWaitingNewName = 10,
-      ValueUnexpectedValueEnd = 11
+      SectionInvalidType,
+      SectionWaitingOpenBracket,
+      SectionWaitingName,
+      SectionInvalidNameChar,
+      SectionWaitingCloseBracketOrArg,
+      SectionUnexpectedArgEnd,
+      SectionWaitingCloseBracket,
+      ValueWaitingName,
+      ValueInvalidNameChar,
+      ValueWaitingAssignOrNewName,
+      ValueWaitingNewName,
+      ValueUnexpectedValueEnd,
+      CodeCount
     };
+
+  private:
+    struct Descr
+    {
+      int code;
+      const char* message;
+    }; //struct Descr;
+
+  private:
+    static const Descr m_descr[];
 
   public:
     /**\brief The constructor
      *
-     * \param [in] code The error code describing the type of error
+     * \param [in] code The error code
      * \param [in] fileName Name of a file being processed
-     * \param [in] lineNumber The number of a line with encountered error
-     * \param [in] pos The problem character position with unibyte coding
-     * \param [in] line The text of an invalid line
+     * \param [in] lineNumber The number of the line with encountered error
+     * \param [in] pos The problem character position (unibyte coding)
+     * \param [in] line The content of the invalid line
      */
     ConfigFileException(int code,
 			const std::string& fileName,
@@ -521,11 +604,8 @@ namespace Deepsolver
     virtual ~ConfigFileException() {}
 
   public:
-    /**\brief Returns the type of encountered error
-     *
-     * Use this method to get type of error.
-     *
-     * \return The encountered error code
+    /**\brief Returns the error code
+     * \return The error code
      */
     int getCode() const
     {
@@ -533,9 +613,6 @@ namespace Deepsolver
     }
 
     /**\brief Returns the name of a file with invalid line
-     *
-     * Use this method to get name of a file with an invalid line.
-     *
      * \return Name of a file with an invalid line
      */
     const std::string& getFileName() const
@@ -543,21 +620,15 @@ namespace Deepsolver
       return m_fileName;
     }
 
-    /**\brief Returns number of an invalid line
-     *
-     * Use this method to get number of line with the syntax problem.
-     *
-     * \return Number of an invalid line
+    /**\brief Returns a number of the invalid line
+     * \return Number of the invalid line
      */
     size_t getLineNumber() const
     {
       return m_lineNumber;
     }
 
-    /**\brief Returns the invalid character position
-     *
-     * Use this method to get the invalid character position in unibyte character coding.
-     *
+    /**\brief Returns the position of the invalid character
      * \return The number of the invalid character
      */
     std::string::size_type getPos() const
@@ -566,9 +637,6 @@ namespace Deepsolver
     }
 
     /**\brief Returns the text of the invalid line
-     *
-     * Use this method to get text of the invalid line.
-     *
      * \return The content of the invalid line
      */
     const std::string& getLine() const
@@ -576,59 +644,33 @@ namespace Deepsolver
       return m_line;
     }
 
+  public:
+    /**\brief Generates English  problem description by the given code
+     *
+     * \param [in] code The error code to generate description for
+     *
+     * \return The generated English error description
+     */
+    static std::string getDescr(int code)
+    {
+      size_t i = 0;
+      while (m_descr[i].code != code && m_descr[i].code >= 0 && m_descr[i].message != NULL)
+	++i;
+      assert(m_descr[i].code >= 0 && m_descr[i].message != NULL);
+      return m_descr[i].message;
+  }
+
+  public://AbstractException;
+    std::string getMessage() const;
+
     std::string getType() const
     {
       return "config syntax";
     }
 
-    std::string getMessage() const
+    void accept(ExceptionVisitor& visitor) const
     {
-      std::string msg;
-      switch(m_code)
-	{
-	case SectionInvalidType:
-	  msg = "invalid section type";
-	  break;
-	case SectionWaitingOpenBracket:
-	  msg = "missed opening bracket";
-	  break;
-	case SectionWaitingName:
-	  msg = "missed section name";
-	  break;
-	case SectionInvalidNameChar:
-	  msg = "invalid section name character";
-	  break;
-	case SectionWaitingCloseBracketOrArg:
-	  msg = "missed closing bracket or section header argument";
-	  break;
-	case SectionUnexpectedArgEnd:
-	  msg = "unexpected argument end";
-	  break;
-	case SectionWaitingCloseBracket:
-	  msg = "missed closing bracket";
-	  break;
-	case ValueWaitingName:
-	  msg = "missed parameter name";
-	  break;
-	case ValueInvalidNameChar:
-	  msg = "invalid parameter name character";
-	  break;
-	case ValueWaitingAssignOrNewName:
-	  msg = "illegal new name component or missed equals sign";
-	  break;
-	case ValueWaitingNewName:
-	  msg = "illegal new parameter name component";
-	  break;
-	case ValueUnexpectedValueEnd:
-	  msg = "unexpected value end";
-	  break;
-	default:
-	  assert(0);
-	  return "";
-	} //switch();
-      std::ostringstream ss;
-      ss << m_fileName << "(" << m_lineNumber << "):" << msg;
-      return ss.str();
+      visitor.visit(*this);
     }
 
   private:
@@ -643,16 +685,17 @@ namespace Deepsolver
    *
    * This class instance indicates any problem in Deepsolver configuration
    * structures. Be careful, it must be not confused with
-   * ConfigFileException used to notify about configuration file syntax
+   * ConfigFileException, used to notify about configuration file syntax
    * errors.
    *
-   * The objects of ConfigException provide the error code, option path and section argument if needed
-   * and error location in configuration files if there is any. 
-   * Some kind of problems are actual without any reference to location in a configuration file.
+   * The objects of ConfigException provide the error code, option path with section argument if needed
+   * and error location in configuration file if there is any. 
+   * Note, some sort of problems are still meaningful even without any reference to location 
+   * in a configuration file.
    *
-   * \sa ConfigFileException ConfigCenter ConfigAdapter
+   * \sa ConfigFileException
    */
-  class ConfigException: public DeepsolverException
+  class ConfigException: public AbstractException
   {
   public:
     enum {
@@ -662,17 +705,28 @@ namespace Deepsolver
       InvalidBooleanValue,
       InvalidIntValue,
       InvalidUIntValue,
-      InvalidUrl
+      InvalidUrl,
+CodeCount
     };
+
+  private:
+    struct Descr
+    {
+      int code;
+      const char* message;
+    }; //struct Descr;
+
+  private:
+    static const Descr m_descr[];
 
   public:
     /**\brief The constructor
      *
-     * \param [in] code A error code
-     * \param [in path A value path
+     * \param [in] code The error code
+     * \param [in] path A value path
      * \param [in] sectArg An  argument for first-level section
      * \param [in] line An invalid line value
-     * \param [in] fileName The name of A config file with the invalid line
+     * \param [in] fileName The name of the config file with the invalid line
      * \param [in] lineNumber A number of the invalid line
      */
     ConfigException(int code,
@@ -692,21 +746,15 @@ namespace Deepsolver
     virtual ~ConfigException() {}
 
   public:
-    /**\brief Returns ta error code
-     *
-     * Use this method to get a error code
-     *
-     * \return A error code
+    /**\brief Returns the error code
+     * \return The error code
      */
     int getCode() const
     {
       return m_code;
     }
 
-    /**\brief Returns a configuration options path
-     *
-     * use this method to get a configuration option path.
-     *
+    /**\brief Returns a configuration option path
      * \return A configuration option path
      */
     const StringVector& getPath() const
@@ -715,10 +763,7 @@ namespace Deepsolver
     }
 
     /**\brief Returns a first-level section argument
-     *
-     * Use this method to get a first-level section argument.
-     *
-     * \return A first-level section argument
+     * \return A first-level section argument if there is any
      */
     std::string getSectArg() const
     {
@@ -726,9 +771,6 @@ namespace Deepsolver
     }
 
     /**\brief Returns an invalid line value
-     *
-     * Use this method to get an invalid line value.
-     *
      * \return An invalid line value
      */
     std::string getLine() const
@@ -737,10 +779,7 @@ namespace Deepsolver
     }
 
     /**\brief Returns a file name with an invalid line
-     *
-     * Use this method to get a name of the file with invalid line.
-     *
-     * \return TA file name with the invalid line
+     * \return A file name with the invalid line
      */
     std::string getFileName() const
     {
@@ -750,7 +789,8 @@ namespace Deepsolver
     /**\brief Returns number of a invalid line
      *
      * Use this method to get 1-based number of an invalid line. If this method 
-     * returns 0 that means an exception instance has no information about invalid line location.
+     * returns 0 that means the error is not associated
+     * with any location in configuration files.
      *
      * \return A number of the line caused the problem or zero if there is no any
      */
@@ -760,10 +800,7 @@ namespace Deepsolver
     }
 
     /**\brief Returns a string designation of a configuration option with an invalid value
-     *
-     * This method constructs global configuration option designation using its path and optional section argument.
-     *
-     * \return A gloabl configuration option designation
+     * \return A unique configuration option designation
      */
     std::string getOptionDesignation() const
     {
@@ -779,7 +816,7 @@ namespace Deepsolver
 
     /**\brief Returns full designation of configuration problem location
      *
-     * This method constructs string with global designation of a place causing 
+     * This method constructs string with unique designation of a place causing 
      * configuration problem. This information usually includes file name and line number.
      *
      * \return A string designation of a configuration problem location
@@ -789,52 +826,37 @@ namespace Deepsolver
       if (m_lineNumber == 0 || m_fileName.empty())
 	return "";
       std::ostringstream ss;
-      ss << m_fileName << "(" << m_lineNumber << ")";
+      ss << m_fileName << ":" << m_lineNumber << ":";
       return ss.str();
     }
+
+  public:
+    /**\brief Generates English  problem description by the given code
+     *
+     * \param [in] code The error code to generate description for
+     *
+     * \return The generated English error description
+     */
+    static std::string getDescr(int code)
+    {
+      size_t i = 0;
+      while (m_descr[i].code != code && m_descr[i].code >= 0 && m_descr[i].message != NULL)
+	++i;
+      assert(m_descr[i].code >= 0 && m_descr[i].message != NULL);
+      return m_descr[i].message;
+  }
+
+  public://AbstractConfiguration;
+    std::string getMessage() const;
 
     std::string getType() const
     {
       return "configuration";
     }
 
-    std::string getMessage() const
+    void accept(ExceptionVisitor& visitor) const
     {
-      std::string msg;
-      switch(m_code)
-	{
-	case UnknownOption:
-	  msg = "An unknown configuration option";
-	  break;
-	case ValueCannotBeEmpty:
-	  msg = "Value cannot be empty";
-	  break;
-	case AddingNotPermitted:
-	  msg = "Adding not permitted";
-	  break;
-	case InvalidBooleanValue:
-	  msg = "An invalid boolean value";
-	  break;
-	case InvalidIntValue:
-	  msg = "An invalid integer value";
-	  break;
-	case InvalidUIntValue:
-	  msg = "An invalid unsigned integer value";
-	  break;
-	case InvalidUrl:
-	  msg = "An invalid URL value";
-	  break;
-	default:
-	  assert(0);
-	  return "";
-	}
-      const std::string location = getLocationDesignation();
-      if (!location.empty())
-	return location + ":" + msg;
-      const std::string path = getOptionDesignation();
-      if (!path.empty())
-	return path + ":" + msg;
-      return msg;
+      visitor.visit(*this);
     }
 
   private:
@@ -844,36 +866,23 @@ namespace Deepsolver
     const std::string m_line;
     const std::string m_fileName;
     const size_t m_lineNumber;
-  }; //class DeepsolverException;
-
-  /**\brief The general info file error
-   * FIXME
-   *
-   * \sa InfoFileReader RepoParams InfoFileSyntaxEException InfoFileValueException
-   */
-  class InfoFileException: public DeepsolverException
-  {
-  public:
-    /**brief The default constructor*/
-    InfoFileException() {}
-
-    /**\brief The destructor*/
-    virtual ~InfoFileException() {}
-    //No own methods here;
-  }; //class InfoFileException;
+  }; //class ConfigException;
 
   /**\brief The info file syntax error
    *
-   * FIXME
+   * This exception signales about an invalid syntax of a repository info
+   * file. Info files usually come as basic header of remote package
+   * repositories.
    *
-   * \sa InfoFileReaderInfoFileException InfoFileValueException
+   * \sa InfoFileValueException
    */
-  class InfoFileSyntaxException: public InfoFileException
+  class InfoFileSyntaxException: public AbstractException
   {
   public:
     enum {
-      UnexpectedCharacter = 0,
-      IncompleteLine = 1
+      UnexpectedCharacter,
+      IncompleteLine,
+CodeCount
     };
 
   public:
@@ -887,17 +896,14 @@ namespace Deepsolver
 			    size_t lineNumber,
 			    const std::string& line)
       : m_code(code),
-	m_lineNumber(lineNumber),
-	m_line(line) {}
+      m_lineNumber(lineNumber),
+      m_line(line) {}
 
     /**\brief The destructor*/
     virtual ~InfoFileSyntaxException() {}
 
   public:
     /**\brief Returns the error code
-     *
-     * Use this method to get the error code
-     *
      * \return The error code
      */
     int getCode() const
@@ -905,50 +911,33 @@ namespace Deepsolver
       return m_code;
     }
 
-    /**\brief Returns number of the invalid line
-     *
-     * Use this method to get number of the invalid line.
-     *
-     * \return The number of the line caused the problem
+    /**\brief Returns the number of the invalid line
+     * \return The number of the invalid line
      */
     size_t getLineNumber() const
     {
       return m_lineNumber;
     }
 
-    /**\brief Returns the line caused the problem
-     *
-     * Use this method to get content of the line caused the parsing problem.
-     *
-     * \return The line caused problem
+    /**\brief Returns the wrong line content
+     * \return The wrong line content
      */
     std::string getLine() const
     {
       return m_line;
     }
 
+  public://AbstractException;
+    std::string getMessage() const;
+
     std::string getType() const
     {
       return "info file syntax";
     }
 
-    std::string getMessage() const
+    void accept(ExceptionVisitor& visitor) const
     {
-      std::ostringstream ss;
-      ss << "Info file syntax error at line " << m_lineNumber << ":";
-      switch(m_code)
-	{
-	case UnexpectedCharacter:
-	  ss << "unexpected character";
-	  break;
-	case IncompleteLine:
-	  ss << "incomplete line";
-	  break;
-	default:
-	  assert(0);
-	} //switch(m_code);
-      ss << ":" << m_line;
-      return ss.str();
+      visitor.visit(*this);
     }
 
   private:
@@ -957,38 +946,43 @@ namespace Deepsolver
     const std::string m_line;
   }; //class InfoFileSyntaxException;
 
-  /**\brief The exception class for invalid info file value error indication
-   * FIXME
+  /**\brief The exception class for invalid info file value
    *
-   * \sa InfoFileReader RepoParams InfoFileException InfoFileSyntaxException
+   * This exception class indicates that info file, got as a repository
+   * header, contains an incorrect value. This error should not be confused
+   * with other types of info file problems,
+   * e.g. InfoFileSyntaxException. An incorrect value means cases when
+   * obtained string does not belong to the list of proper values forsome
+   * particular parameter. Such problem can be faced with boolean
+   * parameters or with the parameters implying fixed set of values, like
+   * compression type ("none", "gzip" etc).
+   *
+   * \sa InfoFileSyntaxException
    */
-  class InfoFileValueException: public InfoFileException
+  class InfoFileValueException: public AbstractException
   {
   public:
     enum {
-      InvalidFormatType = 0,
-      InvalidCompressionType = 1,
-      InvalidBooleanValue = 2
+      InvalidFormatType,
+      InvalidCompressionType,
+      InvalidBooleanValue
     };
 
   public:
     /**\brief The constructor
      *
      * \param [in] code The error code
-     * \param [in] arg The string error argument
+     * \param [in] param The string error parameter
      */
-    InfoFileValueException(int code, const std::string& arg)
+    InfoFileValueException(int code, const std::string& param)
       : m_code(code),
-	m_arg(arg) {}
+	m_param(param) {}
 
     /**\brief The destructor*/
     virtual ~InfoFileValueException() {}
 
   public:
     /**\brief Returns the error code
-     *
-     * Use this method to get code of the error.
-     *
      * \return The error code
      */
     int getCode() const
@@ -996,50 +990,44 @@ namespace Deepsolver
       return m_code;
     }
 
-    /**\brief Returns the error argument
-     *
-     * Use this method to get string argument of the error.
-     *
-     * \return The error argument
+    /**\brief Returns the error parameter 
+     * \return The error parameter
      */
-    const std::string& getArg() const
+    const std::string& getParam() const
     {
-      return m_arg;
+      return m_param;
     } 
+
+  public://AbstractException;
+    std::string getMessage() const;
 
     std::string getType() const
     {
       return "info file value";
     }
 
-    std::string getMessage() const
+    void accept(ExceptionVisitor& visitor) const
     {
-      std::string s = "Info file value error:";
-      switch(m_code)
-	{
-	case InvalidFormatType:
-	  return s + "invalid format type: \'" + m_arg + "\'";
-	case InvalidCompressionType:
-	  return s + "invalid compression type: \'" + m_arg + "\'";
-	case InvalidBooleanValue:
-	  return s + "parameter \'" + m_arg + "\' has an invalid boolean value";
-	default:
-	  assert(0);
-	}
-      return "";
+      visitor.visit(*this);
     }
 
   private:
     const int m_code;
-    const std::string m_arg;
+    const std::string m_param;
   }; //class InfoFileValueException;
 
-  class GzipException: public DeepsolverException
+  /**\brief The exception for errors of GZip handling code
+   *
+   * This class brings information about the errors raised in GZip
+   * wrapper. It allows to get only single-line description and does not
+   * provide any additional information about error structure.  
+   */
+  class GzipException: public AbstractException
   {
   public:
     /**\brief The constructor
      *
-     * \param [in] message A error description
+     * \param [in] message An error description
      */
     GzipException(const std::string& msg)
       : m_msg(msg) {}
@@ -1047,73 +1035,101 @@ namespace Deepsolver
     /**\brief The destructor*/
     virtual ~GzipException() {}
 
-public:
+  public://AbstractException;
+    std::string getMessage() const;
+
     std::string getType() const
     {
       return "gzip";
     }
 
-    std::string getMessage() const
+    void accept(ExceptionVisitor& visitor) const
     {
-      return m_msg;
+      visitor.visit(*this);
     }
 
   private:
     const std::string m_msg;
   }; //class GzipException;
 
-  class CurlException: public DeepsolverException
+  /**\brief The exception class for libcurl errors
+   *
+   * This class is used for notifications about the errors occurred during
+   * files fetching. It instances contain error code, URL of the resource,
+   * caused the error, and short single-line description. For download
+   * operations libcurl is used and, hence, this exception is basically
+   * purposed to be a wrapper for libcurl failures.
+   */
+  class CurlException: public AbstractException
   {
   public:
-    /**\brief The destructor
+    /**\brief The constructor
      *
-     * \param [in] code A error code
-     * \param [in] url A URL caused a problem
-     * \param [in] text A error description
+     * \param [in] code The error code
+     * \param [in] url A The URL caused a problem
+     * \param [in] descr The error description
      */
     CurlException(int code,
 		  const std::string& url,
-		  const std::string& text)
+		  const std::string& descr)
       : m_code(code), 
 	m_url(url),
-	m_text(text) {}
+	m_descr(descr) {}
 
     /**\brief The destructor*/
   virtual ~CurlException() {}
 
   public:
+    /**\brief Returns the error code
+     * \return The error code
+     */
     int getCode() const
     {
       return m_code;
     }
 
+    /**\brief Returns the URL caused the error
+     * \return The URL caused the error
+     */
     std::string getUrl() const
     {
       return m_url;
     }
 
-    std::string getText() const
+    /**\brief Returns the error description
+     * \return The error description
+     */
+    std::string getDescr() const
     {
-      return m_text;
+      return m_descr;
     }
+
+  public://AbstractException;
+    std::string getMessage() const;
 
     std::string getType() const
     {
       return "curl";
     }
 
-    std::string getMessage() const
+    void accept(ExceptionVisitor& visitor) const
     {
-      return m_url + ":" + m_text;
+      visitor.visit(*this);
     }
 
   private:
     const int m_code;
     const std::string m_url;
-    const std::string m_text;
+    const std::string m_descr;
   }; //class CurlException;
 
-  class RegExpException: public DeepsolverException
+  /**\brief Notifies about the errors occurred during regular  expressions processing
+   *
+   * This class brings an information about errors caused by regular
+   * expressions processing. The only value, provided by this exception, is
+   * single-line message with short description what's wrong.
+   */
+  class RegExpException: public AbstractException
   {
   public:
     /**\brief The constructor
@@ -1126,15 +1142,17 @@ public:
     /**\brief The destructor*/
     virtual ~RegExpException() {}
 
-  public:
+  public://AbstractException;
+    std::string getMessage() const;
+
     std::string getType() const
     {
       return "regular expression";
     }
 
-    std::string getMessage() const
+    void accept(ExceptionVisitor& visitor) const
     {
-      return "Invalid regular expression:" + m_message;
+      visitor.visit(*this);
     }
 
   private:
@@ -1143,25 +1161,23 @@ public:
 
   /**\brief The exception class for md5file syntax errors
    *
-   * This class instance is thrown when md5file syntax error isCon
+   * This class instance is thrown each time when md5file syntax error is
    * encountered. The client application can access various information
-   * with it about the problem like file name, line number,
+   * through it about the problem, like file name, line number,
    * line content and error code.
-   *
-   * \sa Md5File Md5
    */
-  class Md5FileException: public DeepsolverException
+  class Md5FileException: public AbstractException
   {
   public:
     enum {
-      TooShortLine = 0,
-      InvalidChecksumFormat = 2
+      TooShortLine,
+      InvalidChecksumFormat
     };
 
   public:
     /**\brief The constructor
      *
-     * \param [in] code The error code describing the type of error
+     * \param [in] code The error code
      * \param [in] fileName Name of a file being processed
      * \param [in] lineNumber The number of a line with encountered error
      * \param [in] line The text of an invalid line
@@ -1179,11 +1195,8 @@ public:
     virtual ~Md5FileException() {}
 
   public:
-    /**\brief Returns the type of encountered error
-     *
-     * Use this method to get type of an error.
-     *
-     * \return The encountered error code
+    /**\brief Returns the error code
+     * \return The error code
      */
     int getCode() const
     {
@@ -1191,9 +1204,6 @@ public:
     }
 
     /**\brief Returns the name of a file with invalid line
-     *
-     * Use this method to get name of a file with an invalid line.
-     *
      * \return Name of a file with an invalid line
      */
     const std::string& getFileName() const
@@ -1201,11 +1211,8 @@ public:
       return m_fileName;
     }
 
-    /**\brief Returns number of an invalid line in file
-     *
-     * Use this method to get number of line with the syntax problem.
-     *
-     * \return Number of an invalid line
+    /**\brief Returns number of an invalid line
+     * \return The number of an invalid line
      */
     size_t getLineNumber() const
     {
@@ -1213,9 +1220,6 @@ public:
     }
 
     /**\brief Returns the text of the invalid line
-     *
-     * Use this method to get text of the invalid line.
-     *
      * \return The content of the invalid line
      */
     const std::string& getLine() const
@@ -1223,28 +1227,17 @@ public:
       return m_line;
     }
 
+  public://AbstractException; 
+    std::string getMessage() const;
+
     std::string getType() const
     {
-      return "md5file";
+      return "md 5file";
     }
 
-    std::string getMessage() const
+    void accept(ExceptionVisitor& visitor) const
     {
-      std::string msg;
-      switch(m_code)
-	{
-	case TooShortLine:
-	  msg = "too short line";
-	  break;
-	case InvalidChecksumFormat:
-	  msg = "invalid checksum format";
-	  break;
-	default:
-	  assert(0);
-	};
-      std::ostringstream ss;
-      ss << m_fileName << "(" << m_lineNumber << "):" << msg << ":" << m_line;
-      return ss.str();
+      visitor.visit(*this);
     }
 
   private:
@@ -1254,43 +1247,54 @@ public:
     const std::string m_line;
   }; //class Md5FileException;
 
-  /**\brief Indicates an error inside of package back-end layer
+  /**\brief Indicates an error inside of package back-end
    *
    * This class represents an exception in package back-end layer. There
-   * can be several package back-end implementation (rpm, dpkg, etc) but
-   * all of them should use this type of exceptions to unify errors
+   * can be several package back-end implementations (rpm, dpkg etc), but
+   * all of them should use this type of exception to unify errors
    * handling in command line tools and other libdeepsolver clients. The
-   * preferable argument for this class instance is a failed function name.
+   * preferable parameter for this class instance is a failed function name.
    */
-  class PackageBackEndException: public DeepsolverException
+  class PkgBackEndException: public AbstractException
   {
   public:
     /**\brief The constructor
      *
      * \param [in] fnName A name of a failed function
      */
-    PackageBackEndException(const std::string& fnName)
+    PkgBackEndException(const std::string& fnName)
       : m_fnName(fnName) {}
 
     /**\brief The destructor*/
-    virtual ~PackageBackEndException() {}
+    virtual ~PkgBackEndException() {}
 
   public:
+    /**\brief Returns the name of the function caused the error
+     * \return The name of the function caused the error
+     */
+    const std::string& getFnName() const
+    {
+      return m_fnName;
+    }
+
+  public://AbstractException;
+    std::string getMessage() const;
+
     std::string getType() const
     {
       return "back-end";
     }
 
-    std::string getMessage() const
+    void accept(ExceptionVisitor& visitor) const
     {
-      return m_fnName;
+      visitor.visit(*this);
     }
 
   private:
-    std::string m_fnName;
-  }; //class PackageBackEndException;
+    const std::string m_fnName;
+  }; //class PkgBackEndException;
 
-  class NotImplementedException: public DeepsolverException
+  class NotImplementedException: public AbstractException
   {
   public:
     /**\brief The constructor
@@ -1304,15 +1308,22 @@ public:
     virtual ~NotImplementedException() {}
 
   public:
+    std::string getMessage() const
+    {
+      return m_message;
+    }
+
     std::string getType() const
     {
       return "not implemented";
     }
 
-    std::string getMessage() const
+
+    void accept(ExceptionVisitor& visitor) const
     {
-      return m_message;
+      visitor.visit(*this);
     }
+
 
   private:
     const std::string m_message;

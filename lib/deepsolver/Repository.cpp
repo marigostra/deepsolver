@@ -97,10 +97,15 @@ void Repository::fetchInfoAndChecksum()
   try {
     reader.read(infoFileContent, infoValues);
   }
-  catch(const InfoFileException& e)
+  catch(const InfoFileSyntaxException& e)
     {
       logMsg(LOG_ERR, "info file parsing problem:%s", e.getMessage().c_str());
-      throw OperationException(OperationException::InvalidInfoFile, infoFileUrl);
+      throw OperationCoreException(OperationCoreException::InvalidInfoFile, infoFileUrl);
+    }
+  catch(const InfoFileValueException& e)
+    {
+      logMsg(LOG_ERR, "info file parsing problem:%s", e.getMessage().c_str());
+      throw OperationCoreException(OperationCoreException::InvalidInfoFile, infoFileUrl);
     }
   logMsg(LOG_DEBUG, "Info file downloaded and parsed, list of values:");
   for(StringToStringMap::const_iterator it = infoValues.begin();it != infoValues.end();it++)
@@ -108,12 +113,12 @@ void Repository::fetchInfoAndChecksum()
   if (infoValues.find(INFO_FILE_FORMAT_TYPE) == infoValues.end())
     {
       logMsg(LOG_ERR, "Info file does not contain the \'%s\' key", INFO_FILE_FORMAT_TYPE);
-      throw OperationException(OperationException::InvalidInfoFile, infoFileUrl);
+      throw OperationCoreException(OperationCoreException::InvalidInfoFile, infoFileUrl);
     }
   if (infoValues.find(INFO_FILE_MD5SUM) == infoValues.end())
     {
       logMsg(LOG_ERR, "Info file does not contain the \'%s\' key", INFO_FILE_MD5SUM);
-      throw OperationException(OperationException::InvalidInfoFile, infoFileUrl);
+      throw OperationCoreException(OperationCoreException::InvalidInfoFile, infoFileUrl);
     }
   m_checksumFileName = trim(infoValues.find(INFO_FILE_MD5SUM)->second);
   m_checksumFileUrl = buildChecksumFileUrl();
@@ -126,7 +131,7 @@ void Repository::fetchInfoAndChecksum()
   catch(const Md5FileException& e)
     {
       logMsg(LOG_ERR, "Checksum file problem:%s", e.getMessage().c_str());
-      throw OperationException(OperationException::InvalidChecksumData, m_checksumFileUrl);
+      throw OperationCoreException(OperationCoreException::InvalidChecksumData, m_checksumFileUrl);
     }
   Md5File::ItemVector::size_type i;
   for(i = 0;i < md5File.items.size();i++)
@@ -135,18 +140,18 @@ void Repository::fetchInfoAndChecksum()
   if (i >= md5File.items.size())
     {
       logMsg(LOG_ERR, "Checksum file from \'%s\' has no entry for info file (\'%s\')", m_checksumFileUrl.c_str(), REPO_INDEX_INFO_FILE);
-      throw OperationException(OperationException::InvalidChecksumData, m_checksumFileUrl);
+      throw OperationCoreException(OperationCoreException::InvalidChecksumData, m_checksumFileUrl);
     }
   if (!md5File.verifyItemByString(i, infoFileContent))
     {
       logMsg(LOG_ERR, "Info file from \'%s\' is corrupted according checksum data", infoFileUrl.c_str());
-      throw OperationException(OperationException::InvalidInfoFile, infoFileUrl);
+      throw OperationCoreException(OperationCoreException::InvalidInfoFile, infoFileUrl);
     }
   logMsg(LOG_INFO, "operation:info file from \'%s\' matches the checksum from \'%s\'", infoFileUrl.c_str(), m_checksumFileUrl.c_str());
   if (infoValues.find(INFO_FILE_COMPRESSION_TYPE) == infoValues.end())
     {
       logMsg(LOG_ERR, "Info file does not contain the \'%s\' key", INFO_FILE_COMPRESSION_TYPE);
-      throw OperationException(OperationException::InvalidInfoFile, infoFileUrl);
+      throw OperationCoreException(OperationCoreException::InvalidInfoFile, infoFileUrl);
     }
   const std::string formatType = trim(infoValues.find(INFO_FILE_FORMAT_TYPE)->second);
   const std::string compressionType = trim(infoValues.find(INFO_FILE_COMPRESSION_TYPE)->second);
@@ -159,7 +164,7 @@ void Repository::fetchInfoAndChecksum()
       m_formatType = RepoParams::FormatTypeBinary; else
       {
 	logMsg(LOG_ERR, "Unsupported format type in info file: \'%s\'", formatType.c_str());
-	throw OperationException(OperationException::InvalidInfoFile, infoFileUrl);
+	throw OperationCoreException(OperationCoreException::InvalidInfoFile, infoFileUrl);
       }
   if (compressionType == INFO_FILE_COMPRESSION_TYPE_NONE)
     m_compressionType = RepoParams::CompressionTypeNone; else
@@ -167,7 +172,7 @@ void Repository::fetchInfoAndChecksum()
       m_compressionType = RepoParams::CompressionTypeGzip; else
       {
 	logMsg(LOG_ERR, "Unsupported compression type in info file: \'%s\'", compressionType.c_str());
-	throw OperationException(OperationException::InvalidInfoFile, infoFileUrl);
+	throw OperationCoreException(OperationCoreException::InvalidInfoFile, infoFileUrl);
       }
 }
 
@@ -223,7 +228,7 @@ void Repository::loadPackageData(const StringToStringMap& files,
   catch(const Md5FileException& e)
     {
       logMsg(LOG_ERR, "Checksum file problem:%s", e.getMessage().c_str());
-      throw OperationException(OperationException::InvalidChecksumData, m_checksumFileUrl);
+      throw OperationCoreException(OperationCoreException::InvalidChecksumData, m_checksumFileUrl);
     }
   Md5File::ItemVector::size_type i;
   assert(!getFileNameFromUrl(m_pkgFileUrl).empty());
@@ -233,12 +238,12 @@ void Repository::loadPackageData(const StringToStringMap& files,
   if (i >= md5File.items.size())
     {
       logMsg(LOG_ERR, "Checksum file from \'%s\' does not contain entry for main packages file from \'%s\'", m_checksumFileUrl.c_str(), m_pkgFileUrl.c_str());
-      throw OperationException(OperationException::InvalidChecksumData, m_checksumFileUrl);
+      throw OperationCoreException(OperationCoreException::InvalidChecksumData, m_checksumFileUrl);
     }
   if (!md5File.verifyItem(i, pkgFileName))
     {
       logMsg(LOG_ERR, "repository:packages data from \'%s\' has incorrect checksum from \'%s\'", m_pkgFileUrl.c_str(), m_checksumFileUrl.c_str());
-      throw OperationException(OperationException::BrokenIndexFile, m_pkgFileUrl);
+      throw OperationCoreException(OperationCoreException::BrokenIndexFile, m_pkgFileUrl);
     }
   size_t invalidLineNum;
   std::string invalidLineValue;
@@ -253,11 +258,11 @@ void Repository::loadPackageData(const StringToStringMap& files,
       if (!PkgSection::parsePkgFileSection(lines, pkgFile, invalidLineNum, invalidLineValue))
 	{
 	  logMsg(LOG_ERR, "repository:broken index file \'%s\', invalid line %zu in section \'%s\': \'%s\'", m_pkgFileUrl.c_str(), invalidLineNum, pkgFile.fileName.c_str(), invalidLineValue.c_str());
-	  throw OperationException(OperationException::BrokenIndexFile);
+	  throw OperationCoreException(OperationCoreException::BrokenIndexFile);
 	}
       pkgFile.isSource = 0;
       if (m_stopOnInvalidRepoPkg && !pkgFile.valid())
-	throw OperationException(OperationException::InvalidRepoPkg);
+	throw OperationCoreException(OperationCoreException::InvalidRepoPkg);
       transactData.onNewPkgFile(pkgFile);
       urlsFile.addPkg(pkgFile, buildBinaryPackageUrl(pkgFile));
     }
@@ -282,7 +287,7 @@ void Repository::loadPackageData(const StringToStringMap& files,
       if (!PkgSection::parsePkgFileSection(lines, pkgFile, invalidLineNum, invalidLineValue))
 	{
 	  logMsg(LOG_ERR, "Broken index file \'%s\', invalid line %zu in section \'%s\': \'%s\'", m_pkgDescrFileUrl.c_str(), invalidLineNum, pkgFile.fileName.c_str(), invalidLineValue.c_str());
-	  throw OperationException(OperationException::BrokenIndexFile);
+	  throw OperationCoreException(OperationCoreException::BrokenIndexFile);
 	}
       pkgFile.isSource = 0;
       pkgInfoData.onNewPkgFile(pkgFile);
@@ -298,7 +303,7 @@ void Repository::loadPackageData(const StringToStringMap& files,
       if (!PkgSection::parsePkgFileSection(lines, pkgFile, invalidLineNum, invalidLineValue))
 	{
 	  logMsg(LOG_ERR, "Broken index file \'%s\', invalid line %zu in section \'%s\': \'%s\'", m_srcFileUrl.c_str(), invalidLineNum, pkgFile.fileName.c_str(), invalidLineValue.c_str());
-	  throw OperationException(OperationException::BrokenIndexFile);
+	  throw OperationCoreException(OperationCoreException::BrokenIndexFile);
 	}
       pkgFile.isSource = 1;
       pkgInfoData.onNewPkgFile(pkgFile);
@@ -314,7 +319,7 @@ void Repository::loadPackageData(const StringToStringMap& files,
       if (!PkgSection::parsePkgFileSection(lines, pkgFile, invalidLineNum, invalidLineValue))
 	{
 	  logMsg(LOG_ERR, "Broken index file \'%s\', invalid line %zu in section \'%s\': \'%s\'", m_srcDescrFileUrl.c_str(), invalidLineNum, pkgFile.fileName.c_str(), invalidLineValue.c_str());
-	  throw OperationException(OperationException::BrokenIndexFile);
+	  throw OperationCoreException(OperationCoreException::BrokenIndexFile);
 	}
       pkgFile.isSource = 1;
       pkgInfoData.onNewPkgFile(pkgFile);

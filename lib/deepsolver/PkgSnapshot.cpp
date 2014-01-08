@@ -19,7 +19,8 @@
 #include"deepsolver/PkgSnapshot.h"
 #include"deepsolver/InlineIO.h"
 
-#define THROW_INTERNAL_ERROR throw Deepsolver::OperationException(Deepsolver::OperationException::InternalIOProblem)
+//#define THROW_INTERNAL_ERROR throw Deepsolver::OperationException(Deepsolver::OperationException::InternalIOProblem)
+#define THROW_INTERNAL_ERROR //FIXME:
 
 DEEPSOLVER_BEGIN_NAMESPACE
 DEEPSOLVER_BEGIN_PKG_SNAPSHOT_NAMESPACE
@@ -171,7 +172,7 @@ void enhance(Snapshot& snapshot,
 	     int flags,
 	     ConstCharVector& strings)
 {
-  logMsg(LOG_DEBUG, "enhancing:starting enhancing procedure with %zu new packages", enhanceWith.size());
+  logMsg(LOG_DEBUG, "snapshot:starting enhancing procedure with %zu new packages", enhanceWith.size());
   const clock_t started = clock();
   if (enhanceWith.empty())
     return;
@@ -423,7 +424,7 @@ void loadFromFile(Snapshot& snapshot,
 		  ConstCharVector& strings)
 {
   assert(!fileName.empty());
-  logMsg(LOG_INFO, "snapshot:starting reading from binary file \'%s\'", fileName.c_str());
+  logMsg(LOG_DEBUG, "snapshot:starting reading from binary file \'%s\'", fileName.c_str());
   assert(snapshot.pkgNames.empty());
   assert(snapshot.pkgs.empty());
   assert(snapshot.relations.empty());
