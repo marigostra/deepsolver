@@ -1,6 +1,6 @@
 /*
-   Copyright 2011-2013 ALT Linux
-   Copyright 2011-2013 Michael Pozhidaev
+   Copyright 2011-2014 ALT Linux
+   Copyright 2011-2014 Michael Pozhidaev
 
    This file is part of the Deepsolver.
 
@@ -133,7 +133,7 @@ namespace Deepsolver
     IdPkgRel(PackageId id, VerDirection dir, const std::string& v)
       : pkgId(id), verDir(dir), ver(v) {}
 
-    IdPkgRel(PackageId id, const VersionCond& cond)
+    IdPkgRel(PackageId id, const VerSubset& cond)
       : pkgId(id), verDir(cond.type), ver(cond.version) {}
 
   public:
@@ -174,9 +174,9 @@ namespace Deepsolver
       return s;
     }
 
-    VersionCond extractVersionCond() const
+    VerSubset extractVerSubset() const
     {
-      return VersionCond(ver, verDir);
+      return VerSubset(ver, verDir);
     }
 
     bool valid() const

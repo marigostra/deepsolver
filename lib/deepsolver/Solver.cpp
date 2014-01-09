@@ -1,6 +1,6 @@
 /*
-   Copyright 2011-2013 ALT Linux
-   Copyright 2011-2013 Michael Pozhidaev
+   Copyright 2011-2014 ALT Linux
+   Copyright 2011-2014 Michael Pozhidaev
 
    This file is part of the Deepsolver.
 
@@ -613,7 +613,7 @@ VarId SatBuilder::onUserItemToInstall(const UserTaskItemToInstall& item) const
       m_scope.selectMatchingVarsRealNames(pkgId, vars);
     } else
     {
-      VersionCond ver(item.version, item.verDir);
+      VerSubset ver(item.version, item.verDir);
       //This line does not handle provides too;
       m_scope.selectMatchingVarsRealNames(pkgId, ver, vars);
     }
@@ -631,7 +631,7 @@ VarId SatBuilder::onUserItemToInstall(const UserTaskItemToInstall& item) const
    */
   if (hasVersion)
     {
-      VersionCond ver(item.version, item.verDir);
+      VerSubset ver(item.version, item.verDir);
       m_scope.selectMatchingVarsProvidesOnly(pkgId, ver, vars);
     } else
     m_scope.selectMatchingVarsProvidesOnly(pkgId, vars);
@@ -950,7 +950,7 @@ VarId satisfyRequire(const IdPkgRel& rel) const
 {
   if (!rel.hasVer())
     return satisfyRequire(rel.pkgId);
-  return satisfyRequire(rel.pkgId, rel.extractVersionCond());
+  return satisfyRequire(rel.pkgId, rel.extractVerSubset());
 }
 
 VarId satisfyRequire(PackageId pkgId) const
@@ -993,7 +993,7 @@ VarId satisfyRequire(PackageId pkgId) const
   return processProvidesPriorityBySorting(vars);
 }
 
-VarId satisfyRequire(PackageId pkgId, const VersionCond& version) const
+VarId satisfyRequire(PackageId pkgId, const VerSubset& version) const
 {
   assert(version.type != VerNone);
   assert(!version.version.empty());

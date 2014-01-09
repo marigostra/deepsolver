@@ -1,6 +1,6 @@
 /*
-   Copyright 2011-2013 ALT Linux
-   Copyright 2011-2013 Michael Pozhidaev
+   Copyright 2011-2014 ALT Linux
+   Copyright 2011-2014 Michael Pozhidaev
 
    This file is part of the Deepsolver.
 
@@ -24,7 +24,7 @@ DEEPSOLVER_BEGIN_NAMESPACE
 
 namespace
 {
-  VersionCond constructVersionCondEquals(int epoch, 
+  VerSubset constructVerSubsetEquals(int epoch, 
 						   const std::string& version,
 						   const std::string& release)
   {
@@ -32,7 +32,7 @@ namespace
     assert(!release.empty());
     std::ostringstream ss;
     ss  << epoch << ":" << version << "-" << release;
-    return VersionCond(ss.str(), VerEquals);
+    return VerSubset(ss.str(), VerEquals);
   }
 }
 
@@ -40,7 +40,7 @@ void PkgScope::selectMatchingVarsProvidesOnly(const IdPkgRel& rel, VarIdVector& 
 {
   vars.clear();
   if (rel.hasVer())
-    selectMatchingVarsProvidesOnly(rel.pkgId, rel.extractVersionCond(), vars); else
+    selectMatchingVarsProvidesOnly(rel.pkgId, rel.extractVerSubset(), vars); else
     selectMatchingVarsProvidesOnly(rel.pkgId, vars);
 }
 
@@ -51,7 +51,7 @@ void PkgScope::selectMatchingVarsProvidesOnly(PkgId pkgId, VarIdVector& vars) co
   selectVarsToTry(pkgId, vars, 0);//0 means do not include packageId itself;
 }
 
-void PkgScope::selectMatchingVarsProvidesOnly(PackageId packageId, const VersionCond& ver, VarIdVector& vars) const
+void PkgScope::selectMatchingVarsProvidesOnly(PackageId packageId, const VerSubset& ver, VarIdVector& vars) const
 {
   //Considering only provides entries and only with version information;
   vars.clear();
@@ -71,7 +71,7 @@ void PkgScope::selectMatchingVarsProvidesOnly(PackageId packageId, const Version
 	    continue;  
 	  assert(m_relations[pos + j].verDir != VerNone);
 	  if (m_relations[pos + j].pkgId == packageId && 
-	      verOverlap(VersionCond(m_relations[pos + j].ver, m_relations[pos + j].verDir), ver))
+	      verOverlap(VerSubset(m_relations[pos + j].ver, m_relations[pos + j].verDir), ver))
 	    break;
 	}
       if (j < count)
@@ -83,7 +83,7 @@ void PkgScope::selectMatchingVarsRealNames(const IdPkgRel& rel, VarIdVector& var
 {
   vars.clear();
   if (rel.hasVer())
-    selectMatchingVarsRealNames(rel.pkgId, rel.extractVersionCond(), vars); else
+    selectMatchingVarsRealNames(rel.pkgId, rel.extractVerSubset(), vars); else
     selectMatchingVarsRealNames(rel.pkgId, vars);
 }
 
@@ -101,7 +101,7 @@ void PkgScope::selectMatchingVarsRealNames(PackageId packageId, VarIdVector& var
     }
 }
 
-void PkgScope::selectMatchingVarsRealNames(PackageId packageId, const VersionCond& ver, VarIdVector& vars) const
+void PkgScope::selectMatchingVarsRealNames(PackageId packageId, const VerSubset& ver, VarIdVector& vars) const
 {
   //Here we must process only real package names, no provides are required;
   vars.clear();
@@ -111,7 +111,7 @@ void PkgScope::selectMatchingVarsRealNames(PackageId packageId, const VersionCon
   for(VarId i = fromPos;i < toPos;i++)
     {
       assert(m_pkgs[i].pkgId == packageId);
-      if (verOverlap(constructVersionCondEquals(m_pkgs[i].epoch, m_pkgs[i].ver, m_pkgs[i].release), ver))
+      if (verOverlap(constructVerSubsetEquals(m_pkgs[i].epoch, m_pkgs[i].ver, m_pkgs[i].release), ver))
 	vars.push_back(i);
     }
 }
@@ -120,7 +120,7 @@ void PkgScope::selectMatchingVarsWithProvides(const IdPkgRel& rel, VarIdVector& 
 {
   vars.clear();
   if (rel.hasVer())
-    selectMatchingVarsWithProvides(rel.pkgId, rel.extractVersionCond(), vars); else
+    selectMatchingVarsWithProvides(rel.pkgId, rel.extractVerSubset(), vars); else
     selectMatchingVarsWithProvides(rel.pkgId, vars);
 }
 
@@ -130,7 +130,7 @@ void PkgScope::selectMatchingVarsWithProvides(PackageId pkgId, VarIdVector& vars
   selectVarsToTry(pkgId, vars, 1);//1 means include packageId itself;
 }
 
-void PkgScope::selectMatchingVarsWithProvides(PackageId packageId, const VersionCond& ver, VarIdVector& vars) const
+void PkgScope::selectMatchingVarsWithProvides(PackageId packageId, const VerSubset& ver, VarIdVector& vars) const
 {
   vars.clear();
   VarIdVector toTry;
@@ -138,7 +138,7 @@ void PkgScope::selectMatchingVarsWithProvides(PackageId packageId, const Version
   for(VarIdVector::size_type i = 0;i < toTry.size();i++)
     {
       assert(toTry[i] < m_pkgs.size());
-      if (m_pkgs[toTry[i]].pkgId == packageId && verOverlap(constructVersionCondEquals(m_pkgs[toTry[i]].epoch, m_pkgs[toTry[i]].ver, m_pkgs[toTry[i]].release), ver))
+      if (m_pkgs[toTry[i]].pkgId == packageId && verOverlap(constructVerSubsetEquals(m_pkgs[toTry[i]].epoch, m_pkgs[toTry[i]].ver, m_pkgs[toTry[i]].release), ver))
 	{
 	  vars.push_back(toTry[i]);
 	  continue;
@@ -154,7 +154,7 @@ void PkgScope::selectMatchingVarsWithProvides(PackageId packageId, const Version
 	  if (!HAS_VERSION(m_relations[pos + j]))
 	    continue;  
 	  assert(m_relations[pos + j].verDir != VerNone);
-	  if (m_relations[pos + j].pkgId == packageId && verOverlap(VersionCond(m_relations[pos + j].ver, m_relations[pos + j].verDir), ver))
+	  if (m_relations[pos + j].pkgId == packageId && verOverlap(VerSubset(m_relations[pos + j].ver, m_relations[pos + j].verDir), ver))
 	    break;
 	}
       if (j < count)
@@ -260,7 +260,7 @@ void PkgScope::getRequires(VarId varId, IdPkgRelVector& res) const
 {
   assert(varId != BadVarId);
   PackageIdVector withVersion, withoutVersion;
-  VersionCondVector versions;
+  VerSubsetVector versions;
   getRequires(varId, withoutVersion, withVersion, versions);
   assert(withVersion.size() == versions.size());
   res.clear();
@@ -274,7 +274,7 @@ void PkgScope::getConflicts(VarId varId, IdPkgRelVector& res) const
 {
   assert(varId != BadVarId);
   PackageIdVector withVersion, withoutVersion;
-  VersionCondVector versions;
+  VerSubsetVector versions;
   getConflicts(varId, withoutVersion, withVersion, versions);
   assert(withVersion.size() == versions.size());
   res.clear();
@@ -313,7 +313,7 @@ void PkgScope::whatSatisfyAmongInstalled(const IdPkgRel& rel, VarIdVector& res) 
       if (!(pkg.flags & PkgFlagInstalled))
 	continue;
       if (pkg.pkgId == rel.pkgId &&
-	  verOverlap(constructVersionCondEquals(pkg.epoch, pkg.ver, pkg.release), VersionCond(rel.ver, rel.verDir)))
+	  verOverlap(constructVerSubsetEquals(pkg.epoch, pkg.ver, pkg.release), VerSubset(rel.ver, rel.verDir)))
 	{
 	  res.push_back(vars[i]);
 	  continue;
@@ -330,7 +330,7 @@ void PkgScope::whatSatisfyAmongInstalled(const IdPkgRel& rel, VarIdVector& res) 
 	      !HAS_VERSION(m_relations[pos + j]))//Provide entry has no version;
 	    continue;
 	  assert(m_relations[pos + j].verDir != VerNone);
-	  if (verOverlap(VersionCond(m_relations[pos + j].ver, m_relations[pos + j].verDir), VersionCond(rel.ver, rel.verDir)))
+	  if (verOverlap(VerSubset(m_relations[pos + j].ver, m_relations[pos + j].verDir), VerSubset(rel.ver, rel.verDir)))
 	    {
 	      res.push_back(vars[i]);
 	      break;
@@ -353,7 +353,7 @@ void PkgScope::whatDependAmongInstalled(VarId varId, VarIdVector& res, IdPkgRelV
       assert(v[i] < m_pkgs.size());
       assert(m_pkgs[v[i]].flags & PkgFlagInstalled);
       PackageIdVector withoutVersion, withVersion;
-      VersionCondVector versions;
+      VerSubsetVector versions;
       getRequires(v[i], withoutVersion, withVersion, versions);
       assert(withVersion.size() == versions.size());
       for(PackageIdVector::size_type k = 0;k < withoutVersion.size();k++)
@@ -363,7 +363,7 @@ void PkgScope::whatDependAmongInstalled(VarId varId, VarIdVector& res, IdPkgRelV
 	    resRels.push_back(IdPkgRel(withoutVersion[k]));
 	  }
       for(PackageIdVector::size_type k = 0;k < withVersion.size();k++)
-	if (withVersion[k] == pkg.pkgId && verOverlap(constructVersionCondEquals(pkg.epoch, pkg.ver, pkg.release), versions[k]))
+	if (withVersion[k] == pkg.pkgId && verOverlap(constructVerSubsetEquals(pkg.epoch, pkg.ver, pkg.release), versions[k]))
 	  {
 	    res.push_back(v[i]);
 	    resRels.push_back(IdPkgRel(withVersion[k], versions[k]));
@@ -383,7 +383,7 @@ void PkgScope::whatDependAmongInstalled(VarId varId, VarIdVector& res, IdPkgRelV
 	  assert(v[k] < m_pkgs.size());
 	  assert(m_pkgs[v[k]].flags & PkgFlagInstalled);
 	  PackageIdVector withoutVersion, withVersion;
-	  VersionCondVector versions;
+	  VerSubsetVector versions;
 	  getRequires(v[k], withoutVersion, withVersion, versions);
 	  assert(withVersion.size() == versions.size());
 	  //Checking without version anyway;
@@ -398,7 +398,7 @@ void PkgScope::whatDependAmongInstalled(VarId varId, VarIdVector& res, IdPkgRelV
 	    {
 	      assert(rel.verDir == VerEquals);//Actually it shouldn't be an assert, we can silently skip this provide;
 	      for(PackageIdVector::size_type q = 0;q < withVersion.size();q++)
-		if (withVersion[q] == rel.pkgId && verOverlap(VersionCond(rel.ver, VerEquals), versions[q]))
+		if (withVersion[q] == rel.pkgId && verOverlap(VerSubset(rel.ver, VerEquals), versions[q]))
 		  {
 		    res.push_back(v[k]);
 		    resRels.push_back(IdPkgRel(withVersion[q], versions[q]));
@@ -422,7 +422,7 @@ findPkgsByConflict(m_pkgs[varId].pkgId, v);
       assert(v[i] < m_pkgs.size());
       assert(m_pkgs[v[i]].flags & PkgFlagInstalled);
       PackageIdVector withoutVersion, withVersion;
-      VersionCondVector versions;
+      VerSubsetVector versions;
       getConflicts(v[i], withoutVersion, withVersion, versions);
       assert(withVersion.size() == versions.size());
       for(PackageIdVector::size_type k = 0;k < withoutVersion.size();k++)
@@ -432,7 +432,7 @@ findPkgsByConflict(m_pkgs[varId].pkgId, v);
 	    resRels.push_back(IdPkgRel(withoutVersion[k]));
 	  }
       for(PackageIdVector::size_type k = 0;k < withVersion.size();k++)
-	if (withVersion[k] == pkg.pkgId && verOverlap(constructVersionCondEquals(pkg.epoch, pkg.ver, pkg.release), versions[k]))
+	if (withVersion[k] == pkg.pkgId && verOverlap(constructVerSubsetEquals(pkg.epoch, pkg.ver, pkg.release), versions[k]))
 	  {
 	    res.push_back(v[i]);
 	    resRels.push_back(IdPkgRel(withVersion[k], versions[k]));
@@ -452,7 +452,7 @@ findPkgsByConflict(rel.pkgId, v);
 	  assert(v[k] < m_pkgs.size());
 	  assert(m_pkgs[v[k]].flags & PkgFlagInstalled);
 	  PackageIdVector withoutVersion, withVersion;
-	  VersionCondVector versions;
+	  VerSubsetVector versions;
 	  getConflicts(v[k], withoutVersion, withVersion, versions);
 	  assert(withVersion.size() == versions.size());
 	  //Checking without version anyway;
@@ -467,7 +467,7 @@ findPkgsByConflict(rel.pkgId, v);
 	    {
 	      assert(rel.verDir == VerEquals);//FIXME:Actually it shouldn't be an assert, we can silently skip this provide;
 	      for(PackageIdVector::size_type q = 0;q < withVersion.size();q++)
-		if (withVersion[q] == rel.pkgId && verOverlap(VersionCond(rel.ver, VerEquals), versions[q]))
+		if (withVersion[q] == rel.pkgId && verOverlap(VerSubset(rel.ver, VerEquals), versions[q]))
 		  {
 		    res.push_back(v[k]);
 		    resRels.push_back(IdPkgRel(withVersion[q], versions[q]));
@@ -482,7 +482,7 @@ findPkgsByConflict(rel.pkgId, v);
 void PkgScope::getRequires(VarId varId,
 			       PackageIdVector& depWithoutVersion,
 			       PackageIdVector& depWithVersion,
-			       VersionCondVector& versions) const
+			       VerSubsetVector& versions) const
 {
   depWithoutVersion.clear();
   depWithVersion.clear();
@@ -498,7 +498,7 @@ void PkgScope::getRequires(VarId varId,
 	depWithoutVersion.push_back(m_relations[pos + i].pkgId); else 
 	{
 	  depWithVersion.push_back(m_relations[pos + i].pkgId);
-	  versions.push_back(VersionCond(m_relations[pos + i].ver, m_relations[pos + i].verDir));
+	  versions.push_back(VerSubset(m_relations[pos + i].ver, m_relations[pos + i].verDir));
 	}
     }
 }
@@ -506,7 +506,7 @@ void PkgScope::getRequires(VarId varId,
 void PkgScope::getConflicts(VarId varId,
 				PackageIdVector& withoutVersion,
 				PackageIdVector& withVersion,
-				VersionCondVector& versions) const
+				VerSubsetVector& versions) const
 {
   withoutVersion.clear();
   withVersion.clear();
@@ -522,7 +522,7 @@ void PkgScope::getConflicts(VarId varId,
 	withoutVersion.push_back(m_relations[pos + i].pkgId); else 
 	{
 	  withVersion.push_back(m_relations[pos + i].pkgId);
-	  versions.push_back(VersionCond(m_relations[pos + i].ver, m_relations[pos + i].verDir));
+	  versions.push_back(VerSubset(m_relations[pos + i].ver, m_relations[pos + i].verDir));
 	}
     }
 }

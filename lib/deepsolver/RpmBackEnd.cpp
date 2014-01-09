@@ -1,6 +1,6 @@
 /*
-   Copyright 2011-2013 ALT Linux
-   Copyright 2011-2013 Michael Pozhidaev
+   Copyright 2011-2014 ALT Linux
+   Copyright 2011-2014 Michael Pozhidaev
 
    This file is part of the Deepsolver.
 
@@ -23,7 +23,7 @@
 DEEPSOLVER_BEGIN_NAMESPACE
 
 static bool alreadyReadConfigFiles = 0;
-static int buildSenseFlags(const VersionCond& c);
+static int buildSenseFlags(const VerSubset& c);
 
 void RpmBackEnd::initialize()
 {
@@ -39,7 +39,7 @@ int RpmBackEnd::verCmp(const std::string& ver1, const std::string& ver2) const
   return rpmvercmp(ver1.c_str(), ver2.c_str());
 }
 
-bool RpmBackEnd::verOverlap(const VersionCond& ver1, const VersionCond& ver2) const
+bool RpmBackEnd::verOverlap(const VerSubset& ver1, const VerSubset& ver2) const
 {
   return rpmRangesOverlap("", ver1.version.c_str(), buildSenseFlags(ver1),
 			  "", ver2.version.c_str(), buildSenseFlags(ver2));
@@ -47,12 +47,12 @@ bool RpmBackEnd::verOverlap(const VersionCond& ver1, const VersionCond& ver2) co
 
 bool RpmBackEnd::verEqual(const std::string& ver1, const std::string& ver2) const
 {
-  return verOverlap(VersionCond(ver1), VersionCond(ver2));
+  return verOverlap(VerSubset(ver1), VerSubset(ver2));
 }
 
 bool RpmBackEnd::verGreater(const std::string& ver1, const std::string& ver2) const
 {
-  return verOverlap(VersionCond(ver1, VerLess), VersionCond(ver2));
+  return verOverlap(VerSubset(ver1, VerLess), VerSubset(ver2));
 }
 
 AbstractInstalledPkgIterator::Ptr RpmBackEnd::enumInstalledPkg() const
@@ -99,7 +99,7 @@ bool RpmBackEnd::validSourcePkgFileName(const std::string& fileName) const
   return 1;
 }
 
-int buildSenseFlags(const VersionCond& c)
+int buildSenseFlags(const VerSubset& c)
 {
   int value = 0;
   if (c.isEqual())

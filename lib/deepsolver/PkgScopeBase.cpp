@@ -1,6 +1,6 @@
 /*
-   Copyright 2011-2013 ALT Linux
-   Copyright 2011-2013 Michael Pozhidaev
+   Copyright 2011-2014 ALT Linux
+   Copyright 2011-2014 Michael Pozhidaev
 
    This file is part of the Deepsolver.
 
@@ -119,7 +119,7 @@ int PkgScopeBase::verCmp(const std::string& ver1, const std::string& ver2) const
   return m_backend.verCmp(ver1, ver2);
 }
 
-bool PkgScopeBase::verOverlap(const VersionCond& ver1, const VersionCond& ver2) const
+bool PkgScopeBase::verOverlap(const VerSubset& ver1, const VerSubset& ver2) const
 {
   //FIXME:  assert(ver1.valid() && !ver2.valid());
   return m_backend.verOverlap(ver1, ver2);

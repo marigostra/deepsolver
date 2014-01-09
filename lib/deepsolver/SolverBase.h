@@ -1,6 +1,6 @@
 /*
-   Copyright 2011-2013 ALT Linux
-   Copyright 2011-2013 Michael Pozhidaev
+   Copyright 2011-2014 ALT Linux
+   Copyright 2011-2014 Michael Pozhidaev
 
    This file is part of the Deepsolver.
 
@@ -47,21 +47,21 @@ namespace Deepsolver
       virtual void selectMatchingVarsProvidesOnly(PkgId pkgId, VarIdVector& vars) const = 0;
 
       virtual void selectMatchingVarsProvidesOnly(PkgId pkgId,
-						   const VersionCond& ver,
+						   const VerSubset& ver,
 						   VarIdVector& vars) const = 0;
 
       virtual void selectMatchingVarsRealNames(const IdPkgRel& rel, VarIdVector& vars) const = 0;
       virtual void selectMatchingVarsRealNames(PkgId pkgId, VarIdVector& vars) const = 0;
 
       virtual void selectMatchingVarsRealNames(PkgId pkgId,
-					       const VersionCond& ver,
+					       const VerSubset& ver,
 					       VarIdVector& vars) const = 0;
 
       virtual void selectMatchingVarsWithProvides(const IdPkgRel& rel, VarIdVector& vars) const = 0;
       virtual void selectMatchingVarsWithProvides(PkgId pkgId, VarIdVector& vars) const = 0;
 
       virtual void selectMatchingVarsWithProvides(PkgId pkgId,
-						  const VersionCond& ver,
+						  const VerSubset& ver,
 						  VarIdVector& vars) const = 0;
 
       virtual void selectTheNewest(VarIdVector& vars) const = 0;

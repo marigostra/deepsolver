@@ -1,6 +1,6 @@
 /*
-   Copyright 2011-2013 ALT Linux
-   Copyright 2011-2013 Michael Pozhidaev
+   Copyright 2011-2014 ALT Linux
+   Copyright 2011-2014 Michael Pozhidaev
 
    This file is part of the Deepsolver.
 
@@ -115,7 +115,7 @@ namespace Deepsolver
      *
      * \return Non-zero if intersection is not empty
      */
-    virtual bool verOverlap(const VersionCond& ver1, const VersionCond& ver2) const = 0;
+    virtual bool verOverlap(const VerSubset& ver1, const VerSubset& ver2) const = 0;
 
     /**\brief Compares two version values for equality
      *

@@ -1,6 +1,6 @@
 /*
-   Copyright 2011-2013 ALT Linux
-   Copyright 2011-2013 Michael Pozhidaev
+   Copyright 2011-2014 ALT Linux
+   Copyright 2011-2014 Michael Pozhidaev
 
    This file is part of the Deepsolver.
 
@@ -69,21 +69,21 @@ namespace Deepsolver
     VerGreater = 4
   };
 
-  class VersionCond
+  class VerSubset
   {
   public:
-    VersionCond()
+    VerSubset()
       : type(VerNone) {}
 
-    VersionCond(const std::string& v)
+    VerSubset(const std::string& v)
       : version(v),
 	type(VerEquals) {}
 
-    VersionCond(const std::string& v, VerDirection t)
+    VerSubset(const std::string& v, VerDirection t)
       : version(v),
 	type(t) {}
 
-    VersionCond(const std::string& v,
+    VerSubset(const std::string& v,
 		bool l,
 		bool e,
 		bool g)
@@ -118,10 +118,10 @@ namespace Deepsolver
   public:
     std::string version;
     VerDirection type;
-  }; //class VersionCond;
+  }; //class VerSubset;
 
-  typedef std::list<VersionCond> VersionCondList;
-  typedef std::vector<VersionCond> VersionCondVector;
+  typedef std::list<VerSubset> VerSubsetList;
+  typedef std::vector<VerSubset> VerSubsetVector;
 
   //Utils;
 

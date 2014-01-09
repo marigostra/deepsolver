@@ -1,6 +1,6 @@
 /*
-   Copyright 2011-2013 ALT Linux
-   Copyright 2011-2013 Michael Pozhidaev
+   Copyright 2011-2014 ALT Linux
+   Copyright 2011-2014 Michael Pozhidaev
 
    This file is part of the Deepsolver.
 
@@ -48,7 +48,7 @@ bool OsIntegrity::checkRequire(const NamedPkgRel& require, const PkgVector& pkgs
       {
 	if (!require.verRestricted())
 	  return 1;
-	if (m_backend.verOverlap(VersionCond(pkgs[i].fullVersion()), VersionCond(require.ver, require.type)))
+	if (m_backend.verOverlap(VerSubset(pkgs[i].fullVersion()), VerSubset(require.ver, require.type)))
 	  return 1;
       }
   //Provides;
@@ -61,7 +61,7 @@ bool OsIntegrity::checkRequire(const NamedPkgRel& require, const PkgVector& pkgs
 	  {
 	    if (!require.verRestricted() && !provide.verRestricted())
 	      return 1;
-	    if (m_backend.verOverlap(VersionCond(provide.ver, provide.type), VersionCond(require.ver, require.type)))
+	    if (m_backend.verOverlap(VerSubset(provide.ver, provide.type), VerSubset(require.ver, require.type)))
 	      return 1;
 	  }
       }
@@ -75,7 +75,7 @@ bool OsIntegrity::checkConflict(const NamedPkgRel& conflict, const PkgVector& pk
       {
 	if (!conflict.verRestricted())
 	  return 0;
-	if (m_backend.verOverlap(VersionCond(pkgs[i].fullVersion()), VersionCond(conflict.ver, conflict.type)))
+	if (m_backend.verOverlap(VerSubset(pkgs[i].fullVersion()), VerSubset(conflict.ver, conflict.type)))
 	  return 0;
       }
   //Provides;
@@ -89,7 +89,7 @@ bool OsIntegrity::checkConflict(const NamedPkgRel& conflict, const PkgVector& pk
 	    continue;
 	  if (!conflict.verRestricted() && !provide.verRestricted())
 	    return 0;
-	  if (m_backend.verOverlap(VersionCond(provide.ver, provide.type), VersionCond(conflict.ver, conflict.type)))
+	  if (m_backend.verOverlap(VerSubset(provide.ver, provide.type), VerSubset(conflict.ver, conflict.type)))
 	    return 0;
 	}
   return 1;

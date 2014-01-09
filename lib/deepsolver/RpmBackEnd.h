@@ -1,6 +1,6 @@
 /*
-   Copyright 2011-2013 ALT Linux
-   Copyright 2011-2013 Michael Pozhidaev
+   Copyright 2011-2014 ALT Linux
+   Copyright 2011-2014 Michael Pozhidaev
 
    This file is part of the Deepsolver.
 
@@ -48,7 +48,7 @@ namespace Deepsolver
   public:
     void initialize() override;
     int verCmp(const std::string& ver1, const std::string& ver2) const override;
-    bool verOverlap(const VersionCond& ver1, const VersionCond& ver2) const override;
+    bool verOverlap(const VerSubset& ver1, const VerSubset& ver2) const override;
     bool verEqual(const std::string& ver1, const std::string& ver2) const override;
     bool verGreater(const std::string& ver1, const std::string& ver2) const override;
     AbstractInstalledPkgIterator::Ptr enumInstalledPkg() const override;

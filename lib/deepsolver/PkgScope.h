@@ -1,6 +1,6 @@
 /*
-   Copyright 2011-2013 ALT Linux
-   Copyright 2011-2013 Michael Pozhidaev
+   Copyright 2011-2014 ALT Linux
+   Copyright 2011-2014 Michael Pozhidaev
 
    This file is part of the Deepsolver.
 
@@ -36,21 +36,21 @@ namespace Deepsolver
     void selectMatchingVarsProvidesOnly(PackageId packageId, VarIdVector& vars) const override;
 
     void selectMatchingVarsProvidesOnly(PackageId packageId,
-					 const VersionCond& ver,
+					 const VerSubset& ver,
 					 VarIdVector& vars) const override;
 
     void selectMatchingVarsRealNames(const IdPkgRel& rel, VarIdVector& vars) const override;
     void selectMatchingVarsRealNames(PackageId packageId, VarIdVector& vars) const override;
 
     void selectMatchingVarsRealNames(PackageId packageId,
-				     const VersionCond& ver,
+				     const VerSubset& ver,
 				     VarIdVector& vars) const override;
 
     void selectMatchingVarsWithProvides(const IdPkgRel& rel, VarIdVector& vars) const override;
     void selectMatchingVarsWithProvides(PackageId packageId, VarIdVector& vars) const override;
 
     void selectMatchingVarsWithProvides(PackageId packageId,
-					const VersionCond& ver,
+					const VerSubset& ver,
 					VarIdVector& vars) const override;
 
     bool isInstalled(VarId varId) const override;
@@ -74,7 +74,7 @@ namespace Deepsolver
     void getRequires(VarId varId,
 		     PackageIdVector& depWithoutVersion,
 		     PackageIdVector& depWithVersion,
-		     VersionCondVector& versions) const;
+		     VerSubsetVector& versions) const;
 
     void selectVarsToTry(PkgId pkgId,
 			 VarIdVector& toTry,
@@ -83,7 +83,7 @@ namespace Deepsolver
     void getConflicts(VarId varId,
 		      PackageIdVector& withoutVersion,
 		      PackageIdVector& withVersion,
-		      VersionCondVector& versions) const;
+		      VerSubsetVector& versions) const;
   }; //class PkgScope;
 } //namespace Deepsolver;
 
