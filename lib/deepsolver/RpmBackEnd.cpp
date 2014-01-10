@@ -140,4 +140,100 @@ bool RpmBackEnd::transaction(const StringVector& toInstall,
   return 1;
 }
 
+std::string RpmBackEnd::makeVer(int epoch,
+				const std::string& ver,
+				const std::string& release,
+				int epochMode) const
+{
+  std::ostringstream res;
+  switch(epochMode)
+    {
+    case EpochAlways:
+      res << epoch << ":";
+      break;
+    case EpochIfNonZero:
+      if (epoch > 0)
+  res << epoch << ":";
+  break;
+    };
+  res << (!ver.empty()?ver:"NO_VERSION") << "-" << (!release.empty()?release:"NO_RELEASE");
+  return res.str();
+}
+
+std::string RpmBackEnd::makeVer(const PkgBase& pkg, int epochMode) const
+{
+  return makeVer(pkg.epoch, pkg.version, pkg.release, epochMode);
+}
+
+std::string RpmBackEnd::combineNameAndVer(const std::string& name, const std::string& ver) const
+{
+  assert(!name.empty() && !ver.empty());
+  return name + "-" + ver;
+}
+
+std::string RpmBackEnd::getDesignation(const PkgBase& pkg, int epochMode) const
+{
+  return combineNameAndVer(pkg.name, makeVer(pkg, epochMode));
+}
+
+std::string RpmBackEnd::getDesignation(const NamedPkgRel& rel) const
+{
+  if (!rel.verRestricted())
+    return rel.pkgName;
+  std::string res = rel.pkgName;
+  res += " ";
+  if (rel.type & VerLess)
+    res += "<";
+  if (rel.type & VerGreater)
+    res += ">";
+  if (rel.type & VerEquals)
+    res += "=";
+  res += " " + rel.ver;
+  return res;
+}
+
+bool RpmBackEnd::matches(const NamedPkgRel& rel, const Pkg& pkg) const
+{
+  assert(!rel.pkgName.empty() && !pkg.name.empty());
+  assert(!pkg.version.empty() && !pkg.release.empty());
+  if (rel.pkgName == pkg.name)
+    {
+      if (!rel.verRestricted())
+	return 1;
+      if (verOverlap(VerSubset(makeVer(pkg, EpochAlways)),
+		     VerSubset(rel.ver, rel.type)))
+	return 1;
+    }
+  for (NamedPkgRelVector::size_type i = 0;i < pkg.provides.size();++i)
+    if (matches(rel, pkg.provides[i]))
+      return 1;
+  return 0;
+}
+
+bool RpmBackEnd::matches(const NamedPkgRel& rel, const NamedPkgRel& provide) const
+{
+  if (rel.pkgName != provide.pkgName)
+    return 0;
+  if (!rel.verRestricted() && !provide.verRestricted())
+    return 1;
+  if (rel.verRestricted() && provide.verRestricted() &&
+      verOverlap(VerSubset(provide.ver, provide.type),
+		 VerSubset(rel.ver, rel.type)))
+    return 1;
+  return 0;
+}
+
+bool RpmBackEnd::matches(const IdPkgRel& rel, const IdPkgRel& provide) const
+{
+  if (rel.pkgId != provide.pkgId)
+    return 0;
+  if (!rel.verRestricted() && !provide.verRestricted())
+    return 1;
+  if (rel.verRestricted() && provide.verRestricted() &&
+      verOverlap(VerSubset(provide.ver, provide.verDir),
+		 VerSubset(rel.ver, rel.verDir)))
+    return 1;
+  return 0;
+}
+
 DEEPSOLVER_END_NAMESPACE

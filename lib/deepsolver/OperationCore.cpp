@@ -46,7 +46,7 @@ namespace
 	  {
 	    if (stopOnInvalidPkg)
 	      throw OperationCoreException(OperationCoreException::InvalidInstalledPkg); else //FIXME:Add package designation here;
-	      logMsg(LOG_WARNING, "OS has an invalid package: %s", pkg.designation().c_str());
+	      logMsg(LOG_WARNING, "OS has an invalid package: %s", backend.getDesignation(pkg, AbstractPkgBackEnd::EpochIfNonZero).c_str());
 	  }
 	installedCount++;
 	const PkgId pkgId = PkgSnapshot::strToPkgId(snapshot, pkg.name);//FIXME:must be got with checkName();

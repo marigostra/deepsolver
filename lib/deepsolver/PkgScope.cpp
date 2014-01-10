@@ -39,7 +39,7 @@ namespace
 void PkgScope::selectMatchingVarsProvidesOnly(const IdPkgRel& rel, VarIdVector& vars) const
 {
   vars.clear();
-  if (rel.hasVer())
+  if (rel.verRestricted())
     selectMatchingVarsProvidesOnly(rel.pkgId, rel.extractVerSubset(), vars); else
     selectMatchingVarsProvidesOnly(rel.pkgId, vars);
 }
@@ -82,7 +82,7 @@ void PkgScope::selectMatchingVarsProvidesOnly(PackageId packageId, const VerSubs
 void PkgScope::selectMatchingVarsRealNames(const IdPkgRel& rel, VarIdVector& vars) const
 {
   vars.clear();
-  if (rel.hasVer())
+  if (rel.verRestricted())
     selectMatchingVarsRealNames(rel.pkgId, rel.extractVerSubset(), vars); else
     selectMatchingVarsRealNames(rel.pkgId, vars);
 }
@@ -119,7 +119,7 @@ void PkgScope::selectMatchingVarsRealNames(PackageId packageId, const VerSubset&
 void PkgScope::selectMatchingVarsWithProvides(const IdPkgRel& rel, VarIdVector& vars) const
 {
   vars.clear();
-  if (rel.hasVer())
+  if (rel.verRestricted())
     selectMatchingVarsWithProvides(rel.pkgId, rel.extractVerSubset(), vars); else
     selectMatchingVarsWithProvides(rel.pkgId, vars);
 }
@@ -290,7 +290,7 @@ void PkgScope::whatSatisfyAmongInstalled(const IdPkgRel& rel, VarIdVector& res) 
   res.clear();
 
   //If there is no version restrictions;
-  if (!rel.hasVer())
+  if (!rel.verRestricted())
     {
       VarIdVector vars;
       selectVarsToTry(rel.pkgId, vars, 1);//1 means to include package itself;

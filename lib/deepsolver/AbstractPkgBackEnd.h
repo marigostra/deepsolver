@@ -20,11 +20,11 @@
 
 namespace Deepsolver
 {
-  /**\brief The abstract interface for every iterator over set of installed packages
+  /**\brief The abstract interface for iterator over a set of installed packages
    *
-   * This class isolates any engine of particular package library which can
-   * be used to read database with installed packages data. It instance can
-   * be obtained by methods of AbstractPackageBackEnd class.
+   * This class isolates any engine of particular package library, which can
+   * be used to read database with installed packages data. Its instance should
+   * be obtained through the methods of AbstractPackageBackEnd class.
    *
    * \sa AbstractPackageBackEnd RpmBackEnd RpmInstalledPackagesIterator
    */
@@ -48,9 +48,9 @@ namespace Deepsolver
      * any and fills necessary data. If there is no next package (including
      * the case there are no packages at all) this method returns zero.
      *
-     * \param [out] pkg The Pkg class instance to received data about next installed package
+     * \param [out] pkg The Pkg class instance to received data
      *
-     * \return Non-zero if there is next package or zero otherwise (including the case there are no packages at all)
+     * \return Non-zero if there is the next package or zero otherwise (including the case there are no packages at all)
      */
     virtual bool moveNext(Pkg& pkg) = 0; 
   }; //class AbstractInstalledPkgIterator;
@@ -59,17 +59,24 @@ namespace Deepsolver
    *
    * This abstract interface isolates any functions of an particular
    * package library like rpm, dpkg or any other. They can be treated as
-   * back-ends for Deepsolver itself.  Nevertheless all methods has strict
+   * back-ends for Deepsolver itself.  Although all methods has strict
    * declaration they semantics can be not exactly the same due to
    * differences in package libraries behaviour. So every developer and
    * user should be very careful on any attempt to add new library
-   * support. The first real implementation of this class was librpm so all
-   * dependent code has its unpremeditated influence.
+   * support. The first real implementation of this class was for librpm, so all
+   * dependent code has unpremeditated influence of this library.
    *
    * \sa RpmBackEnd 
    */
   class AbstractPkgBackEnd
   {
+  public:
+      enum {
+	EpochNever,
+	EpochIfNonZero,
+	EpochAlways
+      };
+
   public:
     typedef std::shared_ptr<AbstractPkgBackEnd> Ptr;
 
@@ -84,53 +91,46 @@ namespace Deepsolver
     /**\brief Prepares package back-end for any operations
      *
      * This method should be called before performing any operations with
-     * particular package library. For safety reasons it is assumed
+     * particular package library. For safety reasons it is assumed that 
      * invocation is needed for every created instance of the back-end but
-     * actually it is not always so. For example in case of RpmBackEnd this
-     * method may be called only once with any instance.
+     * actually it is not always the case. For example, if RpmBackEnd is used, this
+     * method may be called only once using any instance.
      */
     virtual void initialize() = 0;
 
     /**\brief Compares two version strings
      *
-     * This method compares two version values and returns an integer value
-     * reflecting its relation.
-     *
      * \param [in] ver1 The first version value to compare
      * \param [in] ver2 The second version value to compare
      *
-     * \return The integer value less than zero in case of ver1 less than ver2, greater than zero if ver1 greater than ver2 and zero otherwise
+     * \return The integer value less than zero if ver1 less than ver2, greater than zero if ver1 greater than ver2 and zero otherwise
      */
     virtual int verCmp(const std::string& ver1, const std::string& ver2) const = 0;
 
     /**\brief Overlaps two version ranges
      *
      * This method is not symmetric. If second version range has no epoch
-     * indication it assumes the same as in first one if there any. So if this
-     * method is used for requires processing the require entry should go
+     * indication it assumes the first one may have any. So if this
+     * method is used for requires processing, the require entry can go
      * only as second argument.
      *
      * \param [in] ver1 The first version range to intersect
      * \param [in] ver2 The second version range to intersect
      *
-     * \return Non-zero if intersection is not empty
+     * \return Non-zero if intersection is not empty and zero otherwise
      */
     virtual bool verOverlap(const VerSubset& ver1, const VerSubset& ver2) const = 0;
 
-    /**\brief Compares two version values for equality
-     *
-     * This method checks two strings designate same version value. 
+    /**\brief Checks the equality of two version values
      *
      * \param [in] ver1 The first string to compare
      * \param [in] ver2 The second string to compare
      *
-     * \return Non-zero if two strings designates the same value or zero otherwise
+     * \return Non-zero if two strings designate the same value or zero otherwise
      */
     virtual bool verEqual(const std::string& ver1, const std::string& ver2) const = 0;
 
     /**\brief Checks if one version is newer than another
-     *
-     * This method checks one version string designates version value newer than another.
      *
      * \param [in] ver1 The first string to compare
      * \param [in] ver2 The second string to compare
@@ -140,51 +140,37 @@ namespace Deepsolver
     virtual bool verGreater(const std::string& ver1, const std::string& ver2) const = 0;
 
     /**\brief Creates an instance of an iterator over the set of installed packages
-     *
-     * Use this method to get the complete list of packages currently
-     * installed in the user system. Since iteration process is very back-end
-     * specific the iterator is also provided by abstract interface as
-     * back-end object itself.
-     *
-     * \return The iterator over set of installed packages
+     * \return The iterator over the set of installed packages
      */
     virtual AbstractInstalledPkgIterator::Ptr enumInstalledPkg() const = 0;
 
     /**\brief Reads header information from package file on disk
      *
-     * This method reads header data from package file on dist using
-     * corresponding functions of an particular package library. Retrieved
-     * data is saved in the instance of the universal package class PkgFile. 
-     *
      * \param [in] fileName The name of the file to read data from
-     * \param [out] pkgFile The object to save retrieved data in
+     * \param [out] pkgFile The object to save retrieved data to
      */
     virtual void readPkgFile(const std::string& fileName, PkgFile& pkgFile) const = 0;
 
     /**\brief Checks if provided file name is a proper package name
      *
-     * Use this method to check package file extension.
-     *
      * \param [in] fileName The file name to check
      *
-     * \return Non-zero if provided file name is a valid package name
+     * \return Non-zero if provided file name is a valid package name and zero otherwise
      */
     virtual bool validPkgFileName(const std::string& fileName) const = 0;
 
     /**\brief Checks if provided file name is a proper source package name
      *
-     * Use this method to check source package file extension.
-     *
      * \param [in] fileName The file name to check
      *
-     * \return Non-zero if provided file name is a valid source package name
+     * \return Non-zero if provided file name is a valid source package name and zero otherwise
      */
     virtual bool validSourcePkgFileName(const std::string& fileName) const = 0;
 
     /**\brief Performs install/remove transaction with given packages
      *
      * This method gives a way to make desired changes in operating system
-     * state. Using it everybody can perform a transaction containing any
+     * state. With it everybody can perform a transaction containing any
      * installation, removing, upgrading and downgrading tasks. The main
      * restriction is a requirement that all package dependencies and
      * conflicts must be satisfied. The package to install must be provided
@@ -195,10 +181,11 @@ namespace Deepsolver
      *
      * If a transaction fails this method returns zero. The state of OS after
      * failed transaction is unspecified and package back-end dependent.
-     * \param [in] toInstall A file names vector with packages to install
-     * \param [in] toRemove A file names vector with packages to remove
-     * \param [in] toUpgrade A map from package names to file names with packages to upgrade
-     * \param [in] toDowngrade A map from package names to file names with packages to downgrade
+     *
+     * \param [in] toInstall The file names vector with packages to install
+     * \param [in] toRemove The file names vector with packages to remove
+     * \param [in] toUpgrade The map from package names to file names with packages to upgrade
+     * \param [in] toDowngrade The map from package names to file names with packages to downgrade
      *
      * \return Non-zero if a transaction is completed successfully or zero otherwise
      *
@@ -207,7 +194,83 @@ namespace Deepsolver
     virtual bool transaction(const StringVector& toInstall,
 			     const StringVector& toRemove,
 			     const StringToStringMap& toUpgrade,
-			     const StringToStringMap& toDowngrade) = 0; 
+			     const StringToStringMap& toDowngrade) = 0;
+
+    /**\brief Constructs a version designating string
+     *
+     * \param [in] epoch The version epoch
+     * \param [in ver The package version
+     * \param [in]] The package release
+     * \param [in] The epoch including mode (can be EpochNever, EpochIfNonZero or EpochAlways)
+     *
+     * \return The constructed version string
+     */
+    virtual std::string makeVer(int epoch,
+			      const std::string& ver,
+			      const std::string& release,
+			      int epochMode) const = 0;
+
+    /**\brief Constructs the string designating the package version
+     *
+     * \param [in] pkg The package to construct version string for
+     * \param [in] The epoch including mode (can be EpochNever, EpochIfNonZero or EpochAlways)
+     *
+     * \return The version string for the provided package
+     */
+    virtual std::string makeVer(const PkgBase& pkg, int epochMode) const = 0;
+
+    /**\brief Combines the package name and the package version into one string
+     *
+     * \param [in] name The package name
+     * \param [in] ver The package version
+     *
+     *
+     * \return The combined  package string
+     */
+    virtual std::string combineNameAndVer(const std::string& name, const std::string& ver) const = 0;
+
+    /**\brief Constructs the string designation of the provided package
+     *
+     * \param [in] pkg The package to construct string designation for
+     * \param [in] The epoch including mode (can be EpochNever, EpochIfNonZero or EpochAlways)
+     *
+     * \return The constructed package designation
+     */
+    virtual std::string getDesignation(const PkgBase& pkg, int epochMode) const = 0;
+
+    /**\brief Constructs the string designation of the package relation
+     * \param [in] rel The package relation to construct designation for
+     *
+     * \return The constructed package relation designation
+     */
+    virtual std::string getDesignation(const NamedPkgRel& rel) const = 0;
+
+    /**\brief Checks if the package suits to the relation
+     *
+     * \param [in] rel The relation
+     * \param [in] pkg The package to check for
+     *
+     * \return Non-zero if the package matches the relation and zero otherwise
+     */
+    virtual bool matches(const NamedPkgRel& rel, const Pkg& pkg) const = 0;
+
+    /**\brief Checks if the provide entry suits to the relation (named form)
+     *
+     * \param [in] rel The relation to check with
+     * \param [in] provide The provide entry to check
+     *
+     * \return Non-zero if the provide entry matches the relation
+     */
+    virtual bool matches(const NamedPkgRel& rel, const NamedPkgRel& provide) const = 0;
+
+    /**\brief Checks if the provide entry suits to the relation (IDs form)
+     *
+     * \param [in] rel The relation to check with
+     * \param [in] provide The provide entry to check
+     *
+     * \return Non-zero if the provide entry matches the relation
+     */
+    virtual bool matches(const IdPkgRel& rel, const IdPkgRel& provide) const = 0;
   }; //class AbstractPkgBackEnd;
 
   AbstractPkgBackEnd::Ptr createRpmBackEnd();

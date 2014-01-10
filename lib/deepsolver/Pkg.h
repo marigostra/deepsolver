@@ -93,6 +93,7 @@ namespace Deepsolver
     /**\brief Constructs the string with this relation designation
      * \return The string designation of the relation
      */
+    /*
     std::string designation() const
     {
       if (!verRestricted())
@@ -108,6 +109,7 @@ namespace Deepsolver
       res += " " + ver;
       return res;
     }
+    */
 
   public:
     std::string pkgName;
@@ -148,20 +150,19 @@ namespace Deepsolver
     }
 
   public:
-    bool hasVer() const
+    /**\brief Checks if there is version restriction
+     * \return Non-zero if the version is restricted with this relation
+     */
+    bool verRestricted() const
     {
-      if (verDir == VerNone)
-	{
-	  assert(ver.empty());
-	  return 0;
-	}
-      assert(!ver.empty());
-      return 1;
+      assert(ver.empty() || verDir != VerNone);
+      assert(!ver.empty() || verDir == VerNone);
+      return verDir != VerNone;
     }
 
     std::string verString() const
     {
-      if (!hasVer())
+      if (!verRestricted())
 	return "";
       std::string s;
       if (verDir & VerLess)
@@ -236,16 +237,19 @@ namespace Deepsolver
     /**\brief Constructs the full version designation (epoch is always included)
      * \return The full package version designation
      */
+    /*
     std::string fullVersion() const
     {
       std::ostringstream ss;
       ss << epoch << ":" << version << "-" << release;
       return ss.str();
     }
+    */
 
     /**\brief Constructs string identifier of the package
      * \return The string designating the package
      */
+    /*
     std::string designation() const
     {
       std::ostringstream ss;
@@ -260,6 +264,7 @@ namespace Deepsolver
 	ss << "NO_RELEASE";
       return ss.str();
     }
+    */
 
     bool theSameAs(const PkgBase& p) const
     {

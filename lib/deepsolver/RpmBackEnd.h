@@ -60,6 +60,19 @@ namespace Deepsolver
 		     const StringVector& toRemove,
 		     const StringToStringMap& toUpgrade,
 		     const StringToStringMap& toDowngrade) override;
+
+    std::string makeVer(int epoch,
+			const std::string& ver,
+			const std::string& release,
+			int epochMode) const override;
+
+    std::string makeVer(const PkgBase& pkg, int epochMode) const override;
+    std::string combineNameAndVer(const std::string& name, const std::string& ver) const override;
+    std::string getDesignation(const PkgBase& pkg, int epochMode) const override;
+    std::string getDesignation(const NamedPkgRel& rel) const override;
+    bool matches(const NamedPkgRel& rel, const Pkg& pkg) const override;
+    bool matches(const NamedPkgRel& rel, const NamedPkgRel& provide) const override;
+    bool matches(const IdPkgRel& rel, const IdPkgRel& provide) const override;
   }; //class RpmBackEnd;
 } //namespace Deepsolver;
 

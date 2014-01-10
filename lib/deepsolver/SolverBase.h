@@ -18,6 +18,8 @@
 #ifndef DEEPSOLVER_SOLVER_BASE_H
 #define DEEPSOLVER_SOLVER_BASE_H
 
+#include"deepsolver/AbstractPkgBackEnd.h"
+
 #define DEEPSOLVER_BEGIN_SOLVER_NAMESPACE namespace Deepsolver { namespace Solver{
 #define DEEPSOLVER_END_SOLVER_NAMESPACE }}
 
@@ -29,9 +31,9 @@ namespace Deepsolver
     {
     public:
       enum {
-	EpochNever,
-	EpochIfNonZero,
-	EpochAlways
+	EpochNever = AbstractPkgBackEnd::EpochNever,
+	EpochIfNonZero = AbstractPkgBackEnd::EpochIfNonZero,
+	EpochAlways = AbstractPkgBackEnd::EpochAlways
       };
 
     public:

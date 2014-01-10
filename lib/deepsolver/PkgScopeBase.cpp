@@ -40,27 +40,14 @@ std::string PkgScopeBase::getPkgName(VarId varId) const
 std::string PkgScopeBase::getDesignation(VarId varId, int epochMode) const
 {
   assert(varId != BadVarId);
-  const std::string name = getPkgName(varId);
-  const std::string ver = getVersion(varId, epochMode);
-  assert(!name.empty() && !ver.empty());
-  return name + "-" + ver;
+  return m_backend.combineNameAndVer(getPkgName(varId), getVersion(varId, epochMode));
 }
 
 std::string PkgScopeBase::getDesignation(const IdPkgRel& r) const
 {
   assert(r.pkgId != BadPkgId);
-  std::string s = pkgIdToStr(r.pkgId);
-  if (r.verDir == VerNone)
-    return s;
-  assert(!r.ver.empty());
-  s += " ";
-  if (r.verDir & VerLess)
-    s += "<";
-  if (r.verDir & VerGreater)
-    s += ">";
-  if (r.verDir & VerEquals)
-    s += "=";
-  return s + " " + r.ver;
+  NamedPkgRel namedRel(pkgIdToStr(r.pkgId), r.verDir, r.ver);
+  return m_backend.getDesignation(namedRel);
 }
 
 std::string PkgScopeBase::getVersion(VarId varId, int epochMode) const
@@ -68,19 +55,7 @@ std::string PkgScopeBase::getVersion(VarId varId, int epochMode) const
   assert(varId != BadVarId && varId < m_pkgs.size());
   const SnapshotPkg& pkg = m_pkgs[varId];
   assert(pkg.ver != NULL && pkg.release != NULL);
-  std::ostringstream res;
-  switch(epochMode)
-    {
-    case EpochAlways:
-      res << pkg.epoch << ":";
-      break;
-    case EpochIfNonZero:
-      if (pkg.epoch > 0)
-  res << pkg.epoch << ":";
-  break;
-    };
-  res << pkg.ver << "-" << pkg.release;
-  return res.str();
+  return m_backend.makeVer(pkg.epoch, pkg.ver, pkg.release, epochMode);
 }
 
 void PkgScopeBase::fullPkgData(VarId varId, Pkg& pkg) const
