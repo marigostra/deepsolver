@@ -31,7 +31,7 @@ namespace Deepsolver
     virtual ~PackageListPrinting() {}
 
   public:
-    void printSolution(const TransactionIterator& it) const;
+    void printSolution(const TransactionIterator& it, bool toLog = 0) const;
 
   private:
     void columnsView(const StringVector& install,

@@ -164,22 +164,23 @@ void ExceptionMessagesEn::visit(const TaskException& e)
   switch(e.getCode())
     {
     case TaskException::UnknownPkg:
-      m_stream << "You have requested an unknown package. Provided name \"" << e.getParam() << "\" is not present" << std::endl;
-      m_stream << "neither in available repositories nor in the system." << std::endl;
+      m_stream << "You have requested the package with unknown name. The following name is not present neither in the system nor in the available repositories." << std::endl << std::endl;
+      m_stream << "The unknown package name is:" << e.getParam() << std::endl;
+      return;
+    case TaskException::Contradiction:
+      m_stream << "You have issued the meaningless request.  It takes the same package" << std::endl;
+      m_stream << "for installation and removing simultaneously. This is impossible." << std::endl << std::endl;
+      m_stream << "The packaged caused the problem:" << e.getParam() << std::endl;
       return;
     case TaskException::UnsolvableSat:
-      m_stream << "The package \"" << e.getParam() << "\" was considered to be installed and removed simultaneously. That can" << std::endl;
-      m_stream << "be caused by problems in the package dependencies set or too difficult" << std::endl;
-      m_stream << "user request. To resolve this situation you can simplify your task by" << std::endl;
-      m_stream << "listing less packages if there are several." << std::endl;
+      m_stream << "Your request has no solution. That can be caused either by a contradiction" << std::endl;
+      m_stream << "in the list of requested packages or by the problems in the attached repositories." << std::endl;
       return;
     case TaskException::Unmet:
-      m_stream << "The require entry \"" << e.getParam() << "\" causes an unmet. That means there are no packages" << std::endl;
-      m_stream << "neither in the available repositories nor in the system suitable to" << std::endl;
-      m_stream << "satisfy this requirement. Probably there are problems in package set" << std::endl;
-      m_stream << "you are working with. Please, contact your repositories administrator." << std::endl;
+      m_stream << "There is a require entry without any matching packages neither in the" << std::endl;
+      m_stream << "system not in the available repositories. The entry caused the break is:" << std::endl << std::endl;
+      m_stream << e.getParam() << std::endl;
       return;
-      //FIXME:Contradiction;
     default:
       assert(0);
     };

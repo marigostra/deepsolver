@@ -113,11 +113,10 @@ void SatBuilder::build(const UserTask& userTask)
     m_debugReferences[i] = BadVarId;
 #endif //DEEPSOLVER_SOLVER_DEBUG;
   onUserTask(userTask);
-
-  //  m_userTaskInstall.insert(35853);
-  //  m_userTaskInstall.insert(36700);
-
-  //FIXME:Check user task collision;
+  for(VarIdSet::const_iterator it1 = m_userTaskInstall.begin();it1 != m_userTaskInstall.end();++it1)
+  for(VarIdSet::const_iterator it2 = m_userTaskRemove.begin();it2 != m_userTaskRemove.end();++it2)
+    if (*it1 == *it2)
+      throw TaskException(TaskException::Contradiction, m_scope.getDesignation(*it1));
   for(VarIdSet::const_iterator it = m_userTaskInstall.begin();it != m_userTaskInstall.end();++it)
     {
       if (m_scope.isInstalled(*it))
@@ -140,23 +139,28 @@ void SatBuilder::build(const UserTask& userTask)
     }
   logMsg(LOG_DEBUG, "solver:user task yields %zu pending packages", m_pending.size());
   onPending();
+  //If user task packages are not presented in table, they can be excluded from processing due to optimization;
   for(VarIdSet::iterator it = m_userTaskInstall.begin();it != m_userTaskInstall.end();)
     {
       VarIdSet::iterator tmpIt = it; 
       ++it;
       if (!p.hasEntry(*tmpIt))
-	m_userTaskInstall.erase(*tmpIt);
+	{
+	  logMsg(LOG_DEBUG, "solver:removing \'%s\' from user task since it has been reduced by the optimization", m_scope.getDesignation(*tmpIt).c_str());
+	  m_userTaskInstall.erase(*tmpIt);
+	}
     }
-
   for(VarIdSet::iterator it = m_userTaskRemove.begin();it != m_userTaskRemove.end();)
     {
       VarIdSet::iterator tmpIt = it; 
       ++it;
       if (!p.hasEntry(*tmpIt))
+	{
+	  logMsg(LOG_DEBUG, "solver:removing \'%s\' from user task since it has been reduced by the optimization", m_scope.getDesignation(*tmpIt).c_str());
 	m_userTaskRemove.erase(*tmpIt);
+	}
     }
-
-
+  //Take a look at statistics;
   const double duration = (double)(clock() - start) / CLOCKS_PER_SEC;
     logMsg(LOG_DEBUG, "solver:SAT construction completed in %f sec", duration);
   size_t installedGermCount = 0, uninstalledGermCount = 0;
@@ -184,19 +188,20 @@ void SatBuilder::build(const UserTask& userTask)
   assert(ensureSatCorrect());
   p.clearGerms();
 #ifdef DEEPSOLVER_SOLVER_DEBUG
-  logMsg(LOG_DEBUG, "Dumping references to installed packages:");
+  logMsg(LOG_DEBUG, "solver:dumping references to installed packages:");
   for(VarIdVector::size_type i = 0;i < m_debugReferences.size();++i)
     if (m_debugReferences[i] != BadVarId && m_scope.isInstalled(i))
-      logMsg(LOG_DEBUG, "installed %s has initial reference from %s", m_scope.getPkgName(i).c_str(), m_scope.getDesignation(m_debugReferences[i]).c_str());
-  logMsg(LOG_DEBUG, "Dumping references to uninstalled packages:");
+      logMsg(LOG_DEBUG, "solver:installed %s has initial reference from %s", m_scope.getPkgName(i).c_str(), m_scope.getDesignation(m_debugReferences[i]).c_str());
+  logMsg(LOG_DEBUG, "solver:dumping references to uninstalled packages:");
   for(VarIdVector::size_type i = 0;i < m_debugReferences.size();++i)
     if (m_debugReferences[i] != BadVarId && !m_scope.isInstalled(i))
-      logMsg(LOG_DEBUG, "%s has initial reference from %s", m_scope.getDesignation(i).c_str(), m_scope.getDesignation(m_debugReferences[i]).c_str());
+      logMsg(LOG_DEBUG, "solver:%s has initial reference from %s", m_scope.getDesignation(i).c_str(), m_scope.getDesignation(m_debugReferences[i]).c_str());
 #endif //DEEPSOLVER_SOLVER_DEBUG;
 }
 
 bool SatBuilder::ensureSatCorrect() const
 {
+  //Each variable, involved in SAT, must have corresponding entry in table and this entry may not be a germ;
   size_t clauseNum = 0, litNum = 0;
   for(VarId i = 0;i < p.size();++i)
     if(p.hasEntry(i))
@@ -214,7 +219,6 @@ bool SatBuilder::ensureSatCorrect() const
 			 m_scope.getDesignation(e.sat[s][c].varId).c_str());
 		  return 0;
 		}
-
 	      if (p.getEntry(e.sat[s][c].varId).germ)
 		{
 		  logMsg(LOG_ERR, "%s contains %s literal with germ entry %s", m_scope.getDesignation(i).c_str(), 
@@ -222,8 +226,6 @@ bool SatBuilder::ensureSatCorrect() const
 			 m_scope.getDesignation(e.sat[s][c].varId).c_str());
 		  return 0;
 		}
-
-
 	      } //for(literals); 
 	  } //for(clauses);
 	clauseNum += e.sat.size();
@@ -412,8 +414,13 @@ void SatBuilder::toBeInstalled(VarId varId, VarId replacementFor)
       m_scope.selectMatchingVarsWithProvides(requires[i], alternatives);
       if (alternatives.empty())
 	{
-	  logMsg(LOG_ERR, "unmet %s in package %s", m_scope.getDesignation(requires[i]).c_str(), m_scope.getDesignation(varId).c_str());
-      assert(0);//FIXME:Exception;
+	  logMsg(LOG_ERR, "unmet %s in package %s",
+		 m_scope.getDesignation(requires[i]).c_str(),
+		 m_scope.getDesignation(varId).c_str());
+	  throw TaskException(TaskException::Unmet,
+				  m_scope.getDesignation(varId) + ": " +
+				  m_scope.getDesignation(requires[i]));
+
 	}
       noDoubling(alternatives);
       size_t offset = 0;
@@ -671,9 +678,11 @@ VarId SatBuilder::byProvidesPrioritySorting(const VarIdVector& vars) const
 void Solver::doMainWork(SatBuilder& builder, const UserTask& userTask) const
 {
   VarIdVector updates;
-  logMsg(LOG_DEBUG, "SAT constructing");
+  logMsg(LOG_DEBUG, "solver:SAT constructing");
   builder.build(userTask);
-  logMsg(LOG_DEBUG, "Initial SAT solving");
+  if (builder.userTaskInstall() .empty() && builder.userTaskRemove().empty())
+    return;
+  logMsg(LOG_DEBUG, "solver:initial SAT solving");
   if (!solveSat(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), updates))
     {
       logMsg(LOG_DEBUG, "Initial SAT solving failed");
@@ -783,6 +792,7 @@ bool Solver::solveSat(RefCountedEntries& p,
 		      const VarIdSet& userTaskRemove,
 		      const VarIdVector& fixedToInstall) const
 {
+  assert(!userTaskInstall.empty() || !userTaskRemove.empty());
   AbstractSatSolver::Ptr satSolver = createDefaultSatSolver();
   for(VarIdSet::const_iterator it = userTaskInstall.begin();it != userTaskInstall.end();++it)
     //    if (p.hasEntry(*it))//The variable could be optimized by SAT builder;

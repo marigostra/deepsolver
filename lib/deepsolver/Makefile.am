@@ -27,7 +27,6 @@ Md5.cpp \
 Md5File.cpp \
 OperationCore.cpp \
 OsIntegrity.cpp \
-Pkg.cpp \
 PkgScopeBase.cpp \
 PkgScope.cpp \
 PkgScopeMetadata.cpp \

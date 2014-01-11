@@ -330,7 +330,7 @@ namespace Deepsolver
       UnknownPkg, //the parameter contains name of the unknown package;
       Contradiction, //the parameter contains full package designation which is considered to install and remove simultaneously;
       UnsolvableSat, //SAT equation has no solution, parameter is empty;
-      Unmet, //the parameter contains the unsatisfied require entry;
+      Unmet, //the parameter contains the package caused the problem and the its unsatisfied require entry;
 CodeCount
     };
 

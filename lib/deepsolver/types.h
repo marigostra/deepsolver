@@ -61,6 +61,7 @@ namespace Deepsolver
   typedef std::map<VarId, VarId> VarIdToVarIdMap;
 
   typedef char VerDirection;
+  typedef unsigned short Epoch;
 
   enum {
     VerNone = 0,
@@ -69,91 +70,9 @@ namespace Deepsolver
     VerGreater = 4
   };
 
-  class VerSubset
-  {
-  public:
-    VerSubset()
-      : type(VerNone) {}
-
-    VerSubset(const std::string& v)
-      : version(v),
-	type(VerEquals) {}
-
-    VerSubset(const std::string& v, VerDirection t)
-      : version(v),
-	type(t) {}
-
-    VerSubset(const std::string& v,
-		bool l,
-		bool e,
-		bool g)
-      : version(v),
-	type(0)
-    {
-      assert(!l || !g);
-      if (l)
-	type |= VerLess;
-      if (e)
-	type |= VerEquals;
-      if (g)
-	type |= VerGreater;
-    }
-
-  public:
-    bool isLess() const
-    {
-      return type & VerLess;
-    }
-
-    bool isEqual() const
-    {
-      return type & VerEquals;
-    }
-
-    bool isGreater() const
-    {
-      return type & VerGreater;
-    }
-
-  public:
-    std::string version;
-    VerDirection type;
-  }; //class VerSubset;
-
-  typedef std::list<VerSubset> VerSubsetList;
-  typedef std::vector<VerSubset> VerSubsetVector;
-
-  //Utils;
-
-  template<typename T>
-  class AutoArrayAdapter
-  {
-  public:
-    AutoArrayAdapter(T* p)
-      : m_p(p) 
-    {
-      assert(p != NULL);
-    }
-
-    ~AutoArrayAdapter()
-    {
-      delete[] m_p;
-    }
-
-  public:
-    T* get()
-    {
-      return m_p;
-    }
-
-    const T* get() const
-    {
-      return m_p;
-    }
-
-  private:
-    T* m_p;
-  }; //class AutoArrayAdapter;
+  enum {
+    PkgFlagInstalled = 1
+  };
 
   class UserTaskItemToInstall
   {

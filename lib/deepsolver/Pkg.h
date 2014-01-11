@@ -20,7 +20,59 @@
 
 namespace Deepsolver
 {
-  typedef unsigned short Epoch;
+  class VerSubset
+  {
+  public:
+    VerSubset()
+      : type(VerNone) {}
+
+    VerSubset(const std::string& v)
+      : version(v),
+	type(VerEquals) {}
+
+    VerSubset(const std::string& v, VerDirection t)
+      : version(v),
+	type(t) {}
+
+    VerSubset(const std::string& v,
+		bool l,
+		bool e,
+		bool g)
+      : version(v),
+	type(0)
+    {
+      assert(!l || !g);
+      if (l)
+	type |= VerLess;
+      if (e)
+	type |= VerEquals;
+      if (g)
+	type |= VerGreater;
+    }
+
+  public:
+    bool isLess() const
+    {
+      return type & VerLess;
+    }
+
+    bool isEqual() const
+    {
+      return type & VerEquals;
+    }
+
+    bool isGreater() const
+    {
+      return type & VerGreater;
+    }
+
+  public:
+    std::string version;
+    VerDirection type;
+  }; //class VerSubset;
+
+  typedef std::list<VerSubset> VerSubsetList;
+  typedef std::vector<VerSubset> VerSubsetVector;
 
   /**\brief The relation between two packages with the package reference by name
    *
@@ -89,27 +141,6 @@ namespace Deepsolver
       assert(!ver.empty() || type == VerNone);
       return type != VerNone;
     }
-
-    /**\brief Constructs the string with this relation designation
-     * \return The string designation of the relation
-     */
-    /*
-    std::string designation() const
-    {
-      if (!verRestricted())
-	return pkgName;
-      std::string res = pkgName;
-      res += " ";
-      if (type & VerLess)
-	res += "<";
-      if (type & VerGreater)
-	res += ">";
-      if (type & VerEquals)
-	res += "=";
-      res += " " + ver;
-      return res;
-    }
-    */
 
   public:
     std::string pkgName;
@@ -234,38 +265,6 @@ namespace Deepsolver
       return 1;
     }
 
-    /**\brief Constructs the full version designation (epoch is always included)
-     * \return The full package version designation
-     */
-    /*
-    std::string fullVersion() const
-    {
-      std::ostringstream ss;
-      ss << epoch << ":" << version << "-" << release;
-      return ss.str();
-    }
-    */
-
-    /**\brief Constructs string identifier of the package
-     * \return The string designating the package
-     */
-    /*
-    std::string designation() const
-    {
-      std::ostringstream ss;
-      ss << name << "-";
-      if (epoch > 0)
-	ss << epoch << ":";
-      if (!version.empty())
-	ss << version << "-"; else
-	ss << "NO_VERSION-";
-      if (!release.empty())
-	ss << release; else
-	ss << "NO_RELEASE";
-      return ss.str();
-    }
-    */
-
     bool theSameAs(const PkgBase& p) const
     {
       return (name == p.name &&
@@ -381,13 +380,6 @@ namespace Deepsolver
 
   typedef std::vector<PkgFile> PkgFileVector;
   typedef std::list<PkgFile> PkgFileList;
-
-  //  std::ostream& operator <<(std::ostream& s, const PkgBase& );
-  //  std::ostream& operator <<(std::ostream& s, const NamedPkgRel& r);
-
-  enum {
-    PkgFlagInstalled = 1
-  };
 } //namespace Deepsolver;
 
 #endif //DEEPSOLVER_PKG_H;
