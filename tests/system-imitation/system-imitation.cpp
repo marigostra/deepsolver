@@ -27,18 +27,29 @@ int test(const ConfigCenter& conf)
   OsIntegrity integrity(*backend.get());
   OperationCore core(conf);
   StringVector names;
-  core.getPkgNames(names);
+  core.getPkgNames(0, names);//0 means without installed;
   logMsg(LOG_INFO, "test:%zu names obtained", names.size());
   for(StringVector::size_type i = 0;i < names.size();++i)
     {
-      logMsg(LOG_INFO, "test:checking \'%s\':%zu of %zu", names[i].c_str(), i, names.size());
-      UserTaskItemToInstallVector toInstall;
-      toInstall.push_back(UserTaskItemToInstall(names[i]));
-      PkgVector pkgs;
-      core.closure(toInstall, pkgs);
-      logMsg(LOG_INFO, "test:%zu packages are suggested to install", pkgs.size());
-      if (!integrity.verify(pkgs))
-	return EXIT_FAILURE;
+      logMsg(LOG_INFO, "test:checking \'%s\':%zu of %zu", names[i].c_str(), i + 1, names.size());
+      try {
+	UserTaskItemToInstallVector toInstall;
+	toInstall.push_back(UserTaskItemToInstall(names[i]));
+	PkgVector pkgs;
+	core.closure(toInstall, pkgs);
+	logMsg(LOG_INFO, "test:%zu packages are suggested to install", pkgs.size());
+	std::ofstream f(names[i]);
+	assert(f);
+	for(PkgVector::size_type k = 0;k < pkgs.size();++k)
+	  f << pkgs[k].name << std::endl;
+	f.close();
+	if (!integrity.verify(pkgs))
+	  return EXIT_FAILURE;
+      }
+      catch (const TaskException& e)
+	{
+	  std::cerr << names[i] << ":" << e.getMessage() << std::endl;
+	}
     }
   return EXIT_SUCCESS;
 }

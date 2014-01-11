@@ -96,8 +96,8 @@ namespace
 	    break;
 	if (j >= remove.size())
 	  continue;
-	const std::string versionToInstall = scope.getVersion(install[i]);
-	const std::string versionToRemove = scope.getVersion(remove[j]);
+	const std::string versionToInstall = scope.getVersionDef(install[i]);
+	const std::string versionToRemove = scope.getVersionDef(remove[j]);
 	if (!backend.verEqual(versionToInstall, versionToRemove))//Packages may be  with equal versions but with different build times;
 	  {
 	    if (backend.verGreater(versionToInstall, versionToRemove))
@@ -105,7 +105,7 @@ namespace
 	      downgrade.insert(VarIdToVarIdMap::value_type(remove[j], install[i]));
 	    install[i] = BadVarId;
 	  } else
-	  logMsg(LOG_WARNING, "upgrade:trying to upgrade packages with same version but with different build time: %s and %s", scope.getDesignation(install[i]).c_str(), scope.getDesignation(remove[j]).c_str());
+	  logMsg(LOG_WARNING, "upgrade:trying to upgrade packages with same version but with different build time: %s and %s", scope.getDesignationDef(install[i]).c_str(), scope.getDesignationDef(remove[j]).c_str());
 	remove[j] = BadVarId;
       }
     for(VarIdVector::size_type i = 0;i < install.size();i++)
@@ -343,44 +343,35 @@ void OperationCore::generateSat(AbstractTransactionListener& listener,
 
 void OperationCore::printPackagesByRequire(const NamedPkgRel& rel, std::ostream& s)
 {
-  /*FIXME:
   const ConfRoot& root = m_conf.root();
   freeAutoReleaseStrings();
   for(StringVector::size_type i = 0;i < root.os.transactReadAhead.size();i++)
     File::readAhead(root.os.transactReadAhead[i]);
-  AbstractPackageBackEnd::ptr backEnd = CREATE_PACKAGE_BACKEND;
-  backEnd->initialize();
+  AbstractPkgBackEnd::Ptr backend = CREATE_PKG_BACKEND;
+  backend->initialize();
   PkgSnapshot::Snapshot snapshot;
-  ProvideMap provideMap;
-  InstalledReferences requiresReferences, conflictsReferences;
   PkgSnapshot::loadFromFile(snapshot, Directory::mixNameComponents(m_conf.root().dir.pkgData, PKG_DATA_FILE_NAME), m_autoReleaseStrings);
-  logMsg(LOG_DEBUG, "operation:the score of the snapshot just loaded is %zu", PkgSnapshot::getScore(snapshot));
-  if (snapshot.pkgs.empty())//FIXME:
-    throw NotImplementedException("Empty set of attached repositories");
-  PkgUtils::fillWithhInstalledPackages(*backEnd.get(), snapshot, m_autoReleaseStrings, root.stopOnInvalidInstalledPkg);
-  PkgUtils::prepareReversedMaps(snapshot, provideMap, requiresReferences, conflictsReferences);
-  PkgScope scope(*backEnd.get(), snapshot, provideMap, requiresReferences, conflictsReferences);
-  if (!scope.checkName(rel.pkgName))
+  fillWithhInstalledPackages(*backend.get(), snapshot, m_autoReleaseStrings, root.stopOnInvalidInstalledPkg);
+  PkgScope scope(*backend.get(), snapshot);
+  scope.initMetadata();
+  if (!scope.knownPkgName(rel.pkgName))
     {
       logMsg(LOG_DEBUG, "operation:package name \'%s\' is unknown", rel.pkgName.c_str());
       return;
     }
-  const PackageId pkgId = scope.strToPackageId(rel.pkgName);
+  const PackageId pkgId = scope.strToPkgId(rel.pkgName);
   const IdPkgRel idPkgRel(pkgId, rel.type, rel.ver);
-  logMsg(LOG_DEBUG, "operation:processing %zu %s", idPkgRel.pkgId, idPkgRel.verString().c_str());
   VarIdVector vars;
   scope.selectMatchingVarsWithProvides(idPkgRel, vars);
-  rmDub(vars);
-  logMsg(LOG_DEBUG, "operation:found %zu packages matching given require", vars.size());
-  for(VarIdVector::size_type i = 0;i < vars.size();i++)
+  noDoubling(vars);
+  for(VarIdVector::size_type i = 0;i < vars.size();++i)
     {
-      s << scope.constructPackageName(vars[i]);
+      s << scope.getDesignationDef(vars[i]);
       if (scope.isInstalled(vars[i]))
 	s << " (installed)";
       s << std::endl;
       }
   freeAutoReleaseStrings();
-  */
 }
 
 void OperationCore::printSnapshot(bool withInstalled, 
@@ -405,7 +396,7 @@ void OperationCore::printSnapshot(bool withInstalled,
   freeAutoReleaseStrings();
 }
 
-void OperationCore::getPkgNames(StringVector& res)
+void OperationCore::getPkgNames(bool withInstalled, StringVector& res)
 {
   const ConfRoot& root = m_conf.root();
   freeAutoReleaseStrings();
@@ -415,7 +406,8 @@ void OperationCore::getPkgNames(StringVector& res)
   backend->initialize();
   PkgSnapshot::Snapshot snapshot;
   PkgSnapshot::loadFromFile(snapshot, Directory::mixNameComponents(root.dir.pkgData, PKG_DATA_FILE_NAME), m_autoReleaseStrings);
-  fillWithhInstalledPackages(*backend.get(), snapshot, m_autoReleaseStrings, root.stopOnInvalidInstalledPkg);
+  if (withInstalled)
+    fillWithhInstalledPackages(*backend.get(), snapshot, m_autoReleaseStrings, root.stopOnInvalidInstalledPkg);
   StringSet names;
   for(PkgSnapshot::PkgVector::size_type i = 0;i < snapshot.pkgs.size();++i)
     {

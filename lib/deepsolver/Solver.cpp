@@ -116,25 +116,25 @@ void SatBuilder::build(const UserTask& userTask)
   for(VarIdSet::const_iterator it1 = m_userTaskInstall.begin();it1 != m_userTaskInstall.end();++it1)
   for(VarIdSet::const_iterator it2 = m_userTaskRemove.begin();it2 != m_userTaskRemove.end();++it2)
     if (*it1 == *it2)
-      throw TaskException(TaskException::Contradiction, m_scope.getDesignation(*it1));
+      throw TaskException(TaskException::Contradiction, m_scope.getDesignationDef(*it1));
   for(VarIdSet::const_iterator it = m_userTaskInstall.begin();it != m_userTaskInstall.end();++it)
     {
       if (m_scope.isInstalled(*it))
 	{
-	  logMsg(LOG_DEBUG, "solver:user:%s already installed, no need to do it again", m_scope.getDesignation(*it).c_str());
+	  logMsg(LOG_DEBUG, "solver:user:%s already installed, no need to do it again", m_scope.getDesignationDef(*it).c_str());
 	  continue;
 	}
-      logMsg(LOG_DEBUG, "solver:user:install %s", m_scope.getDesignation(*it).c_str());
+      logMsg(LOG_DEBUG, "solver:user:install %s", m_scope.getDesignationDef(*it).c_str());
       toBeInstalled(*it);
     }
   for(VarIdSet::const_iterator it = m_userTaskRemove.begin();it != m_userTaskRemove.end();++it)
     {
       if (!m_scope.isInstalled(*it))
 	{
-	  logMsg(LOG_DEBUG, "solver:user:%s is uninstalled, no need to remove it", m_scope.getDesignation(*it).c_str());
+	  logMsg(LOG_DEBUG, "solver:user:%s is uninstalled, no need to remove it", m_scope.getDesignationDef(*it).c_str());
 	  continue;
 	}
-      logMsg(LOG_DEBUG, "solver:user:remove %s", m_scope.getDesignation(*it).c_str());
+      logMsg(LOG_DEBUG, "solver:user:remove %s", m_scope.getDesignationDef(*it).c_str());
       toBeRemoved(*it);
     }
   logMsg(LOG_DEBUG, "solver:user task yields %zu pending packages", m_pending.size());
@@ -146,7 +146,7 @@ void SatBuilder::build(const UserTask& userTask)
       ++it;
       if (!p.hasEntry(*tmpIt))
 	{
-	  logMsg(LOG_DEBUG, "solver:removing \'%s\' from user task since it has been reduced by the optimization", m_scope.getDesignation(*tmpIt).c_str());
+	  logMsg(LOG_DEBUG, "solver:removing \'%s\' from user task since it has been reduced by the optimization", m_scope.getDesignationDef(*tmpIt).c_str());
 	  m_userTaskInstall.erase(*tmpIt);
 	}
     }
@@ -156,7 +156,7 @@ void SatBuilder::build(const UserTask& userTask)
       ++it;
       if (!p.hasEntry(*tmpIt))
 	{
-	  logMsg(LOG_DEBUG, "solver:removing \'%s\' from user task since it has been reduced by the optimization", m_scope.getDesignation(*tmpIt).c_str());
+	  logMsg(LOG_DEBUG, "solver:removing \'%s\' from user task since it has been reduced by the optimization", m_scope.getDesignationDef(*tmpIt).c_str());
 	m_userTaskRemove.erase(*tmpIt);
 	}
     }
@@ -214,16 +214,16 @@ bool SatBuilder::ensureSatCorrect() const
 	      {
 	      if (!p.hasEntry(e.sat[s][c].varId))
 		{
-		  logMsg(LOG_ERR, "%s contains %s literal without entry %s", m_scope.getDesignation(i).c_str(),
+		  logMsg(LOG_ERR, "%s contains %s literal without entry %s", m_scope.getDesignationDef(i).c_str(),
 			 (e.sat[s][c].neg?"negative":"positive"),
-			 m_scope.getDesignation(e.sat[s][c].varId).c_str());
+			 m_scope.getDesignationDef(e.sat[s][c].varId).c_str());
 		  return 0;
 		}
 	      if (p.getEntry(e.sat[s][c].varId).germ)
 		{
-		  logMsg(LOG_ERR, "%s contains %s literal with germ entry %s", m_scope.getDesignation(i).c_str(), 
+		  logMsg(LOG_ERR, "%s contains %s literal with germ entry %s", m_scope.getDesignationDef(i).c_str(), 
 			 (e.sat[s][c].neg?"negative":"positive"),
-			 m_scope.getDesignation(e.sat[s][c].varId).c_str());
+			 m_scope.getDesignationDef(e.sat[s][c].varId).c_str());
 		  return 0;
 		}
 	      } //for(literals); 
@@ -416,9 +416,9 @@ void SatBuilder::toBeInstalled(VarId varId, VarId replacementFor)
 	{
 	  logMsg(LOG_ERR, "unmet %s in package %s",
 		 m_scope.getDesignation(requires[i]).c_str(),
-		 m_scope.getDesignation(varId).c_str());
+		 m_scope.getDesignationDef(varId).c_str());
 	  throw TaskException(TaskException::Unmet,
-				  m_scope.getDesignation(varId) + ": " +
+				  m_scope.getDesignationDef(varId) + ": " +
 				  m_scope.getDesignation(requires[i]));
 
 	}
@@ -686,7 +686,7 @@ void Solver::doMainWork(SatBuilder& builder, const UserTask& userTask) const
   if (!solveSat(builder.p, builder.userTaskInstall(), builder.userTaskRemove(), updates))
     {
       logMsg(LOG_DEBUG, "Initial SAT solving failed");
-      throw 0;//FIXME:
+      throw TaskException(TaskException::UnsolvableSat);
     }
   assert(builder.p.newStatesValid());
 #ifdef FILTER_SOLUTION
@@ -759,10 +759,10 @@ void Solver::dumpSat(const UserTask& userTask, std::ostream& s) const
       {
 	const RefCountedEntry& e = builder.p.getEntry(i);
 
-	s << "# " << m_scope.getDesignation(e.varId) << std::endl;
+	s << "# " << m_scope.getDesignationDef(e.varId) << std::endl;
 	s << "# Installation: " << (e.oldState?"Yes":"No") << " -> " << (e.newState?"Yes":"No") << std::endl;
 	if (e.replacementFor != BadVarId)
-	  s << "# Replacement for: " << m_scope.getDesignation(e.replacementFor) << std::endl;
+	  s << "# Replacement for: " << m_scope.getDesignationDef(e.replacementFor) << std::endl;
 	s << "# Ambiguous: " << (e.ambiguous?"yes":"no") << std::endl;
 	for(Sat::size_type ss = 0;ss < e.sat.size();++ss)
 	  {
@@ -778,7 +778,7 @@ void Solver::dumpSat(const UserTask& userTask, std::ostream& s) const
 		if (neg)
 		  s << " !"; else
 		  s << "  ";
-		s << m_scope.getDesignation(varId);
+		s << m_scope.getDesignationDef(varId);
 		s << " # " << (builder.p.getEntry(varId).newState?"installed":"not installed") << std::endl;
 	      }
 	    s << ")" << std::endl;

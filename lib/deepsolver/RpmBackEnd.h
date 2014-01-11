@@ -73,6 +73,7 @@ namespace Deepsolver
     bool matches(const NamedPkgRel& rel, const Pkg& pkg) const override;
     bool matches(const NamedPkgRel& rel, const NamedPkgRel& provide) const override;
     bool matches(const IdPkgRel& rel, const IdPkgRel& provide) const override;
+    bool theSamePkg(const PkgBase& pkg1, const PkgBase& pkg2) const override;
   }; //class RpmBackEnd;
 } //namespace Deepsolver;
 

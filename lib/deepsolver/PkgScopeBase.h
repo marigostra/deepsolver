@@ -24,7 +24,7 @@
 
 namespace Deepsolver
 {
-  class PkgScopeBase: public AbstractPkgScope
+  class PkgScopeBase: public Solver::AbstractPkgScope
   {
   protected:
     typedef PkgSnapshot::Snapshot Snapshot;
@@ -56,6 +56,7 @@ namespace Deepsolver
     PkgId strToPkgId(const std::string& name) const override;
 
 protected:
+    NamedPkgRel makeNamedPkgRel(const SnapshotRelation& rel) const;
     int verCmp(const std::string& ver1, const std::string& ver2) const;
     bool verOverlap(const VerSubset& ver1, const VerSubset& ver2) const;
     bool verEqual(const std::string& ver1, const std::string& ver2) const;

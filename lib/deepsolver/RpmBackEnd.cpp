@@ -214,7 +214,7 @@ bool RpmBackEnd::matches(const NamedPkgRel& rel, const NamedPkgRel& provide) con
 {
   if (rel.pkgName != provide.pkgName)
     return 0;
-  if (!rel.verRestricted() && !provide.verRestricted())
+  if (!rel.verRestricted())
     return 1;
   if (rel.verRestricted() && provide.verRestricted() &&
       verOverlap(VerSubset(provide.ver, provide.type),
@@ -234,6 +234,15 @@ bool RpmBackEnd::matches(const IdPkgRel& rel, const IdPkgRel& provide) const
 		 VerSubset(rel.ver, rel.verDir)))
     return 1;
   return 0;
+}
+
+bool RpmBackEnd::theSamePkg(const PkgBase& pkg1, const PkgBase& pkg2) const
+{
+  return (pkg1.name == pkg2.name &&
+	  pkg1.epoch == pkg2.epoch &&
+	  pkg1.version == pkg2.version &&
+	  pkg1.release == pkg2.release &&
+	  pkg1.buildTime == pkg2.buildTime);
 }
 
 DEEPSOLVER_END_NAMESPACE

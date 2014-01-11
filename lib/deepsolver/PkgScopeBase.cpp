@@ -68,6 +68,26 @@ void PkgScopeBase::fullPkgData(VarId varId, Pkg& pkg) const
   pkg.version = p.ver;
   pkg.release = p.release;
   pkg.buildTime = p.buildTime;
+  for(size_t i = p.providesPos;i < p.providesPos + p.providesCount;++i)
+    {
+      assert(i < m_relations.size());
+      pkg.provides.push_back(makeNamedPkgRel(m_relations[i]));
+    }
+  for(size_t i = p.requiresPos;i < p.requiresPos + p.requiresCount;++i)
+    {
+      assert(i < m_relations.size());
+      pkg.requires.push_back(makeNamedPkgRel(m_relations[i]));
+    }
+  for(size_t i = p.conflictsPos;i < p.conflictsPos + p.conflictsCount;++i)
+    {
+      assert(i < m_relations.size());
+      pkg.conflicts.push_back(makeNamedPkgRel(m_relations[i]));
+    }
+  for(size_t i = p.obsoletesPos;i < p.obsoletesPos + p.obsoletesCount;++i)
+    {
+      assert(i < m_relations.size());
+      pkg.obsoletes.push_back(makeNamedPkgRel(m_relations[i]));
+    }
 }
 
 PkgId PkgScopeBase::pkgIdOfVarId(VarId varId) const
@@ -110,6 +130,16 @@ bool PkgScopeBase::verGreater(const std::string& ver1, const std::string& ver2) 
 {
   assert(!ver1.empty() && !ver2.empty());
   return m_backend.verGreater(ver1, ver2);
+}
+
+NamedPkgRel PkgScopeBase::makeNamedPkgRel(const SnapshotRelation& rel) const
+{
+  assert(rel.pkgId != BadPkgId);
+  assert(rel.pkgId < m_snapshot.pkgNames.size());
+  assert(rel.verDir == VerNone || rel.ver != NULL);
+  if (rel.verDir == VerNone)
+    return NamedPkgRel(pkgIdToStr(rel.pkgId));
+  return NamedPkgRel(pkgIdToStr(rel.pkgId), rel.verDir, rel.ver);
 }
 
 DEEPSOLVER_END_NAMESPACE

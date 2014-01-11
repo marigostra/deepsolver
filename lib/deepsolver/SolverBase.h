@@ -93,12 +93,12 @@ namespace Deepsolver
       virtual PkgId strToPkgId(const std::string& name) const = 0;
 
     public:
-      std::string getDesignation(VarId varId) const
+      std::string getDesignationDef(VarId varId) const
       {
 	return getDesignation(varId, EpochIfNonZero);
       }
 
-      std::string getVersion(VarId varId) const
+      std::string getVersionDef(VarId varId) const
       {
 	return getVersion(varId, EpochIfNonZero);
       }

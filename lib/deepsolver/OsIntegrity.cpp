@@ -34,7 +34,7 @@ bool OsIntegrity::verify(const PkgVector& pkgs) const
 	    return 0;
 	  }
       for(NamedPkgRelVector::size_type k = 0;k < p.conflicts.size();++k)
-	if (!checkConflict(p.conflicts[k], pkgs))
+	if (!checkConflict(p, p.conflicts[k], pkgs))
 	  {
 	    logMsg(LOG_ERR, "integrity:the package \'%s\' has violated conflict \'%s\'",
 		   m_backend.getDesignation(p, AbstractPkgBackEnd::EpochIfNonZero).c_str(),
@@ -42,6 +42,7 @@ bool OsIntegrity::verify(const PkgVector& pkgs) const
 	    return 0;
 	  }
     }
+  logMsg(LOG_INFO, "integrity:ok:%zu packages verified", pkgs.size());
   return 1;
 }
 
@@ -53,12 +54,18 @@ bool OsIntegrity::checkRequire(const NamedPkgRel& require, const PkgVector& pkgs
   return 0;
 }
 
-bool OsIntegrity::checkConflict(const NamedPkgRel& conflict, const PkgVector& pkgs) const
+bool OsIntegrity::checkConflict(const Pkg& pkg,
+				const NamedPkgRel& conflict,
+				const PkgVector& pkgs) const
 {
   for(PkgVector::size_type i = 0;i < pkgs.size();++i)
-    if (m_backend.matches(conflict, pkgs[i]))//FIXME:The package cannot conflict with itself;
-      return 1;
-  return 0;
+    {
+      if (m_backend.theSamePkg(pkg, pkgs[i]))
+	continue;
+      if (m_backend.matches(conflict, pkgs[i]))//FIXME:The package cannot conflict with itself;
+	return 0;
+    }
+  return 1;
 }
 
 DEEPSOLVER_END_NAMESPACE

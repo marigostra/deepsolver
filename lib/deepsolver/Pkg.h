@@ -157,7 +157,7 @@ namespace Deepsolver
     IdPkgRel()
       : pkgId(BadPkgId), verDir(VerNone) {}
 
-    IdPkgRel(PackageId id)
+    explicit IdPkgRel(PackageId id)
       : pkgId(id), verDir(VerNone) {}
 
     IdPkgRel(PackageId id, const std::string& v)

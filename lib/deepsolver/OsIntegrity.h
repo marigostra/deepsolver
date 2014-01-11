@@ -55,7 +55,9 @@ namespace Deepsolver
 
   private:
     bool checkRequire(const NamedPkgRel& require, const PkgVector& pkgs) const;
-    bool checkConflict(const NamedPkgRel& conflict, const PkgVector& pkgs) const;
+    bool checkConflict(const Pkg& pkg,
+		       const NamedPkgRel& conflict,
+		       const PkgVector& pkgs) const;
 
   private:
     const AbstractPkgBackEnd& m_backend;

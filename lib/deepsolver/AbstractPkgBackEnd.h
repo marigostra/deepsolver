@@ -271,6 +271,16 @@ namespace Deepsolver
      * \return Non-zero if the provide entry matches the relation
      */
     virtual bool matches(const IdPkgRel& rel, const IdPkgRel& provide) const = 0;
+
+    /**\brief Checks if two instances represent the same package
+     *
+     * \param [in] pkg1 The first package to compare
+     * \param [in] pkg2 The second package to compare
+     *
+     * \return Non-zero if they represent the same package or zero otherwise
+     */
+    virtual bool theSamePkg(const PkgBase& pkg1, const PkgBase& pkg2) const = 0;
+
   }; //class AbstractPkgBackEnd;
 
   AbstractPkgBackEnd::Ptr createRpmBackEnd();

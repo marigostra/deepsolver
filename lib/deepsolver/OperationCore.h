@@ -103,13 +103,14 @@ namespace Deepsolver
     void fetchMetadata(AbstractFetchListener& listener,
 		      const AbstractOperationContinueRequest& continueRequest);
 
-    /**\brief Fills the string vector with the list of all known packages
+    /**\brief Fills the string vector with the list of all known packages (names only, without provides)
      *
-     * \param [out] res The string list to save list of known package names to
+     * \param [in] withInstalled Whether to include installed packages or not
+     * \param [out] res The string list to save names of known packages to
      *
      * \throws OperationCoreException SystemException InternalProblemException
      */
-    void getPkgNames(StringVector& res);
+    void getPkgNames(bool withInstalled, StringVector& res);
 
     /**\brief Generates SAT and saves it as a string
      *
