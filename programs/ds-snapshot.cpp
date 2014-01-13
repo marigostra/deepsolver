@@ -50,13 +50,13 @@ void parseCmdLine(int argc, char* argv[])
 	  assert(0);
 	} //switch();
     }
-  if (cliParser.wasKeyUsed("--help"))
+  if (cliParser.isKeyUsed("--help"))
     {
       Messages(std::cout).dsSnapshotHelp(cliParser);
       exit(EXIT_SUCCESS);
     }
-  withInstalled = cliParser.wasKeyUsed("--installed");
-  withIds = cliParser.wasKeyUsed("--ids");
+  withInstalled = cliParser.isKeyUsed("--installed");
+  withIds = cliParser.isKeyUsed("--ids");
 }
 
 int main(int argc, char* argv[])
@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
   messagesProgramName = "ds-snapshot";
   setlocale(LC_ALL, "");
   parseCmdLine(argc, argv);
-  initLogging(cliParser.wasKeyUsed("--debug")?LOG_DEBUG:LOG_INFO, cliParser.wasKeyUsed("--log"));
+  initLogging(cliParser.isKeyUsed("--debug")?LOG_DEBUG:LOG_INFO, cliParser.isKeyUsed("--log"));
   try{
     ConfigCenter conf;
     conf.loadFromFile(DEFAULT_CONFIG_FILE_NAME);

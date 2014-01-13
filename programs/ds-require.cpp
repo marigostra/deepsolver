@@ -47,7 +47,7 @@ void parseCmdLine(int argc, char* argv[])
 	  assert(0);
 	} //switch();
     }
-  if (cliParser.wasKeyUsed("--help"))
+  if (cliParser.isKeyUsed("--help"))
     {
       Messages(std::cout).dsRequireHelp(cliParser);
       exit(EXIT_SUCCESS);
@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
   messagesProgramName = "ds-require";
   setlocale(LC_ALL, "");
   parseCmdLine(argc, argv);
-  initLogging(cliParser.wasKeyUsed("--debug")?LOG_DEBUG:LOG_INFO, cliParser.wasKeyUsed("--log"));
+  initLogging(cliParser.isKeyUsed("--debug")?LOG_DEBUG:LOG_INFO, cliParser.isKeyUsed("--log"));
   try{
     ConfigCenter conf;
     conf.loadFromFile(DEFAULT_CONFIG_FILE_NAME);

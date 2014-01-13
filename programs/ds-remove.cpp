@@ -133,7 +133,7 @@ void parseCmdLine(int argc, char* argv[])
 	  assert(0);
 	} //switch();
     }
-  if (cliParser.wasKeyUsed("--help"))
+  if (cliParser.isKeyUsed("--help"))
     {
       Messages(std::cout).dsRemoveHelp(cliParser);
       exit(EXIT_SUCCESS);
@@ -142,12 +142,12 @@ void parseCmdLine(int argc, char* argv[])
 
 int doMainWork()
 {
-  TransactionProgress transactionProgress(std::cout, cliParser.wasKeyUsed("--log"));
+  TransactionProgress transactionProgress(std::cout, cliParser.isKeyUsed("--log"));
   ConfigCenter conf;
   conf.loadFromFile(DEFAULT_CONFIG_FILE_NAME);
   conf.loadFromDir(DEFAULT_CONFIG_DIR_NAME);
   conf.commit();
-  if (!cliParser.wasKeyUsed("--log"))
+  if (!cliParser.isKeyUsed("--log"))
     Messages(std::cout).dsRemoveLogo();
   OperationCore core(conf);
   UserTask userTask;
@@ -159,26 +159,26 @@ int doMainWork()
       Messages(std::cerr).onNoPackagesMentionedError();
       return EXIT_FAILURE;
     }
-  if (!cliParser.wasKeyUsed("--sat"))
+  if (!cliParser.isKeyUsed("--sat"))
     {
       TransactionIterator::Ptr it = core.transaction(transactionProgress, userTask);
-      if (cliParser.wasKeyUsed("--urls"))
+      if (cliParser.isKeyUsed("--urls"))
 	{
 	  printUrls(*it.get());
 	  return EXIT_SUCCESS;
 	}
-      if (!cliParser.wasKeyUsed("--files"))
-	PackageListPrinting(conf).printSolution(*it.get(), cliParser.wasKeyUsed("--log"));
-      if (it->emptyTask() || cliParser.wasKeyUsed("--dry-run"))
+      if (!cliParser.isKeyUsed("--files"))
+	PackageListPrinting(conf).printSolution(*it.get(), cliParser.isKeyUsed("--log"));
+      if (it->emptyTask() || cliParser.isKeyUsed("--dry-run"))
 	return EXIT_SUCCESS;
-      if (!cliParser.wasKeyUsed("--files"))
+      if (!cliParser.isKeyUsed("--files"))
 	if (!Messages(std::cout).confirmContinuing())
 	  return 0;
       std::cout << std::endl;
-      FilesFetchProgress progress(std::cout, cliParser.wasKeyUsed("--log"));
+      FilesFetchProgress progress(std::cout, cliParser.isKeyUsed("--log"));
       AlwaysTrueContinueRequest continueRequest;
       it->fetchPackages(progress, continueRequest);
-      if (cliParser.wasKeyUsed("--files"))
+      if (cliParser.isKeyUsed("--files"))
 	{
 	  printFiles(*it.get());
 	  return EXIT_SUCCESS;
@@ -197,13 +197,13 @@ int main(int argc, char* argv[])
   messagesProgramName = "ds-remove";
   setlocale(LC_ALL, "");
   parseCmdLine(argc, argv);
-  initLogging(cliParser.wasKeyUsed("--debug")?LOG_DEBUG:LOG_INFO, cliParser.wasKeyUsed("--log"));
+  initLogging(cliParser.isKeyUsed("--debug")?LOG_DEBUG:LOG_INFO, cliParser.isKeyUsed("--log"));
   try{
     return doMainWork();
   }
   catch(const AbstractException& e)
     {
-      if (!cliParser.wasKeyUsed("--log"))
+      if (!cliParser.isKeyUsed("--log"))
 	{
 	  ExceptionMessagesEn messages;
 	  e.accept(messages);

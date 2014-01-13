@@ -25,6 +25,7 @@ InfoFileReader.cpp \
 logging.cpp \
 Md5.cpp \
 Md5File.cpp \
+MinisatSolver.cpp \
 OperationCore.cpp \
 OsIntegrity.cpp \
 PkgScopeBase.cpp \
@@ -77,6 +78,8 @@ InlineIO.h \
 logging.h \
 Md5File.h \
 Md5.h \
+MinisatCallData.h \
+MinisatSolver.h \
 OperationCore.h \
 OsIntegrity.h \
 Pkg.h \

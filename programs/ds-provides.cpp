@@ -148,7 +148,7 @@ void parseCmdLine(int argc, char* argv[])
 	  assert(0);
 	} //switch();
     }
-  if (cliParser.wasKeyUsed("--help"))
+  if (cliParser.isKeyUsed("--help"))
     {
       printHelp();
 	exit(EXIT_SUCCESS);
@@ -162,7 +162,7 @@ void parseCmdLine(int argc, char* argv[])
     }
   params.indexPath = cliParser.files[0];
   std::string arg;
-  if (cliParser.wasKeyUsed("--ref-sources", arg))
+  if (cliParser.isKeyUsed("--ref-sources", arg))
     splitColonDelimitedList(arg, params.providesRefsSources);
 }
 
@@ -171,14 +171,14 @@ int main(int argc, char* argv[])
   setlocale(LC_ALL, "");
   initCliParser();
   parseCmdLine(argc, argv);
-  initLogging(cliParser.wasKeyUsed("--debug")?LOG_DEBUG:LOG_INFO, cliParser.wasKeyUsed("--log") && !cliParser.wasKeyUsed("--quiet"));
+  initLogging(cliParser.isKeyUsed("--debug")?LOG_DEBUG:LOG_INFO, cliParser.isKeyUsed("--log") && !cliParser.isKeyUsed("--quiet"));
   try {
-    if (!cliParser.wasKeyUsed("--log") && !cliParser.wasKeyUsed("--quiet"))
+    if (!cliParser.isKeyUsed("--log") && !cliParser.isKeyUsed("--quiet"))
       printLogo();
     params.readInfoFile(Directory::mixNameComponents(params.indexPath, REPO_INDEX_INFO_FILE));
 
     std::string arg;
-    if (cliParser.wasKeyUsed("--external-provides", arg))
+    if (cliParser.isKeyUsed("--external-provides", arg))
       {
 	File f;
 	f.openReadOnly(arg);
@@ -193,21 +193,21 @@ int main(int argc, char* argv[])
 	  }
       }
 
-    IndexReconstructionListener listener(cliParser.wasKeyUsed("--log") || cliParser.wasKeyUsed("--quiet"));
+    IndexReconstructionListener listener(cliParser.isKeyUsed("--log") || cliParser.isKeyUsed("--quiet"));
     IndexCore indexCore(listener);
     indexCore.refilterProvides(params);
   }
   catch(const AbstractException& e)
     {
       logMsg(LOG_CRIT, "%s error:%s", e.getType().c_str(), e.getMessage().c_str());
-      if (!cliParser.wasKeyUsed("--log"))
+      if (!cliParser.isKeyUsed("--log"))
 	std::cerr << "ERROR:" << e.getMessage() << std::endl;
       return EXIT_FAILURE;
     }
   catch(std::bad_alloc)
     {
       logMsg(LOG_CRIT, "No enough memory");
-      if (!cliParser.wasKeyUsed("--log"))
+      if (!cliParser.isKeyUsed("--log"))
 	std::cerr << "ERROR:No enough memory" << std::endl;
 	  return EXIT_FAILURE;
     }

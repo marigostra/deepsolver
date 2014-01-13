@@ -106,7 +106,7 @@ void CliParser::printHelp(std::ostream& s) const
     }
 }
 
-bool CliParser::wasKeyUsed(const std::string& keyName, std::string& arg) const
+bool CliParser::isKeyUsed(const std::string& keyName, std::string& arg) const
 {
   KeyVector::size_type index = findKey(keyName);
   if (index == (KeyVector::size_type)-1)
@@ -119,10 +119,10 @@ bool CliParser::wasKeyUsed(const std::string& keyName, std::string& arg) const
   return 1;
 }
 
-bool CliParser::wasKeyUsed(const std::string& keyName) const
+bool CliParser::isKeyUsed(const std::string& keyName) const
 {
   std::string arg;
-  return wasKeyUsed(keyName, arg);
+  return isKeyUsed(keyName, arg);
 }
 
 void CliParser::addKey(const std::string& name, const std::string& descr)

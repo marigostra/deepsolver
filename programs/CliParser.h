@@ -192,7 +192,7 @@ namespace Deepsolver
      *
      * \return Non-zero if command line argument was mentioned by a user
      */
-    bool wasKeyUsed(const std::string& keyName, std::string& arg) const;
+    bool isKeyUsed(const std::string& keyName, std::string& arg) const;
 
     /**\brief Checks if the argument was mentioned by a user
      *
@@ -202,7 +202,7 @@ namespace Deepsolver
      *
      * \return Non-zero if the argument was mentioned by a user
      */
-    bool wasKeyUsed(const std::string& keyName) const;
+    bool isKeyUsed(const std::string& keyName) const;
 
     /**\brief Adds new argument to the table of available arguments
      *

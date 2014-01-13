@@ -205,7 +205,7 @@ void parseCmdLine(int argc, char* argv[])
 	} //switch();
     }
   std::string arg;
-  if (cliParser.wasKeyUsed("--compression", arg))
+  if (cliParser.isKeyUsed("--compression", arg))
     {
       params.compressionType = selectCompressionType(arg);
       if (params.compressionType == -1)
@@ -214,9 +214,9 @@ void parseCmdLine(int argc, char* argv[])
 	  exit(EXIT_FAILURE);
 	}
     }
-  params.changeLogBinary = cliParser.wasKeyUsed("--changelog-binary");
-  params.changeLogSources = cliParser.wasKeyUsed("--changelog-source");
-  if (cliParser.wasKeyUsed("--user", arg))
+  params.changeLogBinary = cliParser.isKeyUsed("--changelog-binary");
+  params.changeLogSources = cliParser.isKeyUsed("--changelog-source");
+  if (cliParser.isKeyUsed("--user", arg))
     {
       StringVector userParams;
       splitColonDelimitedList(arg, userParams);
@@ -227,15 +227,15 @@ void parseCmdLine(int argc, char* argv[])
 	    exit(EXIT_FAILURE);
 	  }
     }
-  params.filterProvidesByRefs = cliParser.wasKeyUsed("--references");
-  if (cliParser.wasKeyUsed("--ref-sources", arg))
+  params.filterProvidesByRefs = cliParser.isKeyUsed("--references");
+  if (cliParser.isKeyUsed("--ref-sources", arg))
     splitColonDelimitedList(arg, params.providesRefsSources);
-  if (cliParser.wasKeyUsed("--help"))
+  if (cliParser.isKeyUsed("--help"))
     {
       printHelp();
       exit(EXIT_SUCCESS);
     }
-  if (cliParser.wasKeyUsed("--dirs", arg))
+  if (cliParser.isKeyUsed("--dirs", arg))
     splitColonDelimitedList(arg, params.filterProvidesByDirs);
   if (cliParser.files.empty() || cliParser.files[0].empty())
     {
@@ -259,12 +259,12 @@ int main(int argc, char* argv[])
   setlocale(LC_ALL, "");
   initCliParser();
   parseCmdLine(argc, argv);
-  initLogging(cliParser.wasKeyUsed("--debug")?LOG_DEBUG:LOG_INFO, cliParser.wasKeyUsed("--log") && !cliParser.wasKeyUsed("--quiet"));
+  initLogging(cliParser.isKeyUsed("--debug")?LOG_DEBUG:LOG_INFO, cliParser.isKeyUsed("--log") && !cliParser.isKeyUsed("--quiet"));
   try {
-    if (!cliParser.wasKeyUsed("--log") && !cliParser.wasKeyUsed("--quiet"))
+    if (!cliParser.isKeyUsed("--log") && !cliParser.isKeyUsed("--quiet"))
       printLogo();
     std::string arg;
-    if (cliParser.wasKeyUsed("--no-requires", arg))
+    if (cliParser.isKeyUsed("--no-requires", arg))
       {
 	File f;
 	f.openReadOnly(arg);
@@ -278,7 +278,7 @@ int main(int argc, char* argv[])
 	    params.excludeRequiresRegExp.push_back(line);
 	  }
       }
-    if (cliParser.wasKeyUsed("--external-provides", arg))
+    if (cliParser.isKeyUsed("--external-provides", arg))
       {
 	File f;
 	f.openReadOnly(arg);
@@ -292,21 +292,21 @@ int main(int argc, char* argv[])
 	    params.providesRefs.push_back(line);
 	  }
       }
-    IndexConstructionListener listener(cliParser.wasKeyUsed("--log") || cliParser.wasKeyUsed("--quiet"));
+    IndexConstructionListener listener(cliParser.isKeyUsed("--log") || cliParser.isKeyUsed("--quiet"));
     IndexCore indexCore(listener);
     indexCore.buildIndex(params);
   }
   catch(const AbstractException& e)
     {
       logMsg(LOG_CRIT, "%s error:%s", e.getType().c_str(), e.getMessage().c_str());
-      if (!cliParser.wasKeyUsed("--log"))
+      if (!cliParser.isKeyUsed("--log"))
 	std::cerr << "ERROR:" << e.getMessage() << std::endl;
       return EXIT_FAILURE;
     }
   catch(std::bad_alloc)
     {
       logMsg(LOG_CRIT, "No enough memory");
-      if (!cliParser.wasKeyUsed("--log"))
+      if (!cliParser.isKeyUsed("--log"))
 	std::cerr << "ERROR:No enough memory" << std::endl;
 	  return EXIT_FAILURE;
     }

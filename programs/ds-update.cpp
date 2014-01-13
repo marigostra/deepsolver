@@ -48,7 +48,7 @@ void parseCmdLine(int argc, char* argv[])
 	  assert(0);
 	} //switch();
     }
-  if (cliParser.wasKeyUsed("--help"))
+  if (cliParser.isKeyUsed("--help"))
     {
       Messages(std::cout).dsUpdateHelp(cliParser);
       exit(EXIT_SUCCESS);
@@ -60,19 +60,19 @@ int main(int argc, char* argv[])
   messagesProgramName = "ds-update";
   setlocale(LC_ALL, "");
   parseCmdLine(argc, argv);
-  initLogging(cliParser.wasKeyUsed("--debug")?LOG_DEBUG:LOG_INFO, cliParser.wasKeyUsed("--log"));
+  initLogging(cliParser.isKeyUsed("--debug")?LOG_DEBUG:LOG_INFO, cliParser.isKeyUsed("--log"));
   try{
     AlwaysTrueContinueRequest alwaysTrueContinueRequest;
-    if (!cliParser.wasKeyUsed("--log"))
+    if (!cliParser.isKeyUsed("--log"))
       Messages(std::cout).dsUpdateLogo();
     ConfigCenter conf;
     conf.loadFromFile(DEFAULT_CONFIG_FILE_NAME);
     conf.loadFromDir(DEFAULT_CONFIG_DIR_NAME);
     conf.commit();
-    if (!cliParser.wasKeyUsed("--log"))
+    if (!cliParser.isKeyUsed("--log"))
       Messages(std::cout).introduceRepoSet(conf);
     OperationCore core(conf);
-    FilesFetchProgress progress(std::cout, cliParser.wasKeyUsed("--log"));
+    FilesFetchProgress progress(std::cout, cliParser.isKeyUsed("--log"));
     core.fetchMetadata(progress, alwaysTrueContinueRequest);
   }
   catch(const AbstractException& e)
