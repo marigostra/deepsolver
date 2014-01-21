@@ -62,6 +62,7 @@ namespace Deepsolver
     }
 
   public://ExceptionVisitor;
+    void visit(const CliParserException& e);
     void visit(const SystemException& e);
     void visit(const ConfigFileException& e);
     void visit(const ConfigException& e);

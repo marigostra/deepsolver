@@ -17,7 +17,7 @@
 
 #include"deepsolver/deepsolver.h"
 #include"deepsolver/IndexCore.h"
-#include"CliParser.h"
+#include"deepsolver/CliParser.h"
 
 #define PREFIX "ds-provides:"
 
@@ -136,17 +136,8 @@ void parseCmdLine(int argc, char* argv[])
   }
   catch (const CliParserException& e)
     {
-      switch (e.getCode())
-	{
-	case CliParserException::NoPrgName:
-	  std::cerr << PREFIX << "Command line has no program name" << std::endl;
-	  exit(EXIT_FAILURE);
-	case CliParserException::MissedArgument:
-	  std::cerr << PREFIX << "Command line argument \'" << e.getArg() << "\' requires additional parameter" << std::endl;exit(EXIT_FAILURE);
-	  exit(EXIT_FAILURE);
-	default:
-	  assert(0);
-	} //switch();
+      std::cerr << "command line error:" << e.getMessage() << std::endl;
+      exit(EXIT_FAILURE);
     }
   if (cliParser.isKeyUsed("--help"))
     {

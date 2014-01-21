@@ -46,6 +46,17 @@ const ConfigException::Descr ConfigException::m_descr[] = {
   {-1, NULL}
 };
 
+std::string CliParserException::getMessage() const
+{
+  switch(m_code)
+    {
+    case NoPrgName:
+      return "argv[0] doesn\'t contain the program name";
+    case MissedArgument:
+      return "the key \'" + m_param + "\' requires the additional parameter";
+    }
+}
+
 std::string SystemException::getMessage() const
 {
   if (m_comment.empty())

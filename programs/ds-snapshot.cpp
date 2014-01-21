@@ -38,17 +38,8 @@ void parseCmdLine(int argc, char* argv[])
   }
   catch (const CliParserException& e)
     {
-      switch (e.getCode())
-	{
-	case CliParserException::NoPrgName:
-	  Messages(std::cerr).onMissedProgramName();
-	  exit(EXIT_FAILURE);
-	case CliParserException::MissedArgument:
-	  Messages(std::cout).onMissedCommandLineArgument(e.getArg());
-	  exit(EXIT_FAILURE);
-	default:
-	  assert(0);
-	} //switch();
+      std::cerr << "command line error:" << e.getMessage() << std::endl;
+      exit(EXIT_FAILURE);
     }
   if (cliParser.isKeyUsed("--help"))
     {
@@ -61,7 +52,6 @@ void parseCmdLine(int argc, char* argv[])
 
 int main(int argc, char* argv[])
 {
-  messagesProgramName = "ds-snapshot";
   setlocale(LC_ALL, "");
   parseCmdLine(argc, argv);
   initLogging(cliParser.isKeyUsed("--debug")?LOG_DEBUG:LOG_INFO, cliParser.isKeyUsed("--log"));

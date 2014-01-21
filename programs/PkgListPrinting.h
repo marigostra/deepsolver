@@ -15,20 +15,19 @@
    General Public License for more details.
 */
 
-#ifndef DEEPSOLVEr_PACKAGE_LIST_PRINTING_H
-#define PAcKAGE_LIST_PRINTING_H
+#ifndef DEEPSOLVEr_PKG_LIST_PRINTING_H
+#define PKG_LIST_PRINTING_H
 
-#include"deepsolver/OperationCore.h"
+#include"deepsolver/ConfigCenter.h"
+#include"deepsolver/TransactionIterator.h"
 
 namespace Deepsolver
 {
-  class PackageListPrinting
+  class PkgListPrinting
   {
   public:
-    PackageListPrinting(const ConfigCenter& conf)
+    PkgListPrinting(const ConfigCenter& conf)
       : m_conf(conf) {}
-
-    virtual ~PackageListPrinting() {}
 
   public:
     void printSolution(const TransactionIterator& it, bool toLog = 0) const;
@@ -41,7 +40,7 @@ namespace Deepsolver
 
   private:
     const ConfigCenter& m_conf;
-  }; //class PackageListPrinting;
+  }; //class PkgListPrinting;
 } //namespace Deepsolver;
 
-#endif //PAcKAGE_LIST_PRINTING_H;
+#endif //PKG_LIST_PRINTING_H;

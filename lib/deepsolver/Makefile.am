@@ -9,6 +9,7 @@ LIB_LTLIBRARIES = libdeepsolver.la
 libdeepsolver_ladir = $(includedir)
 
 libdeepsolver_la_SOURCES = \
+CliParser.cpp \
 ConfigAdapter.cpp \
 ConfigCenter.cpp \
 ConfigFile.cpp \
@@ -58,6 +59,7 @@ AbstractPkgRecipient.h \
 AbstractTaskSolver.h \
 AbstractTransactionListener.h \
 AutoReleaseStrings.h \
+CliParser.h \
 ConfigAdapter.h \
 ConfigCenter.h \
 ConfigData.h \

@@ -16,7 +16,7 @@
 */
 
 #include"deepsolver/deepsolver.h"
-#include"PackageListPrinting.h"
+#include"PkgListPrinting.h"
 
 DEEPSOLVER_BEGIN_NAMESPACE
 
@@ -69,7 +69,7 @@ namespace
   }
 }
 
-void PackageListPrinting::printSolution(const TransactionIterator& it, bool toLog) const
+void PkgListPrinting::printSolution(const TransactionIterator& it, bool toLog) const
 {
   StringVector install, remove, upgrade, downgrade;
   for(PkgVector::size_type i = 0;i < it.getInstall().size();++i)
@@ -100,7 +100,7 @@ void PackageListPrinting::printSolution(const TransactionIterator& it, bool toLo
   std::cout << std::endl;
 }
 
-void PackageListPrinting::columnsView(const StringVector& install,
+void PkgListPrinting::columnsView(const StringVector& install,
 				      const StringVector& remove,
 				      const StringVector& upgrade,
 				      const StringVector& downgrade) const

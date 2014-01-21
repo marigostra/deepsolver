@@ -20,6 +20,19 @@
 
 DEEPSOLVER_BEGIN_NAMESPACE
 
+void ExceptionMessagesEn::visit(const CliParserException& e)
+{
+  switch(e.getCode())
+    {
+    case CliParserException::NoPrgName:
+      m_stream << "command line error:argv[0] doesn\'t contain the program name" << std::endl;
+      return;
+    case CliParserException::MissedArgument:
+      m_stream << "command line error:the key \'" << e.getParam() << "\' requires the additional parameter" << std::endl;
+      return;
+    }
+}
+
 void ExceptionMessagesEn::visit(const SystemException& e)
 {
   m_stream << "System error were occurred during last operation. That may be caused" << std::endl;

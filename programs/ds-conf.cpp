@@ -24,7 +24,6 @@ using namespace Deepsolver;
 
 int main(int argc, char* argv[])
 {
-  messagesProgramName = "ds-conf";
   setlocale(LC_ALL, "");
   initLogging(LOG_DEBUG, 0);
   try{

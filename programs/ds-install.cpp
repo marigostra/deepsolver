@@ -20,7 +20,7 @@
 #include"deepsolver/ExceptionMessagesEn.h"
 #include"TransactionProgress.h"
 #include"Messages.h"
-#include"PackageListPrinting.h"
+#include"PkgListPrinting.h"
 #include"AlwaysTrueContinueRequest.h"
 #include"FilesFetchProgress.h"
 
@@ -190,17 +190,10 @@ void parseCmdLine(int argc, char* argv[])
   }
   catch (const CliParserException& e)
     {
-      switch (e.getCode())
-	{
-	case CliParserException::NoPrgName:
-	  Messages(std::cerr).onMissedProgramName();
-	  exit(EXIT_FAILURE);
-	case CliParserException::MissedArgument:
-	  Messages(std::cout).onMissedCommandLineArgument(e.getArg());
-	  exit(EXIT_FAILURE);
-	default:
-	  assert(0);
-	} //switch();
+      ExceptionMessagesEn messages;
+      e.accept(messages);
+      std::cerr << messages.getMsg();
+      exit(EXIT_FAILURE);
     }
   if (cliParser.isKeyUsed("--help"))
     {
@@ -221,7 +214,7 @@ int doMainWork()
   OperationCore core(conf);
   if (cliParser.userTask.itemsToInstall.empty())
     {
-      Messages(std::cerr).onNoPackagesMentionedError();
+      Messages(std::cerr).onNoPkgMentionedError();
       return EXIT_FAILURE;
     }
   if (!cliParser.isKeyUsed("--sat"))
@@ -233,7 +226,7 @@ int doMainWork()
 	  return EXIT_SUCCESS;
 	}
       if (!cliParser.isKeyUsed("--files"))
-	PackageListPrinting(conf).printSolution(*it.get(), cliParser.isKeyUsed("--log"));
+	PkgListPrinting(conf).printSolution(*it.get(), cliParser.isKeyUsed("--log"));
       if (it->emptyTask() || cliParser.isKeyUsed("--dry-run"))
 	return EXIT_SUCCESS;
       if (!cliParser.isKeyUsed("--files"))
@@ -259,7 +252,6 @@ int doMainWork()
 
 int main(int argc, char* argv[])
 {
-  messagesProgramName = "ds-install";
   setlocale(LC_ALL, "");
   parseCmdLine(argc, argv);
   initLogging(cliParser.isKeyUsed("--debug")?LOG_DEBUG:LOG_INFO, cliParser.isKeyUsed("--log"));

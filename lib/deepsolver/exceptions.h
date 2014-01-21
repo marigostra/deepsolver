@@ -24,6 +24,7 @@
 namespace Deepsolver
 {
   class AbstractException;
+  class CliParserException;
   class SystemException;
   class TaskException;
   class OperationCoreException;
@@ -61,6 +62,12 @@ namespace Deepsolver
     virtual ~ExceptionVisitor() {}
 
   public:
+    /**\brief The action for command line parsing errors
+     *
+     * \param [in] e The reference to the exception object
+     */
+    virtual void visit(const CliParserException& e) {}
+
     /**\brief The action for system call errors
      *
      * \param [in] e The reference to the exception object
@@ -199,6 +206,78 @@ namespace Deepsolver
      */
     virtual void accept(ExceptionVisitor& visitor) const = 0;
   }; //class AbstractException;
+
+  /**\brief The exception for command line parser errors
+   *
+   * The instances of this class are thrown by methods of the CliParser class 
+   * during parsing  the command line.  Through the methods of this exception 
+   * you can obtain various information about the problem and construct corresponding message to user.
+   *
+   * \sa CliParser
+   */
+  class CliParserException: public AbstractException
+  {
+  public:
+    enum {
+      NoPrgName,
+      MissedArgument
+    };
+
+  public:
+    /**\brief The constructor with error code specification
+     *
+     * \param [in] code The error code
+     */
+    CliParserException(int code)
+      : m_code(code) {}
+
+    /**\brief The constructor with error code and string parameter specification
+     *
+     * \param [in] code The error code
+     * \param [in] param The string parameter
+     */
+    CliParserException(int code, const std::string& param)
+      : m_code(code),
+	m_param(param) {}
+
+    /**\brief The destructor*/
+    virtual ~CliParserException() {}
+
+  public:
+    /**\brief Returns the error code
+     * \return The error code
+     */
+    int getCode() const
+    {
+      return m_code;
+    }
+
+    /**\brief Returns the string parameter
+     * \return The string parameter of the error
+     */
+    const std::string& getParam() const
+    {
+      return m_param;
+    } 
+
+  public://AbstractException;
+    std::string getMessage() const;
+
+    std::string getType() const
+    {
+      return "command line";
+    }
+
+    void accept(ExceptionVisitor& visitor) const
+    {
+      visitor.visit(*this);
+    }
+
+  private:
+    const int m_code;
+    const std::string m_param;
+  }; //class CliParserException;
+
 
   /**\brief The exception for system call errors
    *

@@ -1,33 +1,28 @@
 /*
- * This file now provides only support for English language messages but
- * generally multilingual support implies.
- */
+   Copyright 2011-2014 ALT Linux
+   Copyright 2011-2014 Michael Pozhidaev
+
+   This file is part of the Deepsolver.
+
+   Deepsolver is free software; you can redistribute it and/or
+   modify it under the terms of the GNU General Public
+   License as published by the Free Software Foundation; either
+   version 2 of the License, or (at your option) any later version.
+
+   Deepsolver is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   General Public License for more details.
+*/
 
 #include"deepsolver/deepsolver.h"
 #include"Messages.h"
 
 DEEPSOLVER_BEGIN_NAMESPACE
 
-std::string messagesProgramName;
-
-
-//Command line errors;
-
-void Messages::onMissedProgramName() const
+void Messages::onNoPkgMentionedError() const//Maybe it is a good idea to transmit here name of the program;
 {
-  m_stream << messagesProgramName << ":The command line doesn\'t contain program name" << std::endl;
-}
-
-void Messages::onMissedCommandLineArgument(const std::string& arg) const
-{
-  m_stream << messagesProgramName << ":The command line argument \'" << arg << "\' requires additional parameter" << std::endl;
-}
-
-// User input errors;
-
-void Messages::onNoPackagesMentionedError() const
-{
-  m_stream << messagesProgramName << ":No packages mentioned" << std::endl;
+  m_stream << "error:no packages mentioned" << std::endl;
 }
 
 // ds-update;
